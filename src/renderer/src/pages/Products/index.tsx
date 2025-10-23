@@ -17,6 +17,8 @@ import type { Product, ProductFilters as Filters } from './types'
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const toast = useToast()
 
   // Modal states
@@ -43,12 +45,8 @@ export default function Products() {
   // Apply filters using custom hook
   const { filteredProducts, filterOptions } = useProductFilters(products, filters)
 
-  // Sort products from latest to oldest
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    const dateA = new Date(a.createdAt || 0).getTime()
-    const dateB = new Date(b.createdAt || 0).getTime()
-    return dateB - dateA
-  })
+  // Products are already sorted newest first from backend
+  const sortedProducts = filteredProducts
 
   // Paginate products
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage)
@@ -67,21 +65,36 @@ export default function Products() {
   const loadProducts = async () => {
     try {
       setLoading(true)
-      const data = await ipc.products.getAll()
+      
+      // OPTIMIZED: Request products without images for fast loading
+      const response = await ipc.products.getAll({
+        includeImages: false, // Don't load images for list view
+        limit: 500, // Load first 500 newest products
+        offset: 0,
+        searchTerm: filters.searchQuery,
+        category: filters.category
+      })
+      
+      // Handle new response format with pagination data
+      const data = response.products || response || []
+      setTotalCount(response.totalCount || data.length)
+      setHasMore(response.hasMore || false)
       
       // Calculate total stock for each product
       const productsWithStock = data.map((product: any) => ({
         ...product,
         totalStock: product.hasVariants 
           ? product.variants?.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) || 0
-          : 0
+          : 0,
+        images: product.images || [] // Ensure images array exists
       }))
       
       setProducts(productsWithStock)
-      toast.success(`Loaded ${productsWithStock.length} products`)
+      toast.success(`Loaded ${productsWithStock.length} products${hasMore ? ` (${totalCount} total)` : ''}`)
     } catch (error) {
       console.error('Failed to load products:', error)
       toast.error('Failed to load products')
+      setProducts([]) // Set empty array on error
     } finally {
       setLoading(false)
     }
@@ -116,14 +129,28 @@ export default function Products() {
     setCurrentPage(1)
   }
 
-  const handleView = (product: Product) => {
-    setSelectedProduct(product)
-    setShowViewModal(true)
+  const handleView = async (product: Product) => {
+    // Fetch full product details with images
+    try {
+      const fullProduct = await ipc.products.getById(product.id)
+      setSelectedProduct(fullProduct)
+      setShowViewModal(true)
+    } catch (error) {
+      console.error('Failed to load product details:', error)
+      toast.error('Failed to load product details')
+    }
   }
 
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product)
-    setShowEditModal(true)
+  const handleEdit = async (product: Product) => {
+    // Fetch full product details with images
+    try {
+      const fullProduct = await ipc.products.getById(product.id)
+      setSelectedProduct(fullProduct)
+      setShowEditModal(true)
+    } catch (error) {
+      console.error('Failed to load product details:', error)
+      toast.error('Failed to load product details')
+    }
   }
 
   const handleDelete = async (product: Product) => {

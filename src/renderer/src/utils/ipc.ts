@@ -20,6 +20,22 @@ const mockIPC = {
       const stored = localStorage.getItem('products')
       return stored ? JSON.parse(stored) : []
     },
+    getById: async (id: string) => {
+      const products = JSON.parse(localStorage.getItem('products') || '[]')
+      return products.find((p: any) => p.id === id) || null
+    },
+    search: async (searchTerm: string) => {
+      const products = JSON.parse(localStorage.getItem('products') || '[]')
+      return products.filter((p: any) => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.baseSKU.toLowerCase().includes(searchTerm.toLowerCase())
+      ).slice(0, 20)
+    },
+    getStats: async () => ({
+      totalProducts: JSON.parse(localStorage.getItem('products') || '[]').length,
+      totalVariants: 0,
+      lowStockCount: 0
+    }),
     create: async (data: any) => {
       const products = JSON.parse(localStorage.getItem('products') || '[]')
       const newProduct = {
@@ -132,9 +148,12 @@ const mockIPC = {
 }
 
 export const ipc = isElectron ? {
-  // Product operations
+  // Product operations - OPTIMIZED
   products: {
-    getAll: () => window.electron.ipcRenderer.invoke('products:getAll'),
+    getAll: (options?: any) => window.electron.ipcRenderer.invoke('products:getAll', options),
+    getById: (id: string) => window.electron.ipcRenderer.invoke('products:getById', id),
+    search: (searchTerm: string) => window.electron.ipcRenderer.invoke('products:search', searchTerm),
+    getStats: () => window.electron.ipcRenderer.invoke('products:getStats'),
     create: (data: any) => window.electron.ipcRenderer.invoke('products:create', data),
     update: (id: string, data: any) => window.electron.ipcRenderer.invoke('products:update', { id, productData: data }),
     delete: (id: string) => window.electron.ipcRenderer.invoke('products:delete', id)

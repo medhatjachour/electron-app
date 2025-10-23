@@ -25,16 +25,24 @@ export function usePOS() {
   const loadProducts = async () => {
     try {
       setLoading(true)
-      const data = await ipc.products.getAll()
+      // OPTIMIZED: Load products without images for fast POS performance
+      const response = await ipc.products.getAll({
+        includeImages: false,
+        limit: 500 // Load first 500 products
+      })
+      
+      const data = response.products || response || []
       const productsWithStock = data.map((p: any) => ({
         ...p,
         totalStock: p.hasVariants 
           ? p.variants.reduce((sum: number, v: any) => sum + v.stock, 0)
-          : 0
+          : 0,
+        images: p.images || []
       }))
       setProducts(productsWithStock)
     } catch (error) {
       console.error('Failed to load products:', error)
+      setProducts([])
     } finally {
       setLoading(false)
     }

@@ -6,6 +6,12 @@ type AuthContextType = {
   user: User
   login: (username: string, password: string) => Promise<User>
   logout: () => void
+  // Permission helpers
+  isAdmin: boolean
+  isManager: boolean
+  canEdit: boolean
+  canDelete: boolean
+  canManageInventory: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -75,7 +81,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const value = useMemo(() => ({ user, login, logout }), [user])
+  // Calculate permissions based on user role
+  const isAdmin = user?.role === 'admin'
+  const isManager = user?.role === 'manager' || isAdmin
+  const canEdit = isManager // Managers and admins can edit
+  const canDelete = isAdmin // Only admins can delete
+  const canManageInventory = isManager // Managers and admins can manage inventory
+
+  const value = useMemo(
+    () => ({ 
+      user, 
+      login, 
+      logout,
+      isAdmin,
+      isManager,
+      canEdit,
+      canDelete,
+      canManageInventory
+    }), 
+    [user, isAdmin, isManager, canEdit, canDelete, canManageInventory]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

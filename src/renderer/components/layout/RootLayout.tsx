@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
+import { useLanguage } from '../../src/contexts/LanguageContext'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -21,6 +22,7 @@ import {
 
 interface NavItem {
   name: string
+  translationKey: string
   href: string
   icon: React.ElementType
   roles: string[]
@@ -29,66 +31,77 @@ interface NavItem {
 const navigation: NavItem[] = [
   {
     name: 'Dashboard',
+    translationKey: 'dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
     roles: ['admin', 'sales', 'inventory', 'finance']
   },
   {
     name: 'Stores',
+    translationKey: 'stores',
     href: '/stores',
     icon: Store,
     roles: ['admin']
   },
   {
     name: 'Products',
+    translationKey: 'products',
     href: '/products',
     icon: BoxIcon,
     roles: ['admin', 'inventory']
   },
   {
     name: 'POS',
+    translationKey: 'pos',
     href: '/pos',
     icon: CreditCard,
     roles: ['admin', 'sales']
   },
   {
     name: 'Inventory',
+    translationKey: 'inventory',
     href: '/inventory',
     icon: Package,
     roles: ['admin', 'inventory']
   },
   {
     name: 'Sales',
+    translationKey: 'sales',
     href: '/sales',
     icon: ShoppingCart,
     roles: ['admin', 'sales']
   },
   {
     name: 'Employees',
+    translationKey: 'employees',
     href: '/employees',
     icon: Users,
     roles: ['admin']
   },
   {
     name: 'Customers',
+    translationKey: 'customers',
     href: '/customers',
     icon: UserSquare2,
     roles: ['admin', 'sales']
   },
   {
     name: 'Reports',
+    translationKey: 'reports',
     href: '/reports',
     icon: FileBarChart,
     roles: ['admin', 'finance']
   },
   {
     name: 'Finance',
+    translationKey: 'finance',
     href: '/finance',
     icon: Wallet,
     roles: ['admin', 'finance']
   },
   {
     name: 'Settings',
+    translationKey: 'settings',
     href: '/settings',
     icon: Settings,
     roles: ['admin']
@@ -103,6 +116,7 @@ interface RootLayoutProps {
 export default function RootLayout({ children, userRole }: RootLayoutProps) {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -193,11 +207,11 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
                       isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary'
                     }`} 
                   />
-                  {sidebarOpen && <span>{item.name}</span>}
+                  {sidebarOpen && <span>{t(item.translationKey as any)}</span>}
                   
                   {!sidebarOpen && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                      {item.name}
+                      {t(item.translationKey as any)}
                     </div>
                   )}
                 </Link>
@@ -245,7 +259,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                  {navigation.find(item => item.href === location.pathname)?.name || 'SalesElectron'}
+                  {t((navigation.find(item => item.href === location.pathname)?.translationKey || 'dashboard') as any)}
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
                   Point of Sale Management System
@@ -257,7 +271,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-semibold">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              Live
+              {t('live')}
             </div>
           </div>
         </header>

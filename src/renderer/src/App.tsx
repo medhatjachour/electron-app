@@ -15,20 +15,20 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ToastProvider } from './contexts/ToastContext'
 import PageLoader from './components/ui/PageLoader'
-import Login from './pages/Login'
+import Dashboard from './pages/Dashboard/index'
+import Login from './pages/login'
+import Finance from './pages/Finance/index'
+import Products from './pages/Products/index'
+import Settings from './pages/Settings/index'
+import POS from './pages/POS/index'
 
 // Lazy load pages for optimal performance (code splitting)
-const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Sales = lazy(() => import('./pages/Sales'))
 const Inventory = lazy(() => import('./pages/Inventory'))
-const Finance = lazy(() => import('./pages/Finance'))
 const Stores = lazy(() => import('./pages/Stores'))
-const Products = lazy(() => import('./pages/Products'))
-const POS = lazy(() => import('./pages/POS'))
 const Employees = lazy(() => import('./pages/Employees'))
 const Customers = lazy(() => import('./pages/Customers'))
 const Reports = lazy(() => import('./pages/Reports'))
-const Settings = lazy(() => import('./pages/Settings'))
 
 // Error Boundary for graceful error handling
 class ErrorBoundary extends Component<

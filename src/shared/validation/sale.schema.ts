@@ -13,7 +13,7 @@ export const SaleCreateSchema = z.object({
   price: z.number().min(0, 'Price must be positive'),
   total: z.number().min(0, 'Total must be positive'),
   paymentMethod: z.enum(['cash', 'card'], {
-    errorMap: () => ({ message: 'Payment method must be cash or card' })
+    message: 'Payment method must be cash or card'
   }),
   customerName: z.string().max(100).nullable().optional(),
   status: z.enum(['completed', 'pending', 'refunded']).default('completed')

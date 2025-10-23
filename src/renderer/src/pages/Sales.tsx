@@ -91,13 +91,72 @@ export default function Sales(): JSX.Element {
     const totalItems = completedSales.reduce((sum, sale) => sum + sale.quantity, 0)
     const avgSale = completedSales.length > 0 ? totalRevenue / completedSales.length : 0
 
+    // Calculate today's stats
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todaySales = sales.filter(s => {
+      const saleDate = new Date(s.createdAt)
+      return saleDate >= today && s.status === 'completed'
+    })
+    const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0)
+    const todayCount = todaySales.length
+
+    // Calculate yesterday's stats for comparison
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdaySales = sales.filter(s => {
+      const saleDate = new Date(s.createdAt)
+      return saleDate >= yesterday && saleDate < today && s.status === 'completed'
+    })
+    const yesterdayRevenue = yesterdaySales.reduce((sum, sale) => sum + sale.total, 0)
+    const yesterdayCount = yesterdaySales.length
+
+    // Calculate percentage changes
+    const revenueChange = yesterdayRevenue > 0 
+      ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 
+      : todayRevenue > 0 ? 100 : 0
+    const salesChange = yesterdayCount > 0 
+      ? ((todayCount - yesterdayCount) / yesterdayCount) * 100 
+      : todayCount > 0 ? 100 : 0
+
+    // Calculate this week vs last week
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    const thisWeekSales = sales.filter(s => {
+      const saleDate = new Date(s.createdAt)
+      return saleDate >= startOfWeek && s.status === 'completed'
+    })
+    const thisWeekRevenue = thisWeekSales.reduce((sum, sale) => sum + sale.total, 0)
+
+    const lastWeekStart = new Date(startOfWeek)
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7)
+    const lastWeekEnd = new Date(startOfWeek)
+    
+    const lastWeekSales = sales.filter(s => {
+      const saleDate = new Date(s.createdAt)
+      return saleDate >= lastWeekStart && saleDate < lastWeekEnd && s.status === 'completed'
+    })
+    const lastWeekRevenue = lastWeekSales.reduce((sum, sale) => sum + sale.total, 0)
+    
+    const weeklyRevenueChange = lastWeekRevenue > 0 
+      ? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 
+      : thisWeekRevenue > 0 ? 100 : 0
+
     return {
       totalRevenue,
       totalSales: completedSales.length,
       totalItems,
-      avgSale
+      avgSale,
+      todayRevenue,
+      todayCount,
+      revenueChange,
+      salesChange,
+      weeklyRevenueChange,
+      hasData: sales.length > 0
     }
-  }, [filteredSales])
+  }, [filteredSales, sales])
 
   // Pagination
   const paginatedSales = useMemo(() => {
@@ -219,71 +278,111 @@ export default function Sales(): JSX.Element {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Revenue</span>
-            <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <DollarSign size={20} className="text-success" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-success to-emerald-600 flex items-center justify-center">
+              <DollarSign size={20} className="text-white" />
             </div>
           </div>
           <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
             ${stats.totalRevenue.toFixed(2)}
           </div>
-          <div className="flex items-center text-sm text-success">
-            <TrendingUp size={16} className="mr-1" />
-            +12.5% from last week
-          </div>
+          {stats.hasData ? (
+            <div className={`flex items-center text-sm ${stats.weeklyRevenueChange >= 0 ? 'text-success' : 'text-error'}`}>
+              {stats.weeklyRevenueChange >= 0 ? <TrendingUp size={16} className="mr-1" /> : <TrendingUp size={16} className="mr-1 rotate-180" />}
+              {Math.abs(stats.weeklyRevenueChange).toFixed(1)}% from last week
+            </div>
+          ) : (
+            <div className="text-sm text-slate-400">No sales data yet</div>
+          )}
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Sales</span>
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ShoppingBag size={20} className="text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center">
+              <ShoppingBag size={20} className="text-white" />
             </div>
           </div>
           <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
             {stats.totalSales}
           </div>
-          <div className="flex items-center text-sm text-primary">
-            <TrendingUp size={16} className="mr-1" />
-            +8 new today
-          </div>
+          {stats.hasData ? (
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              {stats.todayCount} {stats.todayCount === 1 ? 'sale' : 'sales'} today
+            </div>
+          ) : (
+            <div className="text-sm text-slate-400">Start making sales</div>
+          )}
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Items Sold</span>
-            <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-              <ShoppingBag size={20} className="text-secondary" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-secondary to-purple-600 flex items-center justify-center">
+              <ShoppingBag size={20} className="text-white" />
             </div>
           </div>
           <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
             {stats.totalItems}
           </div>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Across all transactions
-          </div>
+          {stats.hasData ? (
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Across all transactions
+            </div>
+          ) : (
+            <div className="text-sm text-slate-400">No items sold</div>
+          )}
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg. Sale</span>
-            <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-              <DollarSign size={20} className="text-accent" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center">
+              <DollarSign size={20} className="text-white" />
             </div>
           </div>
           <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
             ${stats.avgSale.toFixed(2)}
           </div>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Per transaction
-          </div>
+          {stats.hasData ? (
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Per transaction
+            </div>
+          ) : (
+            <div className="text-sm text-slate-400">No average yet</div>
+          )}
         </div>
       </div>
 
+      {/* Empty State */}
+      {!stats.hasData && !loading && (
+        <div className="glass-card p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <ShoppingBag size={40} className="text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+              No Sales Yet
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Start making sales to see your transaction history and analytics here.
+            </p>
+            <button 
+              onClick={() => window.location.href = '/pos'}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <ShoppingBag size={20} />
+              Go to Point of Sale
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="glass-card p-4">
+      {stats.hasData && (
+        <div className="glass-card p-4">
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex-1 min-w-[250px] relative">
             <input
@@ -316,9 +415,11 @@ export default function Sales(): JSX.Element {
           </div>
         </div>
       </div>
+      )}
 
       {/* Sales Table */}
-      <div className="glass-card overflow-hidden">
+      {stats.hasData && (
+        <div className="glass-card overflow-hidden">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h2>
         </div>
@@ -439,6 +540,7 @@ export default function Sales(): JSX.Element {
           itemName="sales"
         />
       </div>
+      )}
 
       {/* View Sale Modal */}
       {showViewModal && selectedSale && (

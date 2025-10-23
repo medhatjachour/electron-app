@@ -131,7 +131,7 @@ export default function Settings() {
           {activeTab === 'general' && (
             <GeneralSettings
               theme={theme}
-              onThemeChange={setTheme}
+              onThemeChange={(theme: 'light' | 'dark' | 'system') => setTheme(theme as any)}
               actualTheme={actualTheme}
               language={language}
               onLanguageChange={setLanguage}

@@ -103,8 +103,8 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         hasVariants: product.hasVariants,
         variants: product.variants?.map(v => ({
           id: v.id,
-          color: v.color,
-          size: v.size,
+          color: v.color || undefined,
+          size: v.size || undefined,
           sku: v.sku,
           price: v.price,
           stock: v.stock

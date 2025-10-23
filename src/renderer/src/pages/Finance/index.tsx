@@ -47,15 +47,19 @@ export default function Finance() {
   const loadFinancialData = async () => {
     try {
       setLoading(true)
-      const [salesData, productsData] = await Promise.all([
+      const [salesData, productsResponse] = await Promise.all([
         ipc.sales.getAll(),
-        ipc.products.getAll()
+        ipc.products.getAll({ includeImages: false, limit: 1000 })
       ])
 
       setSales(salesData)
+      // Handle new response format
+      const productsData = productsResponse.products || productsResponse || []
       setProducts(productsData)
     } catch (error) {
       console.error('Error loading financial data:', error)
+      setSales([])
+      setProducts([])
     } finally {
       setLoading(false)
     }

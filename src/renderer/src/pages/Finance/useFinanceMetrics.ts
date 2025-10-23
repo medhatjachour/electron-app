@@ -4,8 +4,7 @@
  */
 
 import { useMemo } from 'react'
-import type { Sale, Product } from '../../../../shared/types'
-import type { FinancialMetrics, TopProduct } from './types'
+import type { Sale, Product, FinancialMetrics, TopProduct } from '../../../../shared/types'
 
 export interface UseFinanceMetricsResult {
   metrics: FinancialMetrics

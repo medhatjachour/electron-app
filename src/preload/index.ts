@@ -11,12 +11,16 @@ const api = {
     getMetrics: () => ipcRenderer.invoke('dashboard:getMetrics')
   },
   sales: {
+    getAll: () => ipcRenderer.invoke('sales:getAll'),
     create: (data: {
       productId: string
       userId: string
       quantity: number
       total: number
     }) => ipcRenderer.invoke('sales:create', data)
+  },
+  customers: {
+    getAll: () => ipcRenderer.invoke('customers:getAll')
   },
   inventory: {
     getProducts: () => ipcRenderer.invoke('inventory:getProducts'),
@@ -25,7 +29,17 @@ const api = {
       sku: string
       price: number
       stock: number
-    }) => ipcRenderer.invoke('inventory:addProduct', data)
+    }) => ipcRenderer.invoke('inventory:addProduct', data),
+    // New inventory management APIs
+    getAll: () => ipcRenderer.invoke('inventory:getAll'),
+    getMetrics: () => ipcRenderer.invoke('inventory:getMetrics'),
+    getTopStocked: (limit?: number) => ipcRenderer.invoke('inventory:getTopStocked', limit),
+    getLowStock: (threshold?: number) => ipcRenderer.invoke('inventory:getLowStock', threshold),
+    getOutOfStock: () => ipcRenderer.invoke('inventory:getOutOfStock'),
+    search: (query: string) => ipcRenderer.invoke('inventory:search', query),
+    getStockHistory: (productId: string) => ipcRenderer.invoke('inventory:getStockHistory', productId),
+    updateStock: (data: { variantId: string; stock: number }) => 
+      ipcRenderer.invoke('inventory:updateStock', data)
   },
   finance: {
     addTransaction: (data: {
@@ -36,6 +50,12 @@ const api = {
     }) => ipcRenderer.invoke('finance:addTransaction', data),
     getTransactions: (data: { startDate: Date; endDate: Date }) =>
       ipcRenderer.invoke('finance:getTransactions', data)
+  },
+  products: {
+    getAll: () => ipcRenderer.invoke('products:getAll'),
+    create: (productData: any) => ipcRenderer.invoke('products:create', productData),
+    update: (data: { id: string; productData: any }) => ipcRenderer.invoke('products:update', data),
+    delete: (id: string) => ipcRenderer.invoke('products:delete', id)
   }
 }
 

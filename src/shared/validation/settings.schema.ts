@@ -14,7 +14,7 @@ export const StoreSettingsSchema = z.object({
   email: z.string().email('Invalid email address').max(100),
   address: z.string().min(1, 'Address is required').max(200),
   currency: z.enum(['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'], {
-    errorMap: () => ({ message: 'Please select a valid currency' })
+    message: 'Please select a valid currency'
   }),
   timezone: z.string().min(1, 'Timezone is required')
 })

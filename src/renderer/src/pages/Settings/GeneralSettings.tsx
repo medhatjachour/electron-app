@@ -10,7 +10,7 @@ interface GeneralSettingsProps {
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void
   actualTheme: 'light' | 'dark'
   language: string
-  onLanguageChange: (lang: string) => void
+  onLanguageChange: (lang: 'en' | 'es' | 'fr' | 'ar' | 'zh') => void
 }
 
 export default function GeneralSettings({
@@ -83,7 +83,7 @@ export default function GeneralSettings({
         </label>
         <select
           value={language}
-          onChange={(e) => onLanguageChange(e.target.value)}
+          onChange={(e) => onLanguageChange(e.target.value as 'en' | 'es' | 'fr' | 'ar' | 'zh')}
           className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
         >
           {languages.map((lang) => (
