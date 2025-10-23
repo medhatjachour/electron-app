@@ -28,6 +28,8 @@ model Product {
   basePrice   Float
   baseCost    Float
   hasVariants Boolean          @default(false)
+  storeId     String?          // Optional: Products can be assigned to specific stores
+  store       Store?           @relation(fields: [storeId], references: [id])
   images      ProductImage[]
   variants    ProductVariant[]
   sales       Sale[]
@@ -58,15 +60,20 @@ model ProductVariant {
 }
 
 model Sale {
-  id        String   @id @default(uuid())
-  productId String
-  userId    String
-  quantity  Int
-  total     Float
-  product   Product  @relation(fields: [productId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  productId   String
+  variantId   String?  // Optional: which variant was sold
+  userId      String
+  quantity    Int
+  price       Float    // Price per item at time of sale
+  total       Float    // Total = price * quantity
+  paymentMethod String @default("cash") // cash or card
+  status      String   @default("completed") // completed, pending, refunded
+  customerName String? // Optional customer name
+  product     Product  @relation(fields: [productId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Transaction {
@@ -81,14 +88,16 @@ model Transaction {
 }
 
 model Store {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
   location  String
   phone     String
   hours     String
   manager   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    String    @default("active") // active or inactive
+  products  Product[] // Products assigned to this store
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Employee {

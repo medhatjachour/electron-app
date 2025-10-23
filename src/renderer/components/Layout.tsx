@@ -24,7 +24,7 @@ export default function Layout({ children }: LayoutProps) {
     if (userStr) {
       setUser(JSON.parse(userStr));
     }
-  }, [router]);
+  }, []);
 
   if (location.pathname === '/login') {
     return <>{children}</>;
@@ -50,7 +50,7 @@ export default function Layout({ children }: LayoutProps) {
               {allowedLinks.map((item) => (
                 <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className={`inline-flex items-center px-4 text-sm font-medium ${
                     location.pathname === item.href
                       ? 'border-b-2 border-blue-500 text-blue-600'

@@ -75,10 +75,34 @@ export default function Employees(): JSX.Element {
       toast.error('Valid email is required')
       return false
     }
+    
+    // Phone validation - accepts multiple formats
     if (!formData.phone.trim()) {
-      toast.error('Phone is required')
+      toast.error('Phone number is required')
       return false
     }
+    
+    // Remove all non-digit characters for validation
+    const digitsOnly = formData.phone.replace(/\D/g, '')
+    
+    // Check if we have at least 10 digits (US phone number)
+    if (digitsOnly.length < 10) {
+      toast.error('Phone number must be at least 10 digits')
+      return false
+    }
+    
+    if (digitsOnly.length > 15) {
+      toast.error('Phone number is too long (max 15 digits)')
+      return false
+    }
+    
+    // Optional: Validate format (US format check)
+    const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/
+    if (!phoneRegex.test(formData.phone)) {
+      toast.error('Invalid phone number format. Use formats like: (555) 123-4567, 555-123-4567, or +1-555-123-4567')
+      return false
+    }
+    
     return true
   }
 
@@ -91,21 +115,23 @@ export default function Employees(): JSX.Element {
         hireDate: new Date().toISOString()
       }
 
+      console.log('Creating employee with data:', employeeData)
       const result = await ipc.employees.create(employeeData)
+      console.log('Employee creation result:', result)
       
-      if (result.success) {
+      if (result && result.success) {
         await loadEmployees()
-        const updatedEmployees = [...employees, result.employee]
-        localStorage.setItem('employees', JSON.stringify(updatedEmployees))
-        
         setShowAddModal(false)
         resetForm()
         toast.success('Employee added successfully!')
       } else {
-        // Fallback to localStorage
+        // Fallback to localStorage if database fails
+        console.warn('Database creation failed, using localStorage fallback')
         const newEmployee = {
           id: Date.now().toString(),
-          ...employeeData
+          ...employeeData,
+          status: employeeData.status || 'active',
+          performance: employeeData.performance || 0
         }
         const updatedEmployees = [...employees, newEmployee]
         setEmployees(updatedEmployees)
@@ -113,11 +139,31 @@ export default function Employees(): JSX.Element {
         
         setShowAddModal(false)
         resetForm()
-        toast.warning('Employee saved locally - database unavailable')
+        toast.warning('Employee saved locally (database unavailable). Will sync when database is available.')
       }
     } catch (error) {
       console.error('Error adding employee:', error)
-      toast.error('Failed to add employee')
+      
+      // Try localStorage fallback
+      try {
+        const newEmployee = {
+          id: Date.now().toString(),
+          ...formData,
+          hireDate: new Date().toISOString(),
+          status: formData.status || 'active',
+          performance: formData.performance || 0
+        }
+        const updatedEmployees = [...employees, newEmployee]
+        setEmployees(updatedEmployees)
+        localStorage.setItem('employees', JSON.stringify(updatedEmployees))
+        
+        setShowAddModal(false)
+        resetForm()
+        toast.warning('Employee saved locally only (database error). Data will be temporary.')
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        toast.error('Failed to add employee. Please try again or contact support.')
+      }
     }
   }
 

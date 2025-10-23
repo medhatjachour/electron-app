@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ToastProvider } from './contexts/ToastContext';
-import Dashboard from './pages/Dashboard';
+import Dashboard from '../pages/dashboard';
 import Sales from './pages/Sales';
 import Inventory from './pages/Inventory';
 import Finance from './pages/Finance';

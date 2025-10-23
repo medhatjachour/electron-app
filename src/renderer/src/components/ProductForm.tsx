@@ -17,6 +17,7 @@ type FormData = {
   basePrice: number
   baseCost: number
   baseStock: number
+  storeId: string
   images: string[]
   hasVariants: boolean
   variants: ProductVariant[]
@@ -31,10 +32,17 @@ type FormErrors = {
   images?: string
 }
 
+type Store = {
+  id: string
+  name: string
+  location: string
+}
+
 type ProductFormProps = {
   formData: FormData
   setFormData: (data: FormData) => void
   errors: FormErrors
+  stores: Store[]
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onRemoveImage: (index: number) => void
   newVariant: { color: string; size: string; sku: string; price: number; stock: number }
@@ -47,6 +55,7 @@ export default function ProductForm({
   formData,
   setFormData,
   errors,
+  stores,
   onImageUpload,
   onRemoveImage,
   newVariant,
@@ -151,6 +160,26 @@ export default function ProductForm({
             <option value="Clothing">Clothing</option>
           </select>
           {errors.category && <p className="text-error text-sm mt-1">{errors.category}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Store Assignment
+          </label>
+          <select
+            value={formData.storeId}
+            onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+            className="input-field w-full"
+          >
+            <option value="">No Store (All Locations)</option>
+            {stores.map(store => (
+              <option key={store.id} value={store.id}>
+                {store.name} - {store.location}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Optional: Assign to specific store
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

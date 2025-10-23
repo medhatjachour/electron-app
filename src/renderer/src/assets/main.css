@@ -128,7 +128,7 @@
     @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700;
     @apply text-slate-900 dark:text-white placeholder-slate-400;
     @apply focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
-    @apply transition-all duration-200;
+    @apply transition-colors duration-150;
   }
 }
 

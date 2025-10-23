@@ -65,6 +65,22 @@ const mockIPC = {
       stores.push(newStore)
       localStorage.setItem('stores', JSON.stringify(stores))
       return { success: true, store: newStore }
+    },
+    update: async ({ id, storeData }: any) => {
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]')
+      const index = stores.findIndex((s: any) => s.id === id)
+      if (index !== -1) {
+        stores[index] = { ...stores[index], ...storeData }
+        localStorage.setItem('stores', JSON.stringify(stores))
+        return { success: true, store: stores[index] }
+      }
+      return { success: false, message: 'Store not found' }
+    },
+    delete: async (id: string) => {
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]')
+      const filtered = stores.filter((s: any) => s.id !== id)
+      localStorage.setItem('stores', JSON.stringify(filtered))
+      return { success: true }
     }
   },
   employees: {
@@ -86,6 +102,32 @@ const mockIPC = {
       localStorage.setItem('customers', JSON.stringify(customers))
       return { success: true, customer: newCustomer }
     }
+  },
+  sales: {
+    getAll: async () => JSON.parse(localStorage.getItem('sales') || '[]'),
+    create: async (data: any) => {
+      const sales = JSON.parse(localStorage.getItem('sales') || '[]')
+      const newSale = {
+        id: `S-${Date.now().toString().slice(-6)}`,
+        ...data,
+        createdAt: new Date().toISOString(),
+        product: { name: 'Mock Product' },
+        user: { username: 'Demo User' }
+      }
+      sales.unshift(newSale)
+      localStorage.setItem('sales', JSON.stringify(sales))
+      return { success: true, sale: newSale }
+    },
+    refund: async (saleId: string) => {
+      const sales = JSON.parse(localStorage.getItem('sales') || '[]')
+      const sale = sales.find((s: any) => s.id === saleId)
+      if (sale) {
+        sale.status = 'refunded'
+        localStorage.setItem('sales', JSON.stringify(sales))
+        return { success: true, sale }
+      }
+      return { success: false, message: 'Sale not found' }
+    }
   }
 }
 
@@ -101,7 +143,9 @@ export const ipc = isElectron ? {
   // Store operations
   stores: {
     getAll: () => window.electron.ipcRenderer.invoke('stores:getAll'),
-    create: (data: any) => window.electron.ipcRenderer.invoke('stores:create', data)
+    create: (data: any) => window.electron.ipcRenderer.invoke('stores:create', data),
+    update: (id: string, data: any) => window.electron.ipcRenderer.invoke('stores:update', { id, storeData: data }),
+    delete: (id: string) => window.electron.ipcRenderer.invoke('stores:delete', id)
   },
   
   // Employee operations
@@ -114,5 +158,12 @@ export const ipc = isElectron ? {
   customers: {
     getAll: () => window.electron.ipcRenderer.invoke('customers:getAll'),
     create: (data: any) => window.electron.ipcRenderer.invoke('customers:create', data)
+  },
+  
+  // Sales operations
+  sales: {
+    getAll: () => window.electron.ipcRenderer.invoke('sales:getAll'),
+    create: (data: any) => window.electron.ipcRenderer.invoke('sales:create', data),
+    refund: (saleId: string) => window.electron.ipcRenderer.invoke('sales:refund', saleId)
   }
 } : mockIPC

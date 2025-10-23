@@ -23,24 +23,28 @@ if (!prisma) {
 // Auth handlers
 ipcMain.handle('auth:login', async (_, { username, password }) => {
   try {
-    // Accept a built-in default account for quick access in dev: 0000 / 0000
-    if (username === '0000' && password === '0000') {
-      return { success: true, user: { id: '0', username: '0000', role: 'admin' } }
-    }
     if (prisma) {
       const user = await prisma.user.findUnique({ where: { username } })
-      if (!user) return { success: false, message: 'Invalid username or password' }
+      if (!user) {
+        console.log(`❌ Login failed: User '${username}' not found`)
+        return { success: false, message: 'Invalid username or password' }
+      }
 
       const isValid = await bcrypt.compare(password, user.passwordHash)
-      if (!isValid) return { success: false, message: 'Invalid username or password' }
+      if (!isValid) {
+        console.log(`❌ Login failed: Invalid password for user '${username}'`)
+        return { success: false, message: 'Invalid username or password' }
+      }
 
+      console.log(`✅ Login successful: ${user.username} (${user.role}) - ID: ${user.id}`)
       return { success: true, user: { id: user.id, username: user.username, role: user.role } }
     }
 
-    // Mock fallback
+    // Mock fallback (should not be used if database is working)
+    console.warn('⚠️ Using mock login - database not available')
     return { success: true, user: { id: '1', username, role: 'admin' } }
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login error:', error)
     return { success: false, message: 'An error occurred during login' }
   }
 })
@@ -61,19 +65,120 @@ ipcMain.handle('dashboard:getMetrics', async () => {
 })
 
 // Sales handlers
-ipcMain.handle('sales:create', async (_, { productId, userId, quantity, total }) => {
+ipcMain.handle('sales:create', async (_, saleData) => {
   try {
+    const { productId, variantId, userId, quantity, price, total, paymentMethod, customerName } = saleData
+    
     if (prisma) {
-      const [sale] = await prisma.$transaction([
-        prisma.sale.create({ data: { productId, userId, quantity, total } }),
-        prisma.product.update({ where: { id: productId }, data: { stock: { decrement: quantity } } })
-      ])
-      return { success: true, sale }
+      // Use transaction to create sale and decrease stock atomically
+      const result = await prisma.$transaction(async (tx: any) => {
+        // Create the sale
+        const sale = await tx.sale.create({
+          data: {
+            productId,
+            variantId,
+            userId,
+            quantity,
+            price,
+            total,
+            paymentMethod,
+            customerName,
+            status: 'completed'
+          },
+          include: {
+            product: {
+              include: {
+                images: true
+              }
+            },
+            user: {
+              select: {
+                username: true
+              }
+            }
+          }
+        })
+        
+        // Decrease stock
+        if (variantId) {
+          // Decrease variant stock
+          await tx.productVariant.update({
+            where: { id: variantId },
+            data: { stock: { decrement: quantity } }
+          })
+        }
+        
+        return sale
+      })
+      
+      return { success: true, sale: result }
     }
-    // mock
-    return { success: true, sale: { id: 's_mock', productId, userId, quantity, total } }
+    
+    // Mock fallback
+    return { success: true, sale: { id: 's_mock', ...saleData, status: 'completed' } }
   } catch (error) {
     console.error('Error creating sale:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('sales:getAll', async () => {
+  try {
+    if (prisma) {
+      const sales = await prisma.sale.findMany({
+        include: {
+          product: {
+            select: {
+              name: true,
+              category: true
+            }
+          },
+          user: {
+            select: {
+              username: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+      return sales
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching sales:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('sales:refund', async (_, saleId) => {
+  try {
+    if (prisma) {
+      const sale = await prisma.sale.update({
+        where: { id: saleId },
+        data: { status: 'refunded' },
+        include: {
+          product: true,
+          user: {
+            select: {
+              username: true
+            }
+          }
+        }
+      })
+
+      // Restore stock
+      if (sale.variantId) {
+        await prisma.productVariant.update({
+          where: { id: sale.variantId },
+          data: { stock: { increment: sale.quantity } }
+        })
+      }
+
+      return { success: true, sale }
+    }
+    return { success: false, message: 'Database not available' }
+  } catch (error) {
+    console.error('Error refunding sale:', error)
     throw error
   }
 })
@@ -276,6 +381,32 @@ ipcMain.handle('stores:create', async (_, storeData) => {
     return { success: false, message: 'Database not available' }
   } catch (error: any) {
     console.error('Error creating store:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('stores:update', async (_, { id, storeData }) => {
+  try {
+    if (prisma) {
+      const store = await prisma.store.update({ where: { id }, data: storeData })
+      return { success: true, store }
+    }
+    return { success: false, message: 'Database not available' }
+  } catch (error: any) {
+    console.error('Error updating store:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('stores:delete', async (_, id) => {
+  try {
+    if (prisma) {
+      await prisma.store.delete({ where: { id } })
+      return { success: true }
+    }
+    return { success: false, message: 'Database not available' }
+  } catch (error: any) {
+    console.error('Error deleting store:', error)
     return { success: false, message: error.message }
   }
 })

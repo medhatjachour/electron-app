@@ -36,8 +36,16 @@ type FormErrors = {
   baseCost?: string
 }
 
+type Store = {
+  id: string
+  name: string
+  location: string
+  status: string
+}
+
 export default function Products(): JSX.Element {
   const [products, setProducts] = useState<Product[]>([])
+  const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const toast = useToast()
@@ -53,6 +61,7 @@ export default function Products(): JSX.Element {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterColor, setFilterColor] = useState('')
   const [filterSize, setFilterSize] = useState('')
+  const [filterStore, setFilterStore] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   
   const [formData, setFormData] = useState({
@@ -63,6 +72,7 @@ export default function Products(): JSX.Element {
     basePrice: 0,
     baseCost: 0,
     baseStock: 0,
+    storeId: '',
     images: [] as string[],
     hasVariants: false,
     variants: [] as ProductVariant[]
@@ -79,7 +89,17 @@ export default function Products(): JSX.Element {
   // Load products from database
   useEffect(() => {
     loadProducts()
+    loadStores()
   }, [])
+
+  const loadStores = async () => {
+    try {
+      const data = await ipc.stores.getAll()
+      setStores(data.filter((s: Store) => s.status === 'active'))
+    } catch (error) {
+      console.error('Failed to load stores:', error)
+    }
+  }
 
   const loadProducts = async () => {
     try {
@@ -241,6 +261,7 @@ export default function Products(): JSX.Element {
       basePrice: 0,
       baseCost: 0,
       baseStock: 0,
+      storeId: '',
       images: [],
       hasVariants: false,
       variants: []
@@ -259,6 +280,7 @@ export default function Products(): JSX.Element {
       basePrice: product.basePrice,
       baseCost: product.baseCost,
       baseStock: product.hasVariants ? 0 : (product.variants[0]?.stock || 0),
+      storeId: (product as any).storeId || '',
       images: product.images.map(img => img.imageData),
       hasVariants: product.hasVariants,
       variants: product.variants
@@ -356,7 +378,9 @@ export default function Products(): JSX.Element {
     const matchesSize = !filterSize ||
       product.variants.some(v => v.size?.toLowerCase().includes(filterSize.toLowerCase()))
     
-    return matchesSearch && matchesCategory && matchesColor && matchesSize
+    const matchesStore = !filterStore || (product as any).storeId === filterStore
+    
+    return matchesSearch && matchesCategory && matchesColor && matchesSize && matchesStore
   })
 
   // Get unique values for filters
@@ -421,9 +445,9 @@ export default function Products(): JSX.Element {
           <button onClick={() => setShowFilterModal(true)} className="btn-secondary flex items-center gap-2">
             <Filter size={20} />
             Filters
-            {(filterCategory || filterColor || filterSize) && (
+            {(filterCategory || filterColor || filterSize || filterStore) && (
               <span className="bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                {[filterCategory, filterColor, filterSize].filter(Boolean).length}
+                {[filterCategory, filterColor, filterSize, filterStore].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -565,6 +589,7 @@ export default function Products(): JSX.Element {
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            stores={stores}
             onImageUpload={handleImageUpload}
             onRemoveImage={removeImage}
             newVariant={newVariant}
@@ -590,6 +615,7 @@ export default function Products(): JSX.Element {
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            stores={stores}
             onImageUpload={handleImageUpload}
             onRemoveImage={removeImage}
             newVariant={newVariant}
@@ -725,6 +751,19 @@ export default function Products(): JSX.Element {
       <Modal isOpen={showFilterModal} onClose={() => setShowFilterModal(false)} title="Filter Products" size="md">
         <div className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Store</label>
+            <select
+              value={filterStore}
+              onChange={(e) => setFilterStore(e.target.value)}
+              className="input-field w-full"
+            >
+              <option value="">All Stores</option>
+              {stores.map(store => (
+                <option key={store.id} value={store.id}>{store.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
             <select
               value={filterCategory}
@@ -765,7 +804,7 @@ export default function Products(): JSX.Element {
           </div>
           <div className="flex gap-3 pt-4">
             <button 
-              onClick={() => { setFilterCategory(''); setFilterColor(''); setFilterSize(''); setShowFilterModal(false); }}
+              onClick={() => { setFilterCategory(''); setFilterColor(''); setFilterSize(''); setFilterStore(''); setShowFilterModal(false); }}
               className="btn-secondary flex-1"
             >
               Clear Filters

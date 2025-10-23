@@ -17,7 +17,15 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User>(null)
+  // Initialize user from localStorage if available
+  const [user, setUser] = useState<User>(() => {
+    try {
+      const stored = localStorage.getItem('user')
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
 
   const login = async (username: string, password: string) => {
     try {
@@ -26,28 +34,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined' && (window as any).api?.auth?.login) {
         // @ts-ignore
         const res = await (window as any).api.auth.login(username, password)
-        setUser(res)
-        return res
+        
+        if (res.success && res.user) {
+          console.log('✅ Login successful via IPC:', res.user.username, 'ID:', res.user.id)
+          setUser(res.user)
+          // Persist to localStorage
+          localStorage.setItem('user', JSON.stringify(res.user))
+          return res.user
+        } else {
+          console.log('❌ Login failed:', res.message)
+          throw new Error(res.message || 'Login failed')
+        }
       }
     } catch (e) {
       console.error('API login failed', e)
+      throw e
     }
 
-    // Fallback: mock user (admin)
-    // Accept default dev credentials 0000/0000
-    if (username === '0000' && password === '0000') {
-      const mockDefault = { id: '0', username: '0000', role: 'admin' }
-      setUser(mockDefault)
-      return mockDefault
-    }
-
-    const mock = { id: '1', username, role: 'admin' }
+    // Fallback: mock user (should not happen if database works)
+    console.warn('⚠️ Using fallback mock login - database API not available')
+    const mock = { id: 'mock-' + Date.now(), username, role: 'admin' }
     setUser(mock)
+    localStorage.setItem('user', JSON.stringify(mock))
     return mock
   }
 
   const logout = () => {
     setUser(null)
+    // Clear localStorage
+    localStorage.removeItem('user')
     try {
       // @ts-ignore
       if (typeof globalThis !== 'undefined' && (globalThis as any).api?.auth?.logout) {
