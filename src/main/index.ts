@@ -3,8 +3,8 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
-// Load centralized IPC handlers (guards inside the file handle missing Prisma in dev)
-import './ipc/handlers'
+// Import IPC handlers registration function
+import { registerAllHandlers } from './ipc/handlers/index'
 
 function createWindow(): void {
   // Create the browser window.
@@ -44,6 +44,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // Register all IPC handlers BEFORE creating windows
+  registerAllHandlers()
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
