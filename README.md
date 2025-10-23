@@ -1,18 +1,4 @@
- # SalesElectron - Professional POS Desktop Application
-
-An Electron-based Point of Sale system built with React, TypeScript, Prisma, and SQLite. Features modular architecture, comprehensive product management, multi-store support, and professional code organization.
-
-## ✨ Features
-
-- 🛒 **Point of Sale (POS)** - Fast checkout with barcode scanning, cart management, and payment processing
-- 📦 **Product Management** - Full product lifecycle with variants, images, and stock tracking
-- 📊 **Finance Dashboard** - Revenue analytics, profit tracking, and financial reports
-- 🏪 **Multi-Store Support** - Manage multiple store locations
-- 👥 **Customer & Employee Management** - CRM and staff management
-- 📈 **Real-time Analytics** - Sales metrics, KPIs, and performance charts
-- 🎨 **Dark Mode** - Beautiful UI with light/dark theme support
-- 🌐 **Internationalization** - Multi-language support (English, Arabic)
-- 💾 **SQLite Database** - Fast, reliable local database with Prisma ORM
+ #  
 
 ## 🏗️ Architecture
 
