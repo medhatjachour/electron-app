@@ -1,4 +1,34 @@
- #  
+ # Electron POS & Inventory Management System
+
+> A modern, full-featured desktop Point of Sale and Inventory Management application built with Electron, React, and TypeScript.
+
+**What is this?** A complete retail management solution that runs as a desktop app on Windows, macOS, and Linux. Manages sales transactions, product inventory with variants, customer data, and provides real-time financial analytics—all stored locally with SQLite.
+
+**Tech Stack:** Electron.js + React 18 + TypeScript + Prisma ORM + SQLite + TailwindCSS
+
+---
+
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](./samples/1.png)
+
+### Point of Sale (POS)
+![POS Interface](./samples/POS.png)
+
+### Product Management
+![Products](./samples/products.png)
+
+### Sales Analytics
+![Sales](./samples/sales%20.png)
+
+### Store Management
+![Stores](./samples/stores%20.png)
+
+### Finance Dashboard
+![Finance](./samples/finince%20.png)
+
+---
 
 ## 🏗️ Architecture
 
