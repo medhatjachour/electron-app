@@ -1,143 +1,102 @@
 /**
  * Product search and display component for POS
+ * Now uses backend filtering for better performance and accuracy
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Search, Filter, X, ChevronDown } from 'lucide-react'
+import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
+import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import type { Product, ProductVariant } from './types'
 
 type Props = {
-  products: Product[]
-  loading: boolean
   onAddToCart: (product: Product, variant?: ProductVariant) => void
+  cartOpen?: boolean
 }
 
 type SortOption = 'name' | 'price-low' | 'price-high' | 'stock-low' | 'stock-high'
 
-export default function ProductSearch({ products, loading, onAddToCart }: Readonly<Props>) {
+export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonly<Props>) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showVariantModal, setShowVariantModal] = useState(false)
+  const { settings } = useDisplaySettings()
   
   // Filter states
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedColor, setSelectedColor] = useState('')
-  const [selectedSize, setSelectedSize] = useState('')
-  const [stockFilter, setStockFilter] = useState<'all' | 'in-stock' | 'low-stock'>('all')
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 })
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  const [stockFilter, setStockFilter] = useState<'all' | 'in-stock' | 'low-stock'>('in-stock')
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 10000 })
   const [sortBy, setSortBy] = useState<SortOption>('name')
   
   const ITEMS_PER_PAGE = 50
 
-  // Extract unique categories, colors, and sizes
+  // Load filter metadata (categories, colors, sizes, price range)
+  const { metadata: filterMetadata } = useFilterMetadata()
+
+  // Memoize filters object to prevent unnecessary re-renders
+  const searchFilters = useMemo(() => ({
+    query: searchQuery,
+    categoryIds: selectedCategoryIds,
+    stockStatus: stockFilter === 'all' ? undefined : 
+                 stockFilter === 'in-stock' ? ['low', 'normal', 'high'] as any : 
+                 ['low'] as any,
+    priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
+    colors: selectedColors.length > 0 ? selectedColors : undefined,
+    sizes: selectedSizes.length > 0 ? selectedSizes : undefined
+  }), [searchQuery, selectedCategoryIds, stockFilter, priceRange, selectedColors, selectedSizes])
+
+  // Memoize sort options
+  const sortOptions = useMemo(() => ({
+    field: sortBy === 'name' ? 'name' as const :
+           sortBy === 'price-low' || sortBy === 'price-high' ? 'basePrice' as const :
+           'createdAt' as const,
+    direction: (sortBy === 'price-high' || sortBy === 'stock-high' ? 'desc' : 'asc') as 'asc' | 'desc'
+  }), [sortBy])
+
+  // Backend search with filters
+  const {
+    data: products,
+    loading,
+    totalCount,
+    pagination
+  } = useBackendSearch<Product>({
+    endpoint: 'search:products',
+    filters: searchFilters,
+    sort: sortOptions,
+    options: {
+      debounceMs: 150,  // Fast response for POS
+      limit: ITEMS_PER_PAGE,
+      includeImages: settings.showImagesInPOSCards
+    }
+  })
+
+  // Extract filter options from metadata
   const filterOptions = useMemo(() => {
-    const categories = new Set<string>()
-    const colors = new Set<string>()
-    const sizes = new Set<string>()
-    let maxPrice = 0
-
-    products.forEach(product => {
-      if (product.category) categories.add(product.category)
-      if (product.basePrice > maxPrice) maxPrice = product.basePrice
-      
-      if (product.hasVariants && product.variants) {
-        product.variants.forEach(variant => {
-          if (variant.color) colors.add(variant.color)
-          if (variant.size) sizes.add(variant.size)
-          if (variant.price > maxPrice) maxPrice = variant.price
-        })
+    if (!filterMetadata) {
+      return {
+        categories: [],
+        colors: [],
+        sizes: [],
+        maxPrice: 10000
       }
-    })
-
+    }
+    
     return {
-      categories: Array.from(categories).sort(),
-      colors: Array.from(colors).sort(),
-      sizes: Array.from(sizes).sort(),
-      maxPrice: Math.ceil(maxPrice)
+      categories: (filterMetadata.categories || []).map((cat: any) => cat.name),
+      colors: filterMetadata.colors || [],
+      sizes: filterMetadata.sizes || [],
+      maxPrice: filterMetadata.priceRange?.max || 10000
     }
-  }, [products])
+  }, [filterMetadata])
 
-  // Initialize price range
-  useEffect(() => {
-    if (priceRange.max === 0 && filterOptions.maxPrice > 0) {
-      setPriceRange({ min: 0, max: filterOptions.maxPrice })
-    }
-  }, [filterOptions.maxPrice, priceRange.max])
+  // Products are already filtered by backend
+  const filteredProducts = products
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = products.filter(p => {
-      // Search query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        const matchesName = p.name.toLowerCase().includes(query)
-        const matchesCategory = p.category.toLowerCase().includes(query)
-        if (!matchesName && !matchesCategory) return false
-      }
-
-      // Category filter
-      if (selectedCategory && p.category !== selectedCategory) return false
-
-      // Stock filter
-      const stock = p.totalStock || 0
-      if (stockFilter === 'in-stock' && stock === 0) return false
-      if (stockFilter === 'low-stock' && (stock === 0 || stock > 10)) return false
-
-      // Price filter
-      const price = p.basePrice
-      if (price < priceRange.min || price > priceRange.max) return false
-
-      // Color/Size filters (for variant products)
-      if (p.hasVariants && p.variants) {
-        if (selectedColor) {
-          const hasColor = p.variants.some(v => v.color === selectedColor)
-          if (!hasColor) return false
-        }
-        if (selectedSize) {
-          const hasSize = p.variants.some(v => v.size === selectedSize)
-          if (!hasSize) return false
-        }
-      }
-
-      return true
-    })
-
-    // Sort products
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.basePrice - b.basePrice)
-        break
-      case 'price-high':
-        filtered.sort((a, b) => b.basePrice - a.basePrice)
-        break
-      case 'stock-low':
-        filtered.sort((a, b) => (a.totalStock || 0) - (b.totalStock || 0))
-        break
-      case 'stock-high':
-        filtered.sort((a, b) => (b.totalStock || 0) - (a.totalStock || 0))
-        break
-      case 'name':
-      default:
-        filtered.sort((a, b) => a.name.localeCompare(b.name))
-        break
-    }
-
-    return filtered
-  }, [products, searchQuery, selectedCategory, selectedColor, selectedSize, stockFilter, priceRange, sortBy])
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredProducts.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredProducts, currentPage])
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedCategory, selectedColor, selectedSize, stockFilter, priceRange, sortBy])
+  // Products are already paginated by backend
+  const paginatedProducts = filteredProducts
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && filteredProducts.length > 0) {
@@ -148,15 +107,16 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
 
   const clearAllFilters = () => {
     setSearchQuery('')
-    setSelectedCategory('')
-    setSelectedColor('')
-    setSelectedSize('')
-    setStockFilter('all')
+    setSelectedCategoryIds([])
+    setSelectedColors([])
+    setSelectedSizes([])
+    setStockFilter('in-stock')
     setPriceRange({ min: 0, max: filterOptions.maxPrice })
     setSortBy('name')
   }
 
-  const hasActiveFilters = selectedCategory || selectedColor || selectedSize || stockFilter !== 'all' || 
+  const hasActiveFilters = selectedCategoryIds.length > 0 || selectedColors.length > 0 || 
+                          selectedSizes.length > 0 || stockFilter !== 'in-stock' || 
                           priceRange.min > 0 || priceRange.max < filterOptions.maxPrice
 
   const handleAddToCart = (product: Product, variant?: ProductVariant) => {
@@ -194,8 +154,8 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
             {/* Category Dropdown */}
             <div className="relative">
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedCategoryIds[0] || ''}
+                onChange={(e) => setSelectedCategoryIds(e.target.value ? [e.target.value] : [])}
                 className="pl-3 pr-8 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer min-w-[140px]"
               >
                 <option value="">📁 All Categories</option>
@@ -277,8 +237,8 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
                   </label>
                   <div className="relative">
                     <select
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
+                      value={selectedColors[0] || ''}
+                      onChange={(e) => setSelectedColors(e.target.value ? [e.target.value] : [])}
                       className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
                     >
                       <option value="">All Colors</option>
@@ -299,8 +259,8 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
                   </label>
                   <div className="relative">
                     <select
-                      value={selectedSize}
-                      onChange={(e) => setSelectedSize(e.target.value)}
+                      value={selectedSizes[0] || ''}
+                      onChange={(e) => setSelectedSizes(e.target.value ? [e.target.value] : [])}
                       className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
                     >
                       <option value="">All Sizes</option>
@@ -347,25 +307,25 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
         {/* Results Summary */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
-            <span className="font-semibold text-slate-900 dark:text-white">{filteredProducts.length}</span>
-            {filteredProducts.length === 1 ? 'product' : 'products'}
+            <span className="font-semibold text-slate-900 dark:text-white">{totalCount}</span>
+            {totalCount === 1 ? 'product' : 'products'}
             {hasActiveFilters && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">filtered</span>}
           </p>
-          {totalPages > 1 && (
+          {pagination.totalPages > 1 && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
+                onClick={pagination.prevPage}
+                disabled={pagination.currentPage === 1}
                 className="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm"
               >
                 ←
               </button>
               <span className="text-sm text-slate-600 dark:text-slate-400">
-                {currentPage} / {totalPages}
+                {pagination.currentPage} / {pagination.totalPages}
               </span>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+                onClick={pagination.nextPage}
+                disabled={pagination.currentPage === pagination.totalPages}
                 className="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm"
               >
                 →
@@ -375,7 +335,14 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Responsive Product Grid - Adapts to cart visibility */}
+      <div className={`
+        grid gap-4
+        ${cartOpen 
+          ? 'grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'  // Cart open: 2 cols default, 3 on XL, 4 on 2XL
+          : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'  // Cart closed: More columns
+        }
+      `}>
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -384,7 +351,7 @@ export default function ProductSearch({ products, loading, onAddToCart }: Readon
         ) : filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <p className="text-slate-600 dark:text-slate-400">
-              {products.length === 0 ? 'No products available. Add products first!' : 'No products found.'}
+              No products found.
             </p>
           </div>
         ) : (

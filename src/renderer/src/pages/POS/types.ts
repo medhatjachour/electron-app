@@ -31,6 +31,9 @@ export type CartItem = {
   price: number
   quantity: number
   stock: number // Available stock for this item
+  // Product snapshot for validation during checkout
+  productSnapshot?: Product
+  variantSnapshot?: ProductVariant
 }
 
 export type Customer = {

@@ -1,26 +1,35 @@
 /**
  * ItemDetailDrawer Component
  * Slide-out drawer showing detailed product information
+ * Enhanced with optimistic updates for delete operations
  */
 
-import { useState, useEffect } from 'react'
-import { X, Edit, Trash2, Copy, Package, DollarSign, Calendar, History, Image as ImageIcon } from 'lucide-react'
+import { useState, useEffect, SyntheticEvent } from 'react'
+import { X, Edit, Trash2, Copy, Package, DollarSign, Calendar, History, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
-import { InventoryItem, StockMovement } from 'src/shared/types'
+import { InventoryItem, StockMovement } from '@/shared/types'
+import logger from '../../../../../shared/utils/logger'
 
 interface Props {
   item: InventoryItem
   onClose: () => void
   onRefresh: () => void
+  onDelete?: (id: string) => Promise<void>
+  isDeleting?: boolean
 }
 
-export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
+export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, isDeleting = false }: Props) {
   const { canEdit, canDelete } = useAuth()
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [imageLoading, setImageLoading] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadStockHistory()
+    // Reset image state when item changes
+    setImageErrors(new Set())
+    setImageLoading(new Set(item.images?.map(img => img.id?.toString() || '') || []))
   }, [item.id])
 
   const loadStockHistory = async () => {
@@ -30,71 +39,129 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
       const history = await (globalThis as any).api?.inventory?.getStockHistory(item.id)
       setStockHistory(history || [])
     } catch (error) {
-      console.error('Error loading stock history:', error)
+      logger.error('Error loading stock history:', error)
     } finally {
       setLoadingHistory(false)
     }
   }
 
+  const handleImageLoad = (imageId: string) => {
+    setImageLoading(prev => {
+      const next = new Set(prev)
+      next.delete(imageId)
+      return next
+    })
+  }
+
+  const handleImageError = (imageId: string, e: SyntheticEvent<HTMLImageElement>) => {
+    logger.warn(`Failed to load image: ${imageId}`)
+    setImageErrors(prev => new Set(prev).add(imageId))
+    setImageLoading(prev => {
+      const next = new Set(prev)
+      next.delete(imageId)
+      return next
+    })
+  }
+
   const handleEdit = () => {
-    // TODO: Navigate to edit page
-    console.log('Edit item:', item.id)
+    // Navigate to products page with edit mode
+    window.location.hash = `/products?edit=${item.id}`
+    onClose()
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return
+    const confirmMessage = `⚠️ Delete Product: ${item.name}?\n\nThis will permanently delete:\n- Product information\n- All ${item.variantCount} variants\n- ${item.images.length} images\n\nThis action CANNOT be undone!`
     
+    if (!confirm(confirmMessage)) return
+    
+    // Use the optimistic delete callback if provided
+    if (onDelete) {
+      await onDelete(item.id)
+      onClose() // Close drawer immediately after delete
+      return
+    }
+    
+    // Fallback to direct API call (legacy)
     try {
       // @ts-ignore
-      await (globalThis as any).api?.products?.delete(item.id)
-      onRefresh()
-      onClose()
+      const result = await (globalThis as any).api?.products?.delete(item.id)
+      
+      if (result?.success) {
+        logger.success(`Successfully deleted "${item.name}"`)
+        alert(`✅ Successfully deleted "${item.name}"`)
+        onRefresh()
+        onClose()
+      } else {
+        logger.error('Failed to delete product:', result?.message)
+        alert(`❌ Failed to delete product:\n${result?.message || 'Unknown error'}`)
+      }
     } catch (error) {
-      console.error('Error deleting item:', error)
-      alert('Failed to delete item')
+      logger.error('Error deleting item:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`❌ Error deleting product:\n${errorMessage}`)
     }
   }
 
   const handleDuplicate = () => {
-    // TODO: Implement duplicate functionality
-    console.log('Duplicate item:', item.id)
+    // Navigate to products page with duplicate mode
+    window.location.hash = `/products?duplicate=${item.id}`
+    onClose()
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-end animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-end animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-title"
+      onClick={(e) => {
+        // Close drawer when clicking backdrop
+        if (e.target === e.currentTarget) onClose()
+      }}
+      onKeyDown={(e) => {
+        // Close drawer on Escape key
+        if (e.key === 'Escape') onClose()
+      }}
+    >
       {/* Drawer */}
-      <div className="w-full max-w-2xl h-full bg-white dark:bg-slate-800 shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+      <div 
+        className="w-full max-w-2xl h-full bg-white dark:bg-slate-800 shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-primary to-secondary p-6 text-white z-10">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-1">{item.name}</h2>
+              <h2 id="drawer-title" className="text-2xl font-bold mb-1">{item.name}</h2>
               <p className="text-white/80 text-sm">SKU: {item.baseSKU}</p>
             </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close item details"
             >
-              <X size={24} />
+              <X size={24} aria-hidden="true" />
             </button>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="toolbar" aria-label="Item actions">
             {canEdit && (
               <>
                 <button
                   onClick={handleEdit}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                  aria-label={`Edit ${item.name}`}
                 >
-                  <Edit size={16} />
+                  <Edit size={16} aria-hidden="true" />
                   Edit
                 </button>
                 <button
                   onClick={handleDuplicate}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                  aria-label={`Duplicate ${item.name}`}
                 >
-                  <Copy size={16} />
+                  <Copy size={16} aria-hidden="true" />
                   Duplicate
                 </button>
               </>
@@ -102,16 +169,19 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
             {canDelete && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors flex items-center gap-2 text-sm ml-auto"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors flex items-center gap-2 text-sm ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={isDeleting ? `Deleting ${item.name}` : `Delete ${item.name}`}
+                aria-busy={isDeleting}
               >
-                <Trash2 size={16} />
-                Delete
+                <Trash2 size={16} className={isDeleting ? 'animate-pulse' : ''} aria-hidden="true" />
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             )}
             {!canEdit && !canDelete && (
-              <div className="px-4 py-2 bg-white/10 rounded-lg text-sm text-white/60 italic">
+              <output className="px-4 py-2 bg-white/10 rounded-lg text-sm text-white/60 italic">
                 View Only • No Edit Permissions
-              </div>
+              </output>
             )}
           </div>
         </div>
@@ -119,25 +189,72 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Images */}
-          {item.images.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Images</h3>
-              <div className="grid grid-cols-4 gap-3">
-                {item.images.map((image) => (
-                  <div key={image.id} className="aspect-square bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden">
-                    <img src={image.imageData} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              <ImageIcon size={16} />
+              Product Images {item.images?.length > 0 && `(${item.images.length})`}
+            </h3>
+            {item.images && item.images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {item.images.map((image, index) => {
+                  const imageId = image.id?.toString() || `img-${index}`
+                  const hasError = imageErrors.has(imageId)
+                  const isLoading = imageLoading.has(imageId)
 
-          {item.images.length === 0 && (
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-8 text-center">
-              <ImageIcon className="mx-auto mb-2 text-slate-400" size={32} />
-              <p className="text-sm text-slate-500 dark:text-slate-400">No images available</p>
-            </div>
-          )}
+                  return (
+                    <div 
+                      key={imageId} 
+                      className="relative aspect-square bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden group"
+                    >
+                      {hasError ? (
+                        // Error state - show fallback
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200 dark:bg-slate-800">
+                          <AlertCircle className="text-slate-400 mb-2" size={32} />
+                          <p className="text-xs text-slate-500 dark:text-slate-400 text-center px-2">
+                            Failed to load
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Loading skeleton */}
+                          {isLoading && (
+                            <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                          )}
+                          
+                          {/* Actual image */}
+                          <img 
+                            src={image.imageData} 
+                            alt={`${item.name} ${index + 1}`} 
+                            className={`w-full h-full object-cover transition-all duration-300 ${
+                              isLoading ? 'opacity-0' : 'opacity-100 group-hover:scale-110'
+                            }`}
+                            loading="lazy"
+                            onLoad={() => handleImageLoad(imageId)}
+                            onError={() => handleImageError(imageId, {} as SyntheticEvent<HTMLImageElement>)}
+                          />
+                          
+                          {/* Hover overlay */}
+                          {!isLoading && (
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium bg-black/60 px-2 py-1 rounded">
+                                Image {index + 1}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-8 text-center border-2 border-dashed border-slate-300 dark:border-slate-700">
+                <ImageIcon className="mx-auto mb-2 text-slate-400" size={32} />
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">No images available</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Add images in the product edit page</p>
+              </div>
+            )}
+          </div>
 
           {/* Basic Info */}
           <div>
@@ -145,7 +262,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Category</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{item.category}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{item.category || 'Uncategorized'}</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Base Price</p>
@@ -288,20 +405,72 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh }: Props) {
             )}
           </div>
 
-          {/* Metadata */}
+          {/* Metadata - Enhanced Date Display */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 mb-1">Created</p>
-                <p className="text-slate-900 dark:text-white font-medium">
-                  {new Date(item.createdAt).toLocaleDateString()}
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar size={16} className="text-slate-600 dark:text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Timeline</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                  Created Date
+                </p>
+                <p className="text-sm text-slate-900 dark:text-white font-semibold">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'N/A'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : ''}
                 </p>
               </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 mb-1">Last Updated</p>
-                <p className="text-slate-900 dark:text-white font-medium">
-                  {new Date(item.updatedAt).toLocaleDateString()}
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  Last Updated
                 </p>
+                <p className="text-sm text-slate-900 dark:text-white font-semibold">
+                  {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'N/A'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : ''}
+                </p>
+              </div>
+            </div>
+            
+            {/* Additional Metadata */}
+            <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Product ID</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 font-mono break-all">{item.id}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.id)
+                    alert('✅ Product ID copied to clipboard')
+                  }}
+                  className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+                  title="Copy ID"
+                >
+                  Copy
+                </button>
               </div>
             </div>
           </div>

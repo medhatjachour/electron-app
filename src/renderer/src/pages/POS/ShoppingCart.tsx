@@ -1,7 +1,9 @@
 /**
  * Shopping cart display and management component
+ * Memoized to prevent unnecessary re-renders
  */
 
+import { memo } from 'react'
 import { ShoppingCart as CartIcon, X, Trash2 } from 'lucide-react'
 import type { CartItem } from './types'
 
@@ -13,7 +15,7 @@ type Props = {
   onClearCart: () => void
 }
 
-export default function ShoppingCart({ 
+function ShoppingCart({ 
   cart, 
   totalItems,
   onUpdateQuantity, 
@@ -103,3 +105,21 @@ export default function ShoppingCart({
     </>
   )
 }
+
+// Memoize component - only re-render when cart changes
+export default memo(ShoppingCart, (prevProps, nextProps) => {
+  // Deep comparison for cart array
+  if (prevProps.cart.length !== nextProps.cart.length) return false
+  if (prevProps.totalItems !== nextProps.totalItems) return false
+  
+  // Check each cart item
+  for (let i = 0; i < prevProps.cart.length; i++) {
+    const prev = prevProps.cart[i]
+    const next = nextProps.cart[i]
+    if (prev.id !== next.id || prev.quantity !== next.quantity) {
+      return false
+    }
+  }
+  
+  return true
+})

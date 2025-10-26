@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useLanguage } from '../../src/contexts/LanguageContext'
+import { preloadData } from '../../src/hooks/useDataCache'
+import SkipToContent from '../../src/components/ui/SkipToContent'
+import KeyboardShortcutsHelp from '../../src/components/KeyboardShortcutsHelp'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -124,17 +127,52 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
     navigate('/login')
   }
 
+  // Preload data for heavy pages on hover
+  const handleLinkHover = (href: string) => {
+    // Preload data for pages with heavy data
+    if (href === '/finance') {
+      preloadData('finance-data', async () => {
+        // Get last 30 days of transactions for preload
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() - 30)
+        
+        const transactions = await window.api.finance.getTransactions({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        })
+        const stats = await window.api.finance.getStats()
+        return { transactions, stats }
+      })
+    } else if (href === '/products') {
+      preloadData('products-data', async () => {
+        return await window.api.products.getAll({
+          includeImages: true,
+          limit: 50
+        })
+      })
+    } else if (href === '/inventory') {
+      preloadData('inventory-data', async () => {
+        return await window.api.inventory.getAll()
+      })
+    }
+  }
+
   if (location.pathname === '/login') {
     return <>{children}</>
   }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+      <SkipToContent />
+      <KeyboardShortcutsHelp />
+      
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
+          role="presentation"
         />
       )}
 
@@ -167,21 +205,24 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+            aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-expanded={sidebarOpen}
           >
-            {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+            {sidebarOpen ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
           </button>
 
           {/* Mobile Close */}
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400"
+            aria-label="Close menu"
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto" aria-label="Main navigation">
           {navigation
             .filter(item => item.roles.includes(userRole))
             .map(item => {
@@ -191,6 +232,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
                   key={item.name}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
+                  onMouseEnter={() => handleLinkHover(item.href)}
                   className={`
                     flex items-center gap-3 rounded-xl px-3 py-2.5
                     text-sm font-medium transition-all duration-200
@@ -201,16 +243,19 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
                     }
                   `}
                   title={!sidebarOpen ? item.name : undefined}
+                  aria-label={`Navigate to ${item.name}`}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <item.icon 
                     className={`h-5 w-5 flex-shrink-0 ${
                       isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary'
-                    }`} 
+                    }`}
+                    aria-hidden="true"
                   />
                   {sidebarOpen && <span>{t(item.translationKey as any)}</span>}
                   
                   {!sidebarOpen && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50" role="tooltip">
                       {t(item.translationKey as any)}
                     </div>
                   )}
@@ -231,9 +276,10 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
             <button
               onClick={handleLogout}
               className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              aria-label="Logout"
               title="Logout"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -277,7 +323,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
+        <main id="main-content" className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900" tabIndex={-1}>
           {children}
         </main>
       </div>

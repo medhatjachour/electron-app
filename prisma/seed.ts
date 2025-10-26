@@ -32,6 +32,46 @@ const placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAA
 async function main() {
   console.log('🌱 Starting database seed...\n')
 
+  // ==================== CLEAR EXISTING DATA ====================
+  console.log('🗑️ Clearing existing data...')
+  await prisma.productImage.deleteMany()
+  await prisma.productVariant.deleteMany()
+  await prisma.sale.deleteMany()
+  await prisma.transaction.deleteMany()
+  await prisma.product.deleteMany()
+  await prisma.employee.deleteMany()
+  await prisma.customer.deleteMany()
+  await prisma.store.deleteMany()
+  await prisma.user.deleteMany()
+  await prisma.category.deleteMany()
+  console.log('✅ Cleared existing data\n')
+
+  // ==================== CATEGORIES ====================
+  console.log('📂 Creating categories...')
+  const categories = await Promise.all([
+    prisma.category.create({ data: { name: 'Electronics', description: 'Electronic devices, computers, phones, and accessories' } }),
+    prisma.category.create({ data: { name: 'Clothing', description: 'Men, women, and children apparel' } }),
+    prisma.category.create({ data: { name: 'Home & Kitchen', description: 'Furniture, decor, kitchen appliances, and home essentials' } }),
+    prisma.category.create({ data: { name: 'Sports & Fitness', description: 'Sporting goods, gym equipment, and outdoor gear' } }),
+    prisma.category.create({ data: { name: 'Books & Media', description: 'Books, magazines, movies, and music' } }),
+    prisma.category.create({ data: { name: 'Toys & Games', description: 'Toys, board games, and entertainment for all ages' } }),
+    prisma.category.create({ data: { name: 'Health & Beauty', description: 'Personal care, cosmetics, and wellness products' } }),
+    prisma.category.create({ data: { name: 'Automotive', description: 'Car parts, accessories, and maintenance products' } }),
+    prisma.category.create({ data: { name: 'Office Supplies', description: 'Business and office essentials, stationery' } }),
+    prisma.category.create({ data: { name: 'Outdoor & Garden', description: 'Gardening tools, outdoor furniture, and equipment' } }),
+    prisma.category.create({ data: { name: 'Pet Supplies', description: 'Pet food, toys, and accessories' } }),
+    prisma.category.create({ data: { name: 'Baby & Kids', description: 'Baby care, kids clothing, and toys' } }),
+    prisma.category.create({ data: { name: 'Jewelry & Accessories', description: 'Fashion jewelry, watches, and accessories' } }),
+    prisma.category.create({ data: { name: 'Food & Beverages', description: 'Gourmet foods, snacks, and beverages' } }),
+    prisma.category.create({ data: { name: 'Musical Instruments', description: 'Instruments, audio equipment, and accessories' } }),
+    prisma.category.create({ data: { name: 'Furniture', description: 'Indoor and outdoor furniture' } }),
+    prisma.category.create({ data: { name: 'Tools & Hardware', description: 'Power tools, hand tools, and hardware' } }),
+    prisma.category.create({ data: { name: 'Crafts & Hobbies', description: 'Art supplies, crafting materials, and hobby items' } }),
+    prisma.category.create({ data: { name: 'Luggage & Bags', description: 'Travel bags, backpacks, and luggage' } }),
+    prisma.category.create({ data: { name: 'Shoes & Footwear', description: 'Shoes, boots, sandals, and sneakers' } })
+  ])
+  console.log(`✅ Created ${categories.length} categories\n`)
+
   // ==================== USERS ====================
   console.log('👥 Creating users...')
   
@@ -225,15 +265,6 @@ async function main() {
   // ==================== PRODUCTS (4000 ITEMS) ====================
   console.log('📦 Creating 4000 products with variants and images...')
   
-  const categories = [
-    'Electronics', 'Clothing', 'Home & Kitchen', 'Sports & Fitness', 
-    'Books & Media', 'Toys & Games', 'Health & Beauty', 'Automotive', 
-    'Office Supplies', 'Outdoor & Garden', 'Pet Supplies', 'Baby & Kids',
-    'Jewelry & Accessories', 'Food & Beverages', 'Musical Instruments',
-    'Furniture', 'Tools & Hardware', 'Crafts & Hobbies', 'Luggage & Bags',
-    'Shoes & Footwear'
-  ]
-  
   const colors = [
     'Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Pink', 
     'Gray', 'Brown', 'Orange', 'Navy', 'Teal', 'Beige', 'Burgundy', 
@@ -281,7 +312,7 @@ async function main() {
   let productCount = 0
   const batchSize = 100
   
-  for (let batch = 0; batch < 40; batch++) { // 40 batches of 100 products = 4000
+  for (let batch = 0; batch < 400; batch++) { // 40 batches of 100 products = 4000
     const productsInBatch: any[] = []
     
     for (let i = 0; i < batchSize; i++) {
@@ -311,28 +342,54 @@ async function main() {
       if (hasVariants) {
         const numVariants = Math.floor(Math.random() * 5) + 2 // 2-6 variants
         for (let v = 0; v < numVariants; v++) {
+          // More realistic stock distribution: 10% out of stock, 15% low, 50% normal, 25% high
+          const stockRandom = Math.random()
+          let stock: number
+          if (stockRandom < 0.10) {
+            stock = 0 // 10% out of stock
+          } else if (stockRandom < 0.25) {
+            stock = Math.floor(Math.random() * 10) + 1 // 15% low stock (1-10)
+          } else if (stockRandom < 0.75) {
+            stock = Math.floor(Math.random() * 40) + 11 // 50% normal stock (11-50)
+          } else {
+            stock = Math.floor(Math.random() * 150) + 51 // 25% high stock (51-200)
+          }
+          
           variantsData.push({
             color: colors[Math.floor(Math.random() * colors.length)],
             size: sizes[Math.floor(Math.random() * sizes.length)],
             sku: `${brand.substring(0, 3).toUpperCase()}-${(productCount + 1).toString().padStart(5, '0')}-${v + 1}`,
             price: basePrice + (v * 5),
-            stock: Math.floor(Math.random() * 200) + 10,
+            stock,
           })
         }
       } else {
+        // More realistic stock for non-variant products
+        const stockRandom = Math.random()
+        let stock: number
+        if (stockRandom < 0.05) {
+          stock = 0 // 5% out of stock
+        } else if (stockRandom < 0.15) {
+          stock = Math.floor(Math.random() * 10) + 1 // 10% low stock
+        } else if (stockRandom < 0.65) {
+          stock = Math.floor(Math.random() * 40) + 11 // 50% normal stock
+        } else {
+          stock = Math.floor(Math.random() * 250) + 51 // 35% high stock
+        }
+        
         variantsData.push({
           color: null,
           size: null,
           sku: `${brand.substring(0, 3).toUpperCase()}-${(productCount + 1).toString().padStart(5, '0')}`,
           price: basePrice,
-          stock: Math.floor(Math.random() * 300) + 20,
+          stock,
         })
       }
       
       productsInBatch.push({
         name,
         baseSKU: `SKU${(productCount + 1).toString().padStart(5, '0')}`,
-        category,
+        categoryId: category.id,
         description: `${brand} ${prefix} ${type} made from high-quality ${material}. Perfect for everyday use with excellent durability and style.`,
         basePrice,
         baseCost: Math.floor(basePrice * 0.65),

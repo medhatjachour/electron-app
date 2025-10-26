@@ -97,10 +97,9 @@ export class InventoryService {
             updatedAt: true
           }
         },
-        // Only include images if explicitly requested
+        // Include all images when requested (not just first one)
         images: includeImages ? {
-          orderBy: { order: 'asc' },
-          take: 1 // Only first image to reduce payload
+          orderBy: { order: 'asc' }
         } : false,
         store: {
           select: {
@@ -361,18 +360,16 @@ export class InventoryService {
     },
     includeImages: boolean = false
   ): InventoryItem {
-    // Calculate total stock across variants
-    const totalStock = product.hasVariants 
-      ? product.variants.reduce((sum, v) => sum + v.stock, 0)
-      : 0
+    // Calculate total stock across variants (always sum variants, regardless of hasVariants flag)
+    const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0)
 
     // Calculate stock value (cost * quantity)
-    const stockValue = product.hasVariants
+    const stockValue = product.variants.length > 0
       ? product.variants.reduce((sum, v) => sum + (v.price * 0.6 * v.stock), 0) // Assuming 60% cost
       : product.baseCost * totalStock
 
     // Calculate retail value
-    const retailValue = product.hasVariants
+    const retailValue = product.variants.length > 0
       ? product.variants.reduce((sum, v) => sum + (v.price * v.stock), 0)
       : product.basePrice * totalStock
 

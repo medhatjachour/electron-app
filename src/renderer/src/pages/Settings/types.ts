@@ -60,6 +60,21 @@ export interface BackupSettings {
   keepBackups: number
 }
 
+export interface DisplaySettings {
+  showImagesInProductCards: boolean
+  showImagesInPOSCards: boolean
+}
+
+export interface Category {
+  id: string
+  name: string
+  description?: string
+}
+
+export interface CategorySettings {
+  categories: Category[]
+}
+
 export interface AllSettings {
   store: StoreSettings
   taxReceipt: TaxReceiptSettings
@@ -68,10 +83,14 @@ export interface AllSettings {
   userProfile: UserProfileSettings
   security: SecuritySettings
   backup: BackupSettings
+  display: DisplaySettings
+  categories: CategorySettings
 }
 
 export type SettingsTab = 
   | 'general' 
+  | 'display'
+  | 'categories'
   | 'store' 
   | 'user' 
   | 'payments' 

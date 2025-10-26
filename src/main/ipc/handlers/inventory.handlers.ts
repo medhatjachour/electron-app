@@ -13,7 +13,8 @@ export function registerInventoryHandlers(prisma: any) {
   // Get all inventory items with enriched data
   ipcMain.handle('inventory:getAll', async () => {
     try {
-      return await inventoryService.getAllInventory()
+      // Include images for inventory modal display
+      return await inventoryService.getAllInventory({ includeImages: true })
     } catch (error) {
       console.error('Error fetching inventory:', error)
       throw error

@@ -1,11 +1,12 @@
 /**
  * InventoryTable Component
- * Virtualized table with sortable columns
+ * Virtualized table with sortable columns and skeleton loading
  */
 
 import { ArrowUpDown, Package2, Image as ImageIcon } from 'lucide-react'
 import type { InventorySortOptions, SortField } from '../types'
-import { InventoryItem } from 'src/shared/types'
+import { InventoryItem } from '@/shared/types'
+import { TableSkeleton } from '../../../components/ui/SkeletonVariants'
 
 interface Props {
   items: InventoryItem[]
@@ -50,11 +51,8 @@ export default function InventoryTable({ items, loading, sortOptions, onSortChan
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <Package2 className="mx-auto mb-4 animate-pulse text-primary" size={48} />
-          <p className="text-slate-600 dark:text-slate-400">Loading inventory...</p>
-        </div>
+      <div className="h-full overflow-auto p-6">
+        <TableSkeleton rows={10} columns={7} showHeader />
       </div>
     )
   }
@@ -111,13 +109,13 @@ export default function InventoryTable({ items, loading, sortOptions, onSortChan
             <th className="px-4 py-3 text-right">
               <button
                 onClick={() => handleSort('totalStock')}
-                className="flex items-center justify-end gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors ml-auto"
+                className=" flex items-center justify-end gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors ml-auto"
               >
                 Total Stock
                 <SortIcon field="totalStock" />
               </button>
             </th>
-            <th className="px-4 py-3 text-center">
+            <th className="px-4 py-3 text-center min-w-[120px]">
               <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Status</span>
             </th>
             <th className="px-4 py-3 text-right">
@@ -158,7 +156,7 @@ export default function InventoryTable({ items, loading, sortOptions, onSortChan
             >
               <td className="px-4 py-3">
                 <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
-                  {item.images[0] ? (
+                  {item.images && item.images.length > 0 && item.images[0] ? (
                     <img src={item.images[0].imageData} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
                     <ImageIcon size={24} className="text-slate-400" />
@@ -177,7 +175,7 @@ export default function InventoryTable({ items, loading, sortOptions, onSortChan
                 </div>
               </td>
               <td className="px-4 py-3">
-                <span className="text-sm text-slate-600 dark:text-slate-400">{item.category}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{item.category || 'Uncategorized'}</span>
               </td>
               <td className="px-4 py-3 text-center">
                 <span className="text-sm font-medium text-slate-900 dark:text-white">{item.variantCount}</span>
@@ -185,7 +183,7 @@ export default function InventoryTable({ items, loading, sortOptions, onSortChan
               <td className="px-4 py-3 text-right">
                 <span className="text-sm font-bold text-slate-900 dark:text-white">{item.totalStock}</span>
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="px-4 py-3 text-center min-w-[120px]">
                 {getStockStatusBadge(item.stockStatus)}
               </td>
               <td className="px-4 py-3 text-right">

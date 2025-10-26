@@ -1,8 +1,10 @@
 /**
  * DashboardStats Component
  * Key performance metrics cards
+ * Memoized to prevent unnecessary re-renders
  */
 
+import { memo } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart, Users } from 'lucide-react'
 
 interface Props {
@@ -18,7 +20,7 @@ interface Props {
   loading: boolean
 }
 
-export default function DashboardStats({ stats, loading }: Props) {
+function DashboardStats({ stats, loading }: Props) {
   const metrics = [
     {
       label: 'Today\'s Revenue',
@@ -124,3 +126,17 @@ export default function DashboardStats({ stats, loading }: Props) {
     </div>
   )
 }
+
+// Memoize component - only re-render when props actually change
+export default memo(DashboardStats, (prevProps, nextProps) => {
+  return (
+    prevProps.loading === nextProps.loading &&
+    prevProps.stats.todayRevenue === nextProps.stats.todayRevenue &&
+    prevProps.stats.todayOrders === nextProps.stats.todayOrders &&
+    prevProps.stats.totalProducts === nextProps.stats.totalProducts &&
+    prevProps.stats.lowStockItems === nextProps.stats.lowStockItems &&
+    prevProps.stats.totalCustomers === nextProps.stats.totalCustomers &&
+    prevProps.stats.revenueChange === nextProps.stats.revenueChange &&
+    prevProps.stats.ordersChange === nextProps.stats.ordersChange
+  )
+})

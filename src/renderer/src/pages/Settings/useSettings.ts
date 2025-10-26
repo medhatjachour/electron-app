@@ -10,7 +10,8 @@ import type {
   NotificationSettings, 
   PaymentMethodSettings, 
   UserProfileSettings, 
-  BackupSettings 
+  BackupSettings,
+  DisplaySettings
 } from './types'
 
 export function useSettings() {
@@ -72,6 +73,12 @@ export function useSettings() {
     keepBackups: parseInt(localStorage.getItem('keepBackups') || '7')
   }))
 
+  // Display Settings
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({
+    showImagesInProductCards: localStorage.getItem('showImagesInProductCards') !== 'false',
+    showImagesInPOSCards: localStorage.getItem('showImagesInPOSCards') !== 'false'
+  }))
+
   // Save all settings to localStorage
   const saveSettings = useCallback(() => {
     // Store settings
@@ -105,8 +112,12 @@ export function useSettings() {
     }
     localStorage.setItem('keepBackups', String(backupSettings.keepBackups))
 
+    // Display settings
+    localStorage.setItem('showImagesInProductCards', String(displaySettings.showImagesInProductCards))
+    localStorage.setItem('showImagesInPOSCards', String(displaySettings.showImagesInPOSCards))
+
     return true
-  }, [storeSettings, taxReceiptSettings, notificationSettings, paymentMethods, userProfile, backupSettings])
+  }, [storeSettings, taxReceiptSettings, notificationSettings, paymentMethods, userProfile, backupSettings, displaySettings])
 
   return {
     storeSettings,
@@ -121,6 +132,8 @@ export function useSettings() {
     setUserProfile,
     backupSettings,
     setBackupSettings,
+    displaySettings,
+    setDisplaySettings,
     saveSettings
   }
 }

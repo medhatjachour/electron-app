@@ -13,12 +13,16 @@ import {
   CreditCard, 
   Receipt, 
   Database,
-  Save
+  Save,
+  Monitor,
+  Tag
 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useSettings } from './useSettings'
 import GeneralSettings from './GeneralSettings'
+import DisplaySettings from './DisplaySettings'
+import CategorySettings from './CategorySettings'
 import StoreSettings from './StoreSettings'
 import UserProfileSettings from './UserProfileSettings'
 import PaymentMethodsSettings from './PaymentMethodsSettings'
@@ -47,11 +51,15 @@ export default function Settings() {
     setUserProfile,
     backupSettings,
     setBackupSettings,
+    displaySettings,
+    setDisplaySettings,
     saveSettings
   } = useSettings()
 
   const tabs = [
     { id: 'general' as SettingsTab, name: 'General', icon: SettingsIcon },
+    { id: 'display' as SettingsTab, name: 'Display', icon: Monitor },
+    { id: 'categories' as SettingsTab, name: 'Categories', icon: Tag },
     { id: 'store' as SettingsTab, name: 'Store Info', icon: Store },
     { id: 'user' as SettingsTab, name: 'User Profile', icon: User },
     { id: 'payments' as SettingsTab, name: 'Payments', icon: CreditCard },
@@ -70,7 +78,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -136,6 +144,17 @@ export default function Settings() {
               language={language}
               onLanguageChange={setLanguage}
             />
+          )}
+
+          {activeTab === 'display' && (
+            <DisplaySettings
+              settings={displaySettings}
+              onChange={setDisplaySettings}
+            />
+          )}
+
+          {activeTab === 'categories' && (
+            <CategorySettings />
           )}
 
           {activeTab === 'store' && (

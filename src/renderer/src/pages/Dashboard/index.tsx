@@ -14,12 +14,14 @@ import {
 } from 'lucide-react'
 import DashboardStats from './components/DashboardStats'
 import RecentActivity from './components/RecentActivity'
-
+import logger from '../../../../shared/utils/logger'
 
 import QuickActions from './components/QuickActions'
 import SalesChart from './components/SalesChart'
 import TopProducts from './components/TopProducts'
 import InventoryAlerts from './components/InventoryAlerts'
+import GoalTracking from './components/GoalTracking'
+import NotificationCenter from './components/NotificationCenter'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -39,10 +41,11 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboardData()
     
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 5 minutes (reduced from 30 seconds)
+    const REFRESH_INTERVAL = 5 * 60 * 1000 // 5 minutes
     const interval = setInterval(() => {
       loadDashboardData(true)
-    }, 30000)
+    }, REFRESH_INTERVAL)
 
     return () => clearInterval(interval)
   }, [])
@@ -55,69 +58,66 @@ export default function Dashboard() {
         setRefreshing(true)
       }
       
-      // Fetch dashboard data in parallel
-      const [products, sales, customers] = await Promise.all([
+      // Calculate date ranges
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      
+      // Fetch dashboard data using optimized endpoints with date filtering
+      const [productStats, todaySales, yesterdaySales, customerStats] = await Promise.all([
+        // Use optimized stats endpoint instead of loading all products
         // @ts-ignore
-        (globalThis as any).api?.inventory?.getAll(),
+        (globalThis as any).api?.products?.getStats?.() || Promise.resolve({ totalProducts: 0, lowStockCount: 0 }),
+        // Only fetch today's sales (filtered at database level)
         // @ts-ignore
-        (globalThis as any).api?.sales?.getAll(),
+        (globalThis as any).api?.sales?.getByDateRange?.({ 
+          startDate: today.toISOString(),
+          endDate: tomorrow.toISOString()
+        }) || Promise.resolve([]),
+        // Only fetch yesterday's sales (filtered at database level)
+        // @ts-ignore
+        (globalThis as any).api?.sales?.getByDateRange?.({ 
+          startDate: yesterday.toISOString(), 
+          endDate: today.toISOString() 
+        }) || Promise.resolve([]),
+        // Get customer count only (not all customer data)
         // @ts-ignore
         (globalThis as any).api?.customers?.getAll?.() || Promise.resolve([]),
       ])
       
-      console.log('Dashboard data loaded:', { 
-        products: products?.length, 
-        sales: sales?.length, 
-        customers: customers?.length 
+      logger.info('Dashboard data loaded', {
+        todaySales: todaySales.length,
+        yesterdaySales: yesterdaySales.length
       })
 
-      // Calculate today's metrics
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const todaySales = (sales || []).filter((sale: any) => {
-        const saleDate = new Date(sale.createdAt)
-        return saleDate >= today
-      })
-      
-      console.log('Today\'s sales:', todaySales.length, todaySales)
-
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdaySales = (sales || []).filter((sale: any) => {
-        const saleDate = new Date(sale.createdAt)
-        return saleDate >= yesterday && saleDate < today
-      })
-
-      const todayRevenue = todaySales.reduce((sum: number, sale: any) => sum + sale.total, 0)
-      const yesterdayRevenue = yesterdaySales.reduce((sum: number, sale: any) => sum + sale.total, 0)
-      
-      console.log('Revenue:', { today: todayRevenue, yesterday: yesterdayRevenue })
+      // Calculate metrics from filtered data
+      const todayRevenue = (todaySales || []).reduce((sum: number, sale: any) => sum + sale.total, 0)
+      const yesterdayRevenue = (yesterdaySales || []).reduce((sum: number, sale: any) => sum + sale.total, 0)
       
       const revenueChange = yesterdayRevenue > 0 
         ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 
         : 0
 
-      const ordersChange = yesterdaySales.length > 0
-        ? ((todaySales.length - yesterdaySales.length) / yesterdaySales.length) * 100
+      const ordersChange = (yesterdaySales || []).length > 0
+        ? (((todaySales || []).length - (yesterdaySales || []).length) / (yesterdaySales || []).length) * 100
         : 0
-
-      // Count low stock items
-      const lowStockItems = (products || []).filter((item: any) => 
-        item.totalStock > 0 && item.totalStock <= 10
-      ).length
 
       setStats({
         todayRevenue,
-        todayOrders: todaySales.length,
-        totalProducts: products?.length || 0,
-        lowStockItems,
-        totalCustomers: customers?.length || 0,
+        todayOrders: (todaySales || []).length,
+        totalProducts: productStats?.totalProducts || 0,
+        lowStockItems: productStats?.lowStockCount || 0,
+        totalCustomers: customerStats?.length || 0,
         revenueChange,
         ordersChange,
       })
     } catch (error) {
-      console.error('Error loading dashboard data:', error)
+      logger.error('Error loading dashboard data:', error)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -172,7 +172,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 space-y-4">
+      <div className=" mx-auto p-4 space-y-4">
         {/* Key Metrics */}
         <DashboardStats stats={stats} loading={loading} />
 
@@ -194,6 +194,12 @@ export default function Dashboard() {
           <div className="space-y-4">
             {/* Quick Actions */}
             <QuickActions userRole={user?.role || 'sales'} />
+
+            {/* Goal Tracking */}
+            <GoalTracking key={`goals-${stats.todayRevenue}`} />
+
+            {/* Notification Center */}
+            <NotificationCenter key={`notifs-${stats.todayOrders}`} />
 
             {/* Inventory Alerts */}
             <InventoryAlerts key={`alerts-${stats.lowStockItems}`} />

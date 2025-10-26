@@ -15,10 +15,16 @@ type Store = {
   location: string
 }
 
+type Category = {
+  id: string
+  name: string
+  description?: string | null
+}
+
 type FormData = {
   name: string
   baseSKU: string
-  category: string
+  categoryId: string
   description: string
   basePrice: number
   baseCost: number
@@ -39,7 +45,7 @@ type FormData = {
 type FormErrors = {
   name?: string
   baseSKU?: string
-  category?: string
+  categoryId?: string
   basePrice?: string
   baseCost?: string
   images?: string
@@ -55,12 +61,13 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
   const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
     name: '',
     baseSKU: '',
-    category: '',
+    categoryId: '',
     description: '',
     basePrice: 0,
     baseCost: 0,
@@ -82,9 +89,10 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     stock: 0
   })
 
-  // Load stores
+  // Load stores and categories
   useEffect(() => {
     loadStores()
+    loadCategories()
   }, [])
 
   // Load product data if editing
@@ -93,7 +101,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       setFormData({
         name: product.name,
         baseSKU: product.baseSKU,
-        category: product.category,
+        categoryId: product.categoryId || '',
         description: product.description || '',
         basePrice: product.basePrice,
         baseCost: product.baseCost,
@@ -122,6 +130,17 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     }
   }
 
+  const loadCategories = async () => {
+    try {
+      const result = await window.electron.ipcRenderer.invoke('categories:getAll')
+      if (result.success && result.categories) {
+        setCategories(result.categories)
+      }
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+    }
+  }
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
@@ -133,8 +152,8 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       newErrors.baseSKU = 'SKU is required'
     }
 
-    if (!formData.category.trim()) {
-      newErrors.category = 'Category is required'
+    if (!formData.categoryId.trim()) {
+      newErrors.categoryId = 'Category is required'
     }
 
     if (formData.basePrice <= 0) {
@@ -262,7 +281,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       const productData = {
         name: formData.name.trim(),
         baseSKU: formData.baseSKU.trim(),
-        category: formData.category.trim(),
+        categoryId: formData.categoryId,
         description: formData.description.trim(),
         basePrice: formData.basePrice,
         baseCost: formData.baseCost,
@@ -308,6 +327,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         setFormData={setFormData}
         errors={errors}
         stores={stores}
+        categories={categories}
         onImageUpload={handleImageUpload}
         onRemoveImage={handleRemoveImage}
         newVariant={newVariant}

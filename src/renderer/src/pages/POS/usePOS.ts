@@ -4,6 +4,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { ipc } from '../../utils/ipc'
+import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import type { Product, Customer, CartItem, PaymentMethod } from './types'
 
 export function usePOS() {
@@ -15,6 +16,7 @@ export function usePOS() {
   const [customerQuery, setCustomerQuery] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null)
   const [showSuccess, setShowSuccess] = useState(false)
+  const { settings } = useDisplaySettings()
 
   // Load initial data
   useEffect(() => {
@@ -22,19 +24,21 @@ export function usePOS() {
     loadCustomers()
   }, [])
 
+
+
   const loadProducts = async () => {
     try {
       setLoading(true)
-      // OPTIMIZED: Load products without images for fast POS performance
+      // Load products with or without images based on display settings
       const response = await ipc.products.getAll({
-        includeImages: false,
+        includeImages: settings.showImagesInPOSCards, // Use display setting
         limit: 500 // Load first 500 products
       })
       
       const data = response.products || response || []
       const productsWithStock = data.map((p: any) => ({
         ...p,
-        totalStock: p.hasVariants 
+        totalStock: p.variants?.length 
           ? p.variants.reduce((sum: number, v: any) => sum + v.stock, 0)
           : 0,
         images: p.images || []
@@ -101,6 +105,7 @@ export function usePOS() {
         )
       }
       
+      // Store the product snapshot in cart for validation during checkout
       return [...prev, { 
         id: itemId, 
         productId: product.id,
@@ -109,7 +114,10 @@ export function usePOS() {
         variant: variantLabel,
         price,
         stock: availableStock,
-        quantity: 1 
+        quantity: 1,
+        // Store snapshots for validation
+        productSnapshot: product,
+        variantSnapshot: variant
       }]
     })
   }, [])
@@ -169,22 +177,27 @@ export function usePOS() {
         return
       }
       
-      // Validate stock availability
+      // Validate stock availability using stored product snapshots
       for (const item of cart) {
-        const product = products.find(p => p.id === item.productId)
+        // Use the stored product snapshot instead of searching filtered products
+        const product = item.productSnapshot
         
         if (!product) {
-          alert(`Product ${item.name} no longer exists!`)
-          return
-        }
-        
-        if (item.variantId) {
-          const variant = product.variants.find(v => v.id === item.variantId)
-          if (!variant || variant.stock < item.quantity) {
-            alert(`Insufficient stock for ${item.name} (${item.variant})!\n\nOnly ${variant?.stock || 0} units available.`)
+          // Fallback: try to find in current products list
+          const fallbackProduct = products.find(p => p.id === item.productId)
+          if (!fallbackProduct) {
+            alert(`Product ${item.name} information is unavailable!\n\nPlease remove it from cart and re-add it.`)
             return
           }
-        } else {
+        }
+        
+        if (item.variantId && item.variantSnapshot) {
+          const variant = item.variantSnapshot
+          if (variant.stock < item.quantity) {
+            alert(`Insufficient stock for ${item.name} (${item.variant})!\n\nOnly ${variant.stock} units available.`)
+            return
+          }
+        } else if (product) {
           if (product.totalStock < item.quantity) {
             alert(`Insufficient stock for ${item.name}!\n\nOnly ${product.totalStock} units available.`)
             return

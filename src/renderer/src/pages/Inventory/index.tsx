@@ -8,30 +8,45 @@
  * - Item detail drawer
  * - Role-based access control
  * - Export functionality
+ * - Optimistic updates with rollback
+ * - Toast notifications
  */
 
 import { useState, useMemo } from 'react'
 import { Search, Filter, Download, Plus, RefreshCw, Package, AlertTriangle } from 'lucide-react'
-import { useInventory } from './useInventory'
-import { useInventoryFilters } from './useInventoryFilters'
+import { useNavigate } from 'react-router-dom'
+import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
+import { useDebounce } from '../../hooks/useDebounce'
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts'
+import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate'
+import { useToast } from '../../hooks/useToast'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
+import ToastContainer from '../../components/ui/ToastContainer'
+import * as XLSX from 'xlsx'
 
 import type { InventoryFilters as Filters, InventorySortOptions } from './types'
 import InventoryFilters from './components/InventoryFilters'
 import InventoryMetrics from './components/InventoryMetrics'
 import ItemDetailDrawer from './components/ItemDetailDrawer'
-import { InventoryItem } from 'src/shared/types'
+import type { InventoryItem } from '../../../../shared/types'
+import logger from '../../../../shared/utils/logger'
 
 const ITEMS_PER_PAGE = 50
 
 export default function InventoryPage() {
-  const { items, metrics, loading, error, refresh } = useInventory()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-
+  const navigate = useNavigate()
+  const [isExporting, setIsExporting] = useState(false)
+  
+  // Load filter metadata (categories, colors, sizes)
+  const { metadata: filterMetadata } = useFilterMetadata()
+  
+  // Extract category names from metadata
+  const categories = filterMetadata?.categories?.map((c: any) => c.name) || []
+  
   // Filter state
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -47,58 +62,197 @@ export default function InventoryPage() {
     direction: 'asc'
   })
 
-  // Apply filters and sorting
-  const filteredItems = useInventoryFilters(items, { ...filters, search: searchQuery }, sortOptions)
+  // Debounce search query (300ms delay)
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE)
-  const paginatedItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    const endIndex = startIndex + ITEMS_PER_PAGE
-    return filteredItems.slice(startIndex, endIndex)
-  }, [filteredItems, currentPage])
+  // Memoize filters object to prevent unnecessary re-renders
+  const searchFilters = useMemo(() => ({
+    query: debouncedSearch,
+    categoryIds: filters.categories,
+    stockStatus: filters.stockStatus.length > 0 ? filters.stockStatus as any : undefined,
+    priceRange: filters.priceRange.min > 0 || filters.priceRange.max < Infinity ? filters.priceRange : undefined
+  }), [debouncedSearch, filters.categories, filters.stockStatus, filters.priceRange])
+
+  // Memoize sort options
+  const searchSort = useMemo(() => ({
+    field: sortOptions.field,
+    direction: sortOptions.direction
+  }), [sortOptions.field, sortOptions.direction])
+
+  // Backend search with filters - Use search:inventory for enriched data with metrics
+  const {
+    data: items,
+    loading,
+    error,
+    totalCount,
+    pagination,
+    metrics,
+    refetch
+  } = useBackendSearch<InventoryItem>({
+    endpoint: 'search:inventory',
+    filters: searchFilters,
+    sort: searchSort,
+    options: {
+      debounceMs: 300,
+      limit: ITEMS_PER_PAGE,
+      includeImages: false,
+      includeMetrics: true  // Get metrics for dashboard
+    }
+  })
+  
+  // Toast notifications
+  const toast = useToast()
+  
+  // Optimistic updates for delete operations
+  const { execute: executeDelete, isOptimistic: isDeleting } = useOptimisticUpdate({
+    onSuccess: () => {
+      toast.success('Item deleted successfully', 'The item has been removed from inventory')
+    },
+    onError: (error) => {
+      toast.error('Failed to delete item', error.message)
+    }
+  })
 
   // Reset to page 1 when filters change
   const handleFiltersChange = (newFilters: Filters) => {
     setFilters(newFilters)
-    setCurrentPage(1)
+    pagination.setPage(1)
   }
 
+  // Update search query (debounced search will trigger after 300ms)
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
-    setCurrentPage(1)
+    pagination.setPage(1)
   }
 
   const handleSortChange = (options: InventorySortOptions) => {
     setSortOptions(options)
-    setCurrentPage(1)
+    pagination.setPage(1)
   }
 
-  // Extract unique categories
-  const categories = useMemo(() => {
-    const cats = new Set(items.map(item => item.category))
-    return Array.from(cats).sort()
-  }, [items])
+  const handleExport = async () => {
+    try {
+      setIsExporting(true)
+      
+      // Prepare data for export
+      const exportData = items.map(item => ({
+        'Product Name': item.name,
+        'SKU': item.baseSKU,
+        'Category': item.category || 'Uncategorized',
+        'Base Price': item.basePrice.toFixed(2),
+        'Total Stock': item.totalStock,
+        'Stock Value': item.stockValue.toFixed(2),
+        'Retail Value': item.retailValue.toFixed(2),
+        'Potential Profit': (item.retailValue - item.stockValue).toFixed(2),
+        'Variants': item.variantCount,
+        'Status': item.stockStatus,
+        'Description': item.description || ''
+      }))
 
-  const handleExport = () => {
-    // TODO: Implement CSV export
-    console.log('Export', filteredItems)
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory')
+
+      // Auto-size columns
+      const maxWidth = 50
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.min(
+          Math.max(
+            key.length,
+            ...exportData.map(row => String(row[key as keyof typeof row] || '').length)
+          ),
+          maxWidth
+        )
+      }))
+      ws['!cols'] = colWidths
+
+      // Generate filename with date
+      const date = new Date().toISOString().split('T')[0]
+      const filename = `inventory-export-${date}.xlsx`
+
+      // Download file
+      XLSX.writeFile(wb, filename)
+
+      toast.success('Export completed', `${items.length} items exported to ${filename}`)
+    } catch (error) {
+      logger.error('Export error:', error)
+      toast.error('Export failed', error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const handleAddItem = () => {
-    // TODO: Navigate to product creation
-    console.log('Add item')
+    navigate('/products?create=true')
   }
+  
+  /**
+   * Handle delete with optimistic update
+   */
+  const handleDeleteItem = async (id: string) => {
+    await executeDelete({
+      operation: async () => {
+        // @ts-ignore
+        const result = await (globalThis as any).api?.products?.delete(id)
+        if (!result?.success) {
+          throw new Error(result?.message || 'Failed to delete item')
+        }
+        return result
+      },
+      optimisticUpdate: () => {
+        // Immediately refresh the list (will show item removed)
+        refetch()
+      },
+      rollback: () => {
+        // Refresh again to restore the item if delete failed
+        refetch()
+      },
+      description: `delete item ${id}`
+    })
+  }
+
+  // Keyboard shortcuts for inventory page
+  useKeyboardShortcuts([
+    {
+      key: 'n',
+      ctrlKey: true,
+      action: handleAddItem,
+      description: 'Create new item'
+    },
+    {
+      key: 'e',
+      ctrlKey: true,
+      action: () => void handleExport(),
+      description: 'Export inventory'
+    },
+    {
+      key: 'r',
+      ctrlKey: true,
+      action: refetch,
+      description: 'Refresh inventory data'
+    },
+    {
+      key: 'f',
+      ctrlKey: true,
+      action: () => setShowFilters(!showFilters),
+      description: 'Toggle filters'
+    }
+  ])
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6" role="alert" aria-live="assertive">
         <div className="text-center">
-          <AlertTriangle className="mx-auto mb-4 text-error" size={48} />
+          <AlertTriangle className="mx-auto mb-4 text-error" size={48} aria-hidden="true" />
           <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Error Loading Inventory</h2>
           <p className="text-slate-600 dark:text-slate-400 mb-4">{error}</p>
-          <button onClick={refresh} className="btn-primary">
-            <RefreshCw size={18} />
+          <button 
+            onClick={refetch} 
+            className="btn-primary"
+            aria-label="Retry loading inventory"
+          >
+            <RefreshCw size={18} aria-hidden="true" />
             Retry
           </button>
         </div>
@@ -109,10 +263,10 @@ export default function InventoryPage() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="p-2 bg-primary/10 rounded-lg" aria-hidden="true">
               <Package className="text-primary" size={24} />
             </div>
             <div>
@@ -123,27 +277,43 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="toolbar" aria-label="Inventory actions">
             <button
-              onClick={refresh}
+              onClick={refetch}
               className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
               disabled={loading}
+              aria-label={loading ? 'Refreshing inventory' : 'Refresh inventory'}
+              aria-busy={loading}
             >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
               Refresh
             </button>
             <button
               onClick={handleExport}
-              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+              disabled={isExporting || items.length === 0}
+              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={isExporting ? 'Exporting inventory' : `Export ${items.length} items to Excel`}
+              aria-busy={isExporting}
+              aria-disabled={items.length === 0}
             >
-              <Download size={18} />
-              Export
+              {isExporting ? (
+                <>
+                  <RefreshCw size={18} className="animate-spin" aria-hidden="true" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download size={18} aria-hidden="true" />
+                  Export ({items.length})
+                </>
+              )}
             </button>
             <button
               onClick={handleAddItem}
               className="btn-primary flex items-center gap-2"
+              aria-label="Add new inventory item"
             >
-              <Plus size={18} />
+              <Plus size={18} aria-hidden="true" />
               Add Item
             </button>
           </div>
@@ -152,13 +322,15 @@ export default function InventoryPage() {
         {/* Search and Filters */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
             <input
-              type="text"
+              type="search"
               placeholder="Search by name, SKU, category..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              aria-label="Search inventory items by name, SKU, or category"
+              role="searchbox"
             />
           </div>
           <button
@@ -168,21 +340,26 @@ export default function InventoryPage() {
                 ? 'bg-primary text-white border-primary'
                 : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
+            aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+            aria-expanded={showFilters}
+            aria-controls="inventory-filters"
           >
-            <Filter size={18} />
+            <Filter size={18} aria-hidden="true" />
             Filters
           </button>
         </div>
 
         {/* Filters Panel */}
         {showFilters && (
-          <InventoryFilters
-            categories={categories}
-            filters={filters}
-            onFiltersChange={handleFiltersChange}
-          />
+          <section id="inventory-filters" aria-label="Inventory filters">
+            <InventoryFilters
+              categories={categories}
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+            />
+          </section>
         )}
-      </div>
+      </header>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -191,7 +368,7 @@ export default function InventoryPage() {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">
               <InventoryTable
-                items={paginatedItems}
+                items={items}
                 loading={loading}
                 sortOptions={sortOptions}
                 onSortChange={handleSortChange}
@@ -200,13 +377,13 @@ export default function InventoryPage() {
             </div>
             
             {/* Pagination */}
-            {!loading && filteredItems.length > 0 && (
+            {!loading && items.length > 0 && (
               <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={filteredItems.length}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={totalCount}
                 itemsPerPage={ITEMS_PER_PAGE}
-                onPageChange={setCurrentPage}
+                onPageChange={pagination.setPage}
               />
             )}
           </div>
@@ -223,9 +400,14 @@ export default function InventoryPage() {
         <ItemDetailDrawer
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onRefresh={refresh}
+          onRefresh={refetch}
+          onDelete={handleDeleteItem}
+          isDeleting={isDeleting}
         />
       )}
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />
     </div>
   )
 }

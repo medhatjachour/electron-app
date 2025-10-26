@@ -33,6 +33,7 @@ export interface Product {
   name: string
   baseSKU: string
   category: string
+  categoryId: string | null
   description: string | null
   basePrice: number
   baseCost: number

@@ -18,9 +18,10 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer'),
-        '@pages': resolve('src/renderer/pages'),
-        '@components': resolve('src/renderer/components'),
+        '@renderer': resolve('src/renderer/src'),
+        '@pages': resolve('src/renderer/src/pages'),
+        '@components': resolve('src/renderer/src/components'),
+        '@': resolve('src'),
         // Shims for Next imports used in the UI
         'next/router': resolve('src/renderer/next/router.tsx'),
         'next/link': resolve('src/renderer/next/link.tsx')

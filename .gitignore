@@ -4,5 +4,15 @@ out
 .DS_Store
 .eslintcache
 *.log*
-*.db
+
+# Prisma generated client
 /src/generated/prisma
+/out/generated/prisma
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/*.db
+prisma/*.db-journal

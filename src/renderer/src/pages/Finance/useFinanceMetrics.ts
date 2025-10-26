@@ -79,9 +79,12 @@ export function useFinanceMetrics(params: CalculateMetricsParams): UseFinanceMet
     // Calculate top products
     const productSales = new Map<string, { name: string; revenue: number; quantity: number; category?: string }>()
     
+    // Create a product lookup map for better performance
+    const productMap = new Map(products.map(p => [p.id, p]))
+    
     currentSales.forEach(sale => {
-      const product = products.find(p => p.id === sale.productId)
-      const productName = product?.name || 'Unknown'
+      const product = productMap.get(sale.productId)
+      const productName = product?.name || `[Deleted Product]`
       const category = product?.category
       
       const existing = productSales.get(sale.productId) || { name: productName, revenue: 0, quantity: 0, category }

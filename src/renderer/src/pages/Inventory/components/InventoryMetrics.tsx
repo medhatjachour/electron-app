@@ -1,11 +1,12 @@
 /**
  * InventoryMetrics Component
- * Analytics sidebar showing key metrics
+ * Analytics sidebar showing key metrics with skeleton loading
  */
 
 import { useMemo } from 'react'
 import { Package, TrendingUp, AlertTriangle, DollarSign, TrendingDown } from 'lucide-react'
-import { InventoryItem ,InventoryMetrics as Metrics } from 'src/shared/types'
+import { InventoryItem, InventoryMetrics as Metrics } from '@/shared/types'
+import { MetricCardSkeleton } from '../../../components/ui/SkeletonVariants'
 
 interface Props {
   metrics: Metrics | null
@@ -27,12 +28,16 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
 
   if (loading || !metrics) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-24 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-          <div className="h-24 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-          <div className="h-24 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+      <div className="p-6 space-y-4">
+        <div className="mb-6">
+          <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse" />
+          <div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
         </div>
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
       </div>
     )
   }
@@ -137,7 +142,7 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
                 <p className="text-sm font-medium text-slate-900 dark:text-white truncate flex-1">{item.name}</p>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{item.category}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{item.category || 'Uncategorized'}</span>
                 <span className="text-xs font-bold text-primary">{item.totalStock} units</span>
               </div>
             </div>

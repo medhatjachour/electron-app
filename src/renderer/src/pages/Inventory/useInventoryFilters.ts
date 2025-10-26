@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import type { InventoryFilters, InventorySortOptions } from './types'
-import { InventoryItem } from 'src/shared/types'
+import { InventoryItem } from '@/shared/types'
 
 export function useInventoryFilters(
   items: InventoryItem[],
@@ -21,14 +21,14 @@ export function useInventoryFilters(
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(query) ||
         item.baseSKU.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query) ||
         item.description?.toLowerCase().includes(query)
       )
     }
 
     // Apply category filter
     if (filters.categories.length > 0) {
-      filtered = filtered.filter(item => filters.categories.includes(item.category))
+      filtered = filtered.filter(item => item.category && filters.categories.includes(item.category))
     }
 
     // Apply stock status filter
@@ -65,7 +65,7 @@ export function useInventoryFilters(
           comparison = a.baseSKU.localeCompare(b.baseSKU)
           break
         case 'category':
-          comparison = a.category.localeCompare(b.category)
+          comparison = (a.category || '').localeCompare(b.category || '')
           break
         case 'totalStock':
           comparison = a.totalStock - b.totalStock

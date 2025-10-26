@@ -7,6 +7,7 @@ import {
   BanknotesIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
+import { preloadData } from '../../src/hooks/useDataCache';
 
 interface NavItem {
   name: string;

@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 
 // Import IPC handlers registration function
 import { registerAllHandlers } from './ipc/handlers/index'
+import { initializeDatabase } from './database/init'
 
 function createWindow(): void {
   // Create the browser window.
@@ -29,13 +30,32 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  // Open DevTools in production to debug white screen
+  if (!is.dev) {
+    mainWindow.webContents.openDevTools()
+  }
+
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+      .catch(err => {
+        console.error('Failed to load index.html:', err)
+        console.log('__dirname:', __dirname)
+        console.log('Attempting to load from:', join(__dirname, '../renderer/index.html'))
+      })
   }
+
+  // Log any renderer errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Page failed to load:', errorCode, errorDescription)
+  })
+
+  mainWindow.webContents.on('crashed', () => {
+    console.error('Renderer process crashed')
+  })
 }
 
 // This method will be called when Electron has finished
@@ -44,6 +64,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // Initialize database (copy to userData on first run)
+  initializeDatabase()
 
   // Register all IPC handlers BEFORE creating windows
   registerAllHandlers()

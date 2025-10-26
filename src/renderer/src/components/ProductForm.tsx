@@ -12,7 +12,7 @@ type ProductVariant = {
 type FormData = {
   name: string
   baseSKU: string
-  category: string
+  categoryId: string
   description: string
   basePrice: number
   baseCost: number
@@ -26,7 +26,7 @@ type FormData = {
 type FormErrors = {
   name?: string
   baseSKU?: string
-  category?: string
+  categoryId?: string
   basePrice?: string
   baseCost?: string
   images?: string
@@ -38,11 +38,18 @@ type Store = {
   location: string
 }
 
+type Category = {
+  id: string
+  name: string
+  description?: string | null
+}
+
 type ProductFormProps = {
   formData: FormData
   setFormData: (data: FormData) => void
   errors: FormErrors
   stores: Store[]
+  categories: Category[]
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onRemoveImage: (index: number) => void
   newVariant: { color: string; size: string; sku: string; price: number; stock: number }
@@ -56,6 +63,7 @@ export default function ProductForm({
   setFormData,
   errors,
   stores,
+  categories,
   onImageUpload,
   onRemoveImage,
   newVariant,
@@ -148,18 +156,18 @@ export default function ProductForm({
             Category *
           </label>
           <select
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className={`input-field w-full ${errors.category ? 'border-error' : ''}`}
+            value={formData.categoryId}
+            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+            className={`input-field w-full ${errors.categoryId ? 'border-error' : ''}`}
           >
             <option value="">Select category</option>
-            <option value="Footwear">Footwear</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Accessories">Accessories</option>
-            <option value="Furniture">Furniture</option>
-            <option value="Clothing">Clothing</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
           </select>
-          {errors.category && <p className="text-error text-sm mt-1">{errors.category}</p>}
+          {errors.categoryId && <p className="text-error text-sm mt-1">{errors.categoryId}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

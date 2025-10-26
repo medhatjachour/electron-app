@@ -29,7 +29,7 @@ function ProductGrid({ products, onView, onEdit, onDelete }: Readonly<ProductGri
 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { text: 'Out of Stock', color: 'text-red-600 bg-red-50 dark:bg-red-900/20' }
-    if (stock < 10) return { text: 'Low Stock', color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' }
+    if (stock <= 10) return { text: 'Low Stock', color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' }
     return { text: 'In Stock', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' }
   }
 
@@ -94,7 +94,7 @@ function ProductGrid({ products, onView, onEdit, onDelete }: Readonly<ProductGri
               </div>
 
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                {product.category}
+                {product.category || 'Uncategorized'}
               </div>
 
               {/* Action Buttons */}

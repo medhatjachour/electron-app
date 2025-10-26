@@ -92,19 +92,27 @@ function FinanceCharts({ sales, metrics, topProducts }: Readonly<FinanceChartsPr
     }]
   }
 
-  // Sales Status Chart
+  // Sales Status Chart - Count actual status from sales
+  const salesByStatus = sales.reduce((acc, sale) => {
+    const status = sale.status || 'completed'
+    acc[status] = (acc[status] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
   const salesStatusData = {
-    labels: ['Completed', 'Pending', 'Cancelled'],
+    labels: ['Completed', 'Pending', 'Cancelled', 'Refunded'],
     datasets: [{
       data: [
-        sales.length, // All sales are completed by default
-        0,
-        0
+        salesByStatus.completed || 0,
+        salesByStatus.pending || 0,
+        salesByStatus.cancelled || 0,
+        salesByStatus.refunded || 0
       ],
       backgroundColor: [
-        'rgba(34, 197, 94, 0.8)',
-        'rgba(251, 146, 60, 0.8)',
-        'rgba(239, 68, 68, 0.8)'
+        'rgba(34, 197, 94, 0.8)',    // Green for completed
+        'rgba(251, 146, 60, 0.8)',   // Orange for pending
+        'rgba(239, 68, 68, 0.8)',    // Red for cancelled
+        'rgba(147, 51, 234, 0.8)'    // Purple for refunded
       ]
     }]
   }
