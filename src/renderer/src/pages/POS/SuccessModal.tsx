@@ -14,7 +14,7 @@ export default function SuccessModal({ show, total, paymentMethod }: Props) {
   if (!show) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center">
       <div className="glass-card p-8 max-w-md w-full text-center animate-scale-up">
         <div className="w-20 h-20 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Check size={48} className="text-success" />
