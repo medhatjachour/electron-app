@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react'
 import { Search, Filter, X, ChevronDown } from 'lucide-react'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
+import { useDebounce } from '../../hooks/useDebounce'
 import type { Product, ProductVariant } from './types'
 
 type Props = {
@@ -36,9 +37,12 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   // Load filter metadata (categories, colors, sizes, price range)
   const { metadata: filterMetadata } = useFilterMetadata()
 
+  // Debounce search query for better performance (300ms delay like Products/Inventory)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
   // Memoize filters object to prevent unnecessary re-renders
   const searchFilters = useMemo(() => ({
-    query: searchQuery,
+    query: debouncedSearchQuery,
     categoryIds: selectedCategoryIds,
     stockStatus: stockFilter === 'all' ? undefined : 
                  stockFilter === 'in-stock' ? ['low', 'normal', 'high'] as any : 
@@ -46,7 +50,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
     colors: selectedColors.length > 0 ? selectedColors : undefined,
     sizes: selectedSizes.length > 0 ? selectedSizes : undefined
-  }), [searchQuery, selectedCategoryIds, stockFilter, priceRange, selectedColors, selectedSizes])
+  }), [debouncedSearchQuery, selectedCategoryIds, stockFilter, priceRange, selectedColors, selectedSizes])
 
   // Memoize sort options
   const sortOptions = useMemo(() => ({
@@ -56,7 +60,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     direction: (sortBy === 'price-high' || sortBy === 'stock-high' ? 'desc' : 'asc') as 'asc' | 'desc'
   }), [sortBy])
 
-  // Backend search with filters
+  // Backend search with filters - Optimized for POS speed
   const {
     data: products,
     loading,
@@ -67,7 +71,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     filters: searchFilters,
     sort: sortOptions,
     options: {
-      debounceMs: 150,  // Fast response for POS
+      debounceMs: 0,  // Already debounced above with useDebounce hook
       limit: ITEMS_PER_PAGE,
       includeImages: settings.showImagesInPOSCards
     }
@@ -346,12 +350,20 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-slate-600 dark:text-slate-400">Loading products...</p>
+            <p className="text-slate-600 dark:text-slate-400">Searching products...</p>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <p className="text-slate-600 dark:text-slate-400">
-              No products found.
+            <div className="text-slate-400 mb-4">
+              <Search size={48} className="mx-auto opacity-30" />
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 text-lg font-medium mb-2">
+              {searchQuery || hasActiveFilters ? 'No products found' : 'Start searching'}
+            </p>
+            <p className="text-sm text-slate-500">
+              {searchQuery || hasActiveFilters 
+                ? 'Try adjusting your search or filters' 
+                : 'Use the search bar above to find products'}
             </p>
           </div>
         ) : (
