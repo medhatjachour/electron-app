@@ -35,9 +35,9 @@ export function registerProductsHandlers(prisma: any) {
       const where: any = {}
       if (searchTerm) {
         where.OR = [
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { baseSKU: { contains: searchTerm, mode: 'insensitive' } },
-          { description: { contains: searchTerm, mode: 'insensitive' } }
+          { name: { contains: searchTerm } },
+          { baseSKU: { contains: searchTerm } },
+          { description: { contains: searchTerm } }
         ]
       }
       if (category) {
@@ -376,8 +376,8 @@ export function registerProductsHandlers(prisma: any) {
       const products = await prisma.product.findMany({
         where: {
           OR: [
-            { name: { contains: searchTerm, mode: 'insensitive' } },
-            { baseSKU: { contains: searchTerm, mode: 'insensitive' } }
+            { name: { contains: searchTerm } },
+            { baseSKU: { contains: searchTerm } }
           ]
         },
         select: {
@@ -425,9 +425,9 @@ export function registerProductsHandlers(prisma: any) {
       // Search filter
       if (searchTerm) {
         where.OR = [
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { baseSKU: { contains: searchTerm, mode: 'insensitive' } },
-          { description: { contains: searchTerm, mode: 'insensitive' } }
+          { name: { contains: searchTerm } },
+          { baseSKU: { contains: searchTerm } },
+          { description: { contains: searchTerm } }
         ]
       }
       

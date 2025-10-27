@@ -46,6 +46,7 @@ export function registerSearchHandlers(prisma: any) {
   ipcMain.handle('search:products', async (_, options: SearchOptions) => {
     try {
       if (!prisma) {
+        console.warn('[search:products] Prisma not initialized - returning empty results')
         return { 
           items: [], 
           totalCount: 0,
@@ -63,8 +64,13 @@ export function registerSearchHandlers(prisma: any) {
         enrichData = false
       } = options
 
-      // Build WHERE clause
+      // Build WHERE clause with proper AND/OR logic
       const where = buildWhereClause(filters)
+      
+      // Log search parameters in development only
+      if (process.env.NODE_ENV === 'development' && filters.query) {
+        console.log('[search:products] Searching for:', filters.query.substring(0, 20))
+      }
 
       // Execute query with pagination
       const [products, totalCount] = await Promise.all([
@@ -383,8 +389,8 @@ export function registerSearchHandlers(prisma: any) {
       // Search query (customer name or sale ID)
       if (filters.query) {
         where.OR = [
-          { id: { contains: filters.query, mode: 'insensitive' } },
-          { customerName: { contains: filters.query, mode: 'insensitive' } }
+          { id: { contains: filters.query } },
+          { customerName: { contains: filters.query } }
         ]
       }
 
@@ -680,18 +686,22 @@ export function registerSearchHandlers(prisma: any) {
 
 /**
  * Build Prisma WHERE clause from filters
+ * Properly combines multiple filter conditions using AND logic
  */
 function buildWhereClause(filters: SearchFilters): any {
   const where: any = {}
+  const andConditions: any[] = []
 
-  // Text search across multiple fields
+  // Text search across multiple fields (OR within this group)
   if (filters.query && filters.query.trim()) {
     const query = filters.query.trim()
-    where.OR = [
-      { name: { contains: query, mode: 'insensitive' } },
-      { baseSKU: { contains: query, mode: 'insensitive' } },
-      { description: { contains: query, mode: 'insensitive' } }
-    ]
+    andConditions.push({
+      OR: [
+        { name: { contains: query } },
+        { baseSKU: { contains: query } },
+        { description: { contains: query } }
+      ]
+    })
   }
 
   // Category filter
@@ -702,50 +712,59 @@ function buildWhereClause(filters: SearchFilters): any {
     
     if (isUUID) {
       // Filter by category IDs
-      where.categoryId = { in: filters.categoryIds }
+      andConditions.push({ categoryId: { in: filters.categoryIds } })
     } else {
       // Filter by category names
-      where.category = {
-        name: { in: filters.categoryIds }
-      }
+      andConditions.push({
+        category: {
+          name: { in: filters.categoryIds }
+        }
+      })
     }
   }
 
   // Store filter
   if (filters.storeId) {
-    where.storeId = filters.storeId
+    andConditions.push({ storeId: filters.storeId })
   }
 
   // Price range
   if (filters.priceRange) {
-    where.basePrice = {}
+    const priceCondition: any = {}
     if (filters.priceRange.min !== undefined) {
-      where.basePrice.gte = filters.priceRange.min
+      priceCondition.gte = filters.priceRange.min
     }
     if (filters.priceRange.max !== undefined) {
-      where.basePrice.lte = filters.priceRange.max
+      priceCondition.lte = filters.priceRange.max
+    }
+    if (Object.keys(priceCondition).length > 0) {
+      andConditions.push({ basePrice: priceCondition })
     }
   }
 
   // Color filter (variant-based)
   if (filters.colors && filters.colors.length > 0) {
-    where.variants = {
-      some: {
-        color: { in: filters.colors }
+    andConditions.push({
+      variants: {
+        some: {
+          color: { in: filters.colors }
+        }
       }
-    }
+    })
   }
 
   // Size filter (variant-based)
   if (filters.sizes && filters.sizes.length > 0) {
-    where.variants = {
-      some: {
-        size: { in: filters.sizes }
+    andConditions.push({
+      variants: {
+        some: {
+          size: { in: filters.sizes }
+        }
       }
-    }
+    })
   }
 
-  // Stock status filter
+  // Stock status filter (OR within this group for multiple statuses)
   if (filters.stockStatus && filters.stockStatus.length > 0) {
     const stockConditions = filters.stockStatus.map(status => {
       switch (status) {
@@ -762,24 +781,26 @@ function buildWhereClause(filters: SearchFilters): any {
           // Has variants with stock > 50
           return { variants: { some: { stock: { gt: 50 } } } }
         default:
-          return {}
+          return null
       }
-    })
+    }).filter(Boolean)
 
     if (stockConditions.length === 1) {
-      Object.assign(where, stockConditions[0])
-    } else {
-      where.OR = [...(where.OR || []), ...stockConditions]
+      andConditions.push(stockConditions[0])
+    } else if (stockConditions.length > 1) {
+      andConditions.push({ OR: stockConditions })
     }
   }
 
-  // Stock range filter
-  if (filters.stockRange) {
-    // This requires aggregation - handled in enrichment
-    // For now, we'll apply it post-query
+  // Combine all conditions with AND logic
+  if (andConditions.length === 0) {
+    return where
+  } else if (andConditions.length === 1) {
+    return andConditions[0]
+  } else {
+    where.AND = andConditions
+    return where
   }
-
-  return where
 }
 
 /**

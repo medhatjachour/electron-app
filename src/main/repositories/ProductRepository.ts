@@ -113,10 +113,10 @@ export class ProductRepository implements IRepository<ProductWithRelations> {
     return this.findAll({
       where: {
         OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { baseSKU: { contains: query, mode: 'insensitive' } },
-          { category: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } }
+          { name: { contains: query } },
+          { baseSKU: { contains: query } },
+          { category: { contains: query } },
+          { description: { contains: query } }
         ]
       },
       orderBy: { name: 'asc' }

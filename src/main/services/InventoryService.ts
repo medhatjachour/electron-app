@@ -75,9 +75,9 @@ export class InventoryService {
     }
     if (searchTerm) {
       where.OR = [
-        { name: { contains: searchTerm, mode: 'insensitive' } },
-        { baseSKU: { contains: searchTerm, mode: 'insensitive' } },
-        { description: { contains: searchTerm, mode: 'insensitive' } }
+        { name: { contains: searchTerm } },
+        { baseSKU: { contains: searchTerm } },
+        { description: { contains: searchTerm } }
       ]
     }
 
