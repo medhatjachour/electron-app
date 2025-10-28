@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Activity, TrendingUp, Package, DollarSign, AlertCircle, CheckCircle } from 'lucide-react'
+import { Activity, TrendingUp, Package, DollarSign, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react'
 
 type FinancialHealth = {
   score: number
@@ -103,6 +103,9 @@ export default function FinancialHealthDashboard() {
         <div className="flex items-center gap-3">
           <Activity size={20} className="text-primary" />
           <h3 className="font-semibold text-slate-900 dark:text-white">Financial Health</h3>
+          <Tooltip text="Comprehensive business health assessment based on profit margin, inventory turnover, growth rate, and cash position. Score of 80+ is excellent, 60-79 is good, below 60 needs attention.">
+            <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
+          </Tooltip>
         </div>
         
         <button
@@ -114,25 +117,68 @@ export default function FinancialHealthDashboard() {
       </div>
 
       {/* Health Score */}
-      <div className={`relative mb-8 rounded-2xl bg-gradient-to-br ${getScoreBgColor(health.score)} p-8 text-white`}>
-        <div className="relative z-10">
-          <p className="text-white/80 text-sm mb-2">Overall Health Score</p>
-          <div className="flex items-end gap-2 mb-4">
-            <span className="text-6xl font-bold">{health.score}</span>
-            <span className="text-3xl font-medium mb-2">/100</span>
+      <div className={`relative mb-8 rounded-2xl bg-gradient-to-br ${getScoreBgColor(health.score)} p-10 text-white overflow-hidden`}>
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <p className="text-white/80 text-sm mb-2 font-medium">Overall Health Score</p>
+            <div className="flex items-end gap-3 mb-4">
+              <span className="text-7xl font-bold tracking-tight">{health.score}</span>
+              <span className="text-4xl font-medium mb-3 opacity-80">/100</span>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              {health.score >= 80 ? (
+                <span className="text-2xl">🎉</span>
+              ) : health.score >= 60 ? (
+                <span className="text-2xl">👍</span>
+              ) : (
+                <span className="text-2xl">⚠️</span>
+              )}
+              <p className="text-white/90 text-lg font-medium">
+                {health.score >= 80 
+                  ? 'Excellent! Your business is thriving.'
+                  : health.score >= 60
+                  ? 'Good! Room for improvement.'
+                  : 'Action needed for better health.'}
+              </p>
+            </div>
           </div>
-          <p className="text-white/90">
-            {health.score >= 80 
-              ? '🎉 Excellent! Your business is in great shape.'
-              : health.score >= 60
-              ? '👍 Good! Some areas need attention.'
-              : '⚠️ Action needed to improve financial health.'}
-          </p>
+          
+          {/* Circular Progress Indicator */}
+          <div className="relative w-32 h-32">
+            <svg className="transform -rotate-90 w-32 h-32">
+              {/* Background circle */}
+              <circle
+                cx="64"
+                cy="64"
+                r="56"
+                stroke="rgba(255, 255, 255, 0.2)"
+                strokeWidth="8"
+                fill="none"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="64"
+                cy="64"
+                r="56"
+                stroke="rgba(255, 255, 255, 0.9)"
+                strokeWidth="8"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${(health.score / 100) * 351.86} 351.86`}
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-white/90 text-xs font-bold">
+                {health.score >= 80 ? 'A+' : health.score >= 60 ? 'B' : 'C'}
+              </span>
+            </div>
+          </div>
         </div>
         
-        {/* Decorative circles */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-8 -mt-8"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-6 -mb-6"></div>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-12 -mt-12 blur-xl"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-8 -mb-8 blur-xl"></div>
       </div>
 
       {/* Key Indicators */}
@@ -143,6 +189,9 @@ export default function FinancialHealthDashboard() {
             <div className="flex items-center gap-2">
               <DollarSign size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Profit Margin</h4>
+              <Tooltip text="Measures profitability. Higher is better. Good: >20%, Fair: 10-20%, Poor: <10%">
+                <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
+              </Tooltip>
             </div>
             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
               health.indicators.profitMargin.status === 'good'
@@ -173,6 +222,9 @@ export default function FinancialHealthDashboard() {
             <div className="flex items-center gap-2">
               <Package size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Inventory Turnover</h4>
+              <Tooltip text="How quickly inventory sells and is replaced. Higher is better. Good: >5x, Fair: 3-5x, Poor: <3x">
+                <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
+              </Tooltip>
             </div>
             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
               health.indicators.inventoryTurnover.status === 'good'
@@ -203,6 +255,9 @@ export default function FinancialHealthDashboard() {
             <div className="flex items-center gap-2">
               <TrendingUp size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Growth Rate</h4>
+              <Tooltip text="Revenue growth compared to previous period. Good: >10%, Fair: 0-10%, Poor: negative">
+                <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
+              </Tooltip>
             </div>
             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
               health.indicators.growthRate.status === 'good'
@@ -234,6 +289,9 @@ export default function FinancialHealthDashboard() {
             <div className="flex items-center gap-2">
               <Activity size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Cash Position</h4>
+              <Tooltip text="Available cash balance. Good: sufficient reserves, Fair: moderate, Poor: low reserves">
+                <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
+              </Tooltip>
             </div>
             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
               health.indicators.cashPosition.status === 'good'
@@ -294,6 +352,19 @@ export default function FinancialHealthDashboard() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Tooltip Component
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group inline-block">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 w-64 whitespace-normal">
+        {text}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+      </div>
     </div>
   )
 }

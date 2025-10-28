@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Lightbulb, TrendingUp, TrendingDown, Minus, AlertTriangle, Sparkles } from 'lucide-react'
+import { Lightbulb, TrendingUp, TrendingDown, Minus, AlertTriangle, Sparkles, HelpCircle } from 'lucide-react'
 
 type ProductInsight = {
   productId: string
@@ -118,6 +118,9 @@ export default function ProductInsights() {
           <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
             AI-Powered
           </span>
+          <Tooltip text="AI analyzes sales velocity, profit margins, and trends to identify opportunities, warnings, and successful products. Velocity score shows how fast items are selling.">
+            <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
+          </Tooltip>
         </div>
         
         <button
@@ -159,12 +162,31 @@ export default function ProductInsights() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4 max-h-[600px] overflow-y-auto">
+        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
           {filteredInsights.map((insight, index) => (
             <div 
               key={index}
-              className={`border rounded-lg p-4 transition-all hover:shadow-md ${getTypeColor(insight.type)}`}
+              className={`relative border-l-4 rounded-lg p-5 transition-all hover:shadow-lg ${getTypeColor(insight.type)}`}
+              style={{
+                borderLeftColor: 
+                  insight.type === 'success' ? 'rgb(34, 197, 94)' :
+                  insight.type === 'opportunity' ? 'rgb(59, 130, 246)' :
+                  'rgb(245, 158, 11)'
+              }}
             >
+              {/* Priority Badge */}
+              <div className="absolute top-4 right-4">
+                <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  insight.metrics.velocityScore >= 70 
+                    ? 'bg-green-500 text-white' 
+                    : insight.metrics.velocityScore >= 40 
+                    ? 'bg-yellow-500 text-white' 
+                    : 'bg-red-500 text-white'
+                }`}>
+                  {insight.metrics.velocityScore >= 70 ? 'High Priority' : 
+                   insight.metrics.velocityScore >= 40 ? 'Medium' : 'Low Priority'}
+                </div>
+              </div>
               {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-3 flex-1">
@@ -196,7 +218,12 @@ export default function ProductInsights() {
               {/* Metrics */}
               <div className="grid grid-cols-4 gap-3 mb-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg">
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Sales</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Sales</p>
+                    <Tooltip text="Number of units sold during the period">
+                      <HelpCircle size={10} className="text-slate-400 opacity-60" />
+                    </Tooltip>
+                  </div>
                   <div className="flex items-center gap-1">
                     {getTrendIcon(insight.metrics.trend)}
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -205,13 +232,23 @@ export default function ProductInsights() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Revenue</p>
+                    <Tooltip text="Total sales value generated">
+                      <HelpCircle size={10} className="text-slate-400 opacity-60" />
+                    </Tooltip>
+                  </div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
                     ${insight.metrics.revenue.toFixed(0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Margin</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Margin</p>
+                    <Tooltip text="Profit margin percentage">
+                      <HelpCircle size={10} className="text-slate-400 opacity-60" />
+                    </Tooltip>
+                  </div>
                   <p className={`text-sm font-semibold ${
                     insight.metrics.profitMargin > 30 
                       ? 'text-green-600' 
@@ -283,6 +320,19 @@ export default function ProductInsights() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Tooltip Component
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group inline-block">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 w-64 whitespace-normal">
+        {text}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+      </div>
     </div>
   )
 }

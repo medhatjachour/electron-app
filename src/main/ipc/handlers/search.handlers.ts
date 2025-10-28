@@ -524,11 +524,21 @@ export function registerSearchHandlers(prisma: any) {
       // Top products analysis
       const productSales = new Map<string, { name: string; revenue: number; qty: number; cost: number }>()
       
+      // Calculate total cost and profit from ALL sales
+      let totalCost = 0
+      let totalRevenue = 0
+      
       currentSales.forEach(sale => {
         const productId = sale.product.id
         const productName = sale.product.name
         const revenue = sale.total
-        const cost = sale.quantity * (sale.product.basePrice || 0)
+        // Cost calculation: use baseCost from product (actual cost), NOT selling price
+        const unitCost = sale.product.baseCost || 0
+        const cost = sale.quantity * unitCost
+        
+        // Accumulate total cost and revenue for ALL products
+        totalCost += cost
+        totalRevenue += revenue
         
         if (productSales.has(productId)) {
           const existing = productSales.get(productId)!
@@ -575,10 +585,9 @@ export function registerSearchHandlers(prisma: any) {
         .map(([name, revenue]) => ({ name, revenue }))
         .sort((a, b) => b.revenue - a.revenue)
 
-      // Calculate total cost and profit
-      const totalCost = topProducts.reduce((sum, p) => sum + p.cost, 0)
-      const totalProfit = currentRevenue - totalCost
-      const profitMargin = currentRevenue > 0 ? (totalProfit / currentRevenue) * 100 : 0
+      // Calculate profit metrics from ALL sales (already calculated above)
+      const totalProfit = totalRevenue - totalCost
+      const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
 
       return {
         currentMetrics: {
