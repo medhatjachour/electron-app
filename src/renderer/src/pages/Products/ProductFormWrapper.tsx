@@ -89,6 +89,18 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     stock: 0
   })
 
+  // Batch variant creation state
+  const [batchMode, setBatchMode] = useState(false)
+  const [batchVariant, setBatchVariant] = useState({
+    colors: [] as string[],
+    sizes: [] as string[],
+    baseSKU: '',
+    price: 0,
+    stock: 0
+  })
+  const [colorInput, setColorInput] = useState('')
+  const [sizeInput, setSizeInput] = useState('')
+
   // Load stores and categories
   useEffect(() => {
     loadStores()
@@ -263,6 +275,169 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     toast.success('Variant removed')
   }
 
+  // Batch variant handlers
+  const handleAddColor = () => {
+    const trimmed = colorInput.trim()
+    if (!trimmed) {
+      toast.error('Please enter a color')
+      return
+    }
+    if (batchVariant.colors.includes(trimmed)) {
+      toast.error('Color already added')
+      return
+    }
+    setBatchVariant(prev => ({
+      ...prev,
+      colors: [...prev.colors, trimmed]
+    }))
+    setColorInput('')
+  }
+
+  const handleAddSize = () => {
+    const trimmed = sizeInput.trim()
+    if (!trimmed) {
+      toast.error('Please enter a size')
+      return
+    }
+    if (batchVariant.sizes.includes(trimmed)) {
+      toast.error('Size already added')
+      return
+    }
+    setBatchVariant(prev => ({
+      ...prev,
+      sizes: [...prev.sizes, trimmed]
+    }))
+    setSizeInput('')
+  }
+
+  const handleRemoveColor = (color: string) => {
+    setBatchVariant(prev => ({
+      ...prev,
+      colors: prev.colors.filter(c => c !== color)
+    }))
+  }
+
+  const handleRemoveSize = (size: string) => {
+    setBatchVariant(prev => ({
+      ...prev,
+      sizes: prev.sizes.filter(s => s !== size)
+    }))
+  }
+
+  const handleGenerateBatchVariants = () => {
+    // Validation
+    if (!batchVariant.baseSKU.trim()) {
+      toast.error('Please enter a base SKU')
+      return
+    }
+
+    if (batchVariant.price <= 0) {
+      toast.error('Price must be greater than 0')
+      return
+    }
+
+    if (batchVariant.stock < 0) {
+      toast.error('Stock cannot be negative')
+      return
+    }
+
+    if (batchVariant.colors.length === 0 && batchVariant.sizes.length === 0) {
+      toast.error('Please add at least one color or size')
+      return
+    }
+
+    // Generate all combinations
+    const newVariants: Array<{
+      id: string
+      color?: string
+      size?: string
+      sku: string
+      price: number
+      stock: number
+    }> = []
+
+    let counter = 1
+    const baseSKU = batchVariant.baseSKU.trim().toUpperCase()
+
+    // If both colors and sizes are provided, create all combinations
+    if (batchVariant.colors.length > 0 && batchVariant.sizes.length > 0) {
+      batchVariant.colors.forEach(color => {
+        batchVariant.sizes.forEach(size => {
+          const sku = `${baseSKU}-${counter}`
+          newVariants.push({
+            id: `temp-${Date.now()}-${counter}`,
+            color,
+            size,
+            sku,
+            price: batchVariant.price,
+            stock: batchVariant.stock
+          })
+          counter++
+        })
+      })
+    }
+    // If only colors
+    else if (batchVariant.colors.length > 0) {
+      batchVariant.colors.forEach(color => {
+        const sku = `${baseSKU}-${counter}`
+        newVariants.push({
+          id: `temp-${Date.now()}-${counter}`,
+          color,
+          sku,
+          price: batchVariant.price,
+          stock: batchVariant.stock
+        })
+        counter++
+      })
+    }
+    // If only sizes
+    else if (batchVariant.sizes.length > 0) {
+      batchVariant.sizes.forEach(size => {
+        const sku = `${baseSKU}-${counter}`
+        newVariants.push({
+          id: `temp-${Date.now()}-${counter}`,
+          size,
+          sku,
+          price: batchVariant.price,
+          stock: batchVariant.stock
+        })
+        counter++
+      })
+    }
+
+    // Check for duplicate variants
+    const existingCombos = new Set(
+      formData.variants.map(v => `${v.color || ''}-${v.size || ''}`)
+    )
+    const duplicates = newVariants.filter(v => 
+      existingCombos.has(`${v.color || ''}-${v.size || ''}`)
+    )
+
+    if (duplicates.length > 0) {
+      toast.error('Some variant combinations already exist')
+      return
+    }
+
+    // Add all variants
+    setFormData(prev => ({
+      ...prev,
+      variants: [...prev.variants, ...newVariants]
+    }))
+
+    // Reset batch form
+    setBatchVariant({
+      colors: [],
+      sizes: [],
+      baseSKU: '',
+      price: 0,
+      stock: 0
+    })
+    setColorInput('')
+    setSizeInput('')
+
+    toast.success(`${newVariants.length} variants created successfully`)
+  }
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast.error('Please fix the form errors')
@@ -334,6 +509,19 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         setNewVariant={setNewVariant}
         onAddVariant={handleAddVariant}
         onRemoveVariant={handleRemoveVariant}
+        batchMode={batchMode}
+        setBatchMode={setBatchMode}
+        batchVariant={batchVariant}
+        setBatchVariant={setBatchVariant}
+        colorInput={colorInput}
+        setColorInput={setColorInput}
+        sizeInput={sizeInput}
+        setSizeInput={setSizeInput}
+        onAddColor={handleAddColor}
+        onAddSize={handleAddSize}
+        onRemoveColor={handleRemoveColor}
+        onRemoveSize={handleRemoveSize}
+        onGenerateBatchVariants={handleGenerateBatchVariants}
       />
 
       {/* Action Buttons */}

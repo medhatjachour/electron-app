@@ -56,6 +56,26 @@ type ProductFormProps = {
   setNewVariant: (v: any) => void
   onAddVariant: () => void
   onRemoveVariant: (id: string) => void
+  // Batch variant props
+  batchMode: boolean
+  setBatchMode: (mode: boolean) => void
+  batchVariant: {
+    colors: string[]
+    sizes: string[]
+    baseSKU: string
+    price: number
+    stock: number
+  }
+  setBatchVariant: (v: any) => void
+  colorInput: string
+  setColorInput: (v: string) => void
+  sizeInput: string
+  setSizeInput: (v: string) => void
+  onAddColor: () => void
+  onAddSize: () => void
+  onRemoveColor: (color: string) => void
+  onRemoveSize: (size: string) => void
+  onGenerateBatchVariants: () => void
 }
 
 export default function ProductForm({
@@ -69,7 +89,20 @@ export default function ProductForm({
   newVariant,
   setNewVariant,
   onAddVariant,
-  onRemoveVariant
+  onRemoveVariant,
+  batchMode,
+  setBatchMode,
+  batchVariant,
+  setBatchVariant,
+  colorInput,
+  setColorInput,
+  sizeInput,
+  setSizeInput,
+  onAddColor,
+  onAddSize,
+  onRemoveColor,
+  onRemoveSize,
+  onGenerateBatchVariants
 }: Readonly<ProductFormProps>): JSX.Element {
   return (
     <div className="space-y-6">
@@ -257,52 +290,244 @@ export default function ProductForm({
 
         {formData.hasVariants && (
           <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
-            {/* Add Variant Form */}
-            <div className="grid grid-cols-6 gap-3">
-              <input
-                type="text"
-                value={newVariant.color}
-                onChange={(e) => setNewVariant({ ...newVariant, color: e.target.value })}
-                className="input-field"
-                placeholder="Color (optional)"
-              />
-              <input
-                type="text"
-                value={newVariant.size}
-                onChange={(e) => setNewVariant({ ...newVariant, size: e.target.value })}
-                className="input-field"
-                placeholder="Size (optional)"
-              />
-              <input
-                type="text"
-                value={newVariant.sku}
-                onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value.toUpperCase() })}
-                className="input-field"
-                placeholder="SKU"
-              />
-              <input
-                type="number"
-                value={newVariant.price || ''}
-                onChange={(e) => setNewVariant({ ...newVariant, price: parseFloat(e.target.value) || 0 })}
-                className="input-field"
-                placeholder="Price"
-                step="0.01"
-              />
-              <input
-                type="number"
-                value={newVariant.stock || ''}
-                onChange={(e) => setNewVariant({ ...newVariant, stock: parseInt(e.target.value) || 0 })}
-                className="input-field"
-                placeholder="Stock"
-              />
+            {/* Mode Toggle */}
+            <div className="flex items-center gap-4 mb-4">
               <button
-                onClick={onAddVariant}
-                className="btn-primary flex items-center justify-center gap-2"
+                onClick={() => setBatchMode(false)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  !batchMode
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                }`}
               >
-                <Plus size={18} />
-                Add
+                Single Variant
               </button>
+              <button
+                onClick={() => setBatchMode(true)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  batchMode
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                }`}
+              >
+                Batch Variants
+              </button>
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                {batchMode ? 'Create multiple variants at once' : 'Add one variant at a time'}
+              </span>
             </div>
+
+            {/* Single Variant Mode */}
+            {!batchMode && (
+              <div className="grid grid-cols-6 gap-3">
+                <input
+                  type="text"
+                  value={newVariant.color}
+                  onChange={(e) => setNewVariant({ ...newVariant, color: e.target.value })}
+                  className="input-field"
+                  placeholder="Color (optional)"
+                />
+                <input
+                  type="text"
+                  value={newVariant.size}
+                  onChange={(e) => setNewVariant({ ...newVariant, size: e.target.value })}
+                  className="input-field"
+                  placeholder="Size (optional)"
+                />
+                <input
+                  type="text"
+                  value={newVariant.sku}
+                  onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value.toUpperCase() })}
+                  className="input-field"
+                  placeholder="SKU"
+                />
+                <input
+                  type="number"
+                  value={newVariant.price || ''}
+                  onChange={(e) => setNewVariant({ ...newVariant, price: parseFloat(e.target.value) || 0 })}
+                  className="input-field"
+                  placeholder="Price"
+                  step="0.01"
+                />
+                <input
+                  type="number"
+                  value={newVariant.stock || ''}
+                  onChange={(e) => setNewVariant({ ...newVariant, stock: parseInt(e.target.value) || 0 })}
+                  className="input-field"
+                  placeholder="Stock"
+                />
+                <button
+                  onClick={onAddVariant}
+                  className="btn-primary flex items-center justify-center gap-2"
+                >
+                  <Plus size={18} />
+                  Add
+                </button>
+              </div>
+            )}
+
+            {/* Batch Variant Mode */}
+            {batchMode && (
+              <div className="space-y-4">
+                {/* Colors Section */}
+                <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Colors (Optional)
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={colorInput}
+                      onChange={(e) => setColorInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && onAddColor()}
+                      className="input-field flex-1"
+                      placeholder="Enter color (e.g., Red, Blue)"
+                    />
+                    <button
+                      onClick={onAddColor}
+                      className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  {batchVariant.colors.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {batchVariant.colors.map((color) => (
+                        <span
+                          key={color}
+                          className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm font-medium flex items-center gap-2"
+                        >
+                          {color}
+                          <button
+                            onClick={() => onRemoveColor(color)}
+                            className="hover:text-secondary/70"
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sizes Section */}
+                <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Sizes (Optional)
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={sizeInput}
+                      onChange={(e) => setSizeInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && onAddSize()}
+                      className="input-field flex-1"
+                      placeholder="Enter size (e.g., S, M, L, XL)"
+                    />
+                    <button
+                      onClick={onAddSize}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  {batchVariant.sizes.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {batchVariant.sizes.map((size) => (
+                        <span
+                          key={size}
+                          className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium flex items-center gap-2"
+                        >
+                          {size}
+                          <button
+                            onClick={() => onRemoveSize(size)}
+                            className="hover:text-primary/70"
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Common Fields */}
+                <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Common Settings (Applied to All Variants)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                        Base SKU *
+                      </label>
+                      <input
+                        type="text"
+                        value={batchVariant.baseSKU}
+                        onChange={(e) => setBatchVariant({ ...batchVariant, baseSKU: e.target.value.toUpperCase() })}
+                        className="input-field w-full"
+                        placeholder="SKU-BASE"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Will be: {batchVariant.baseSKU || 'SKU'}-1, {batchVariant.baseSKU || 'SKU'}-2, etc.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                        Price * ($)
+                      </label>
+                      <input
+                        type="number"
+                        value={batchVariant.price || ''}
+                        onChange={(e) => setBatchVariant({ ...batchVariant, price: parseFloat(e.target.value) || 0 })}
+                        className="input-field w-full"
+                        placeholder="0.00"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                        Stock (Units)
+                      </label>
+                      <input
+                        type="number"
+                        value={batchVariant.stock || ''}
+                        onChange={(e) => setBatchVariant({ ...batchVariant, stock: parseInt(e.target.value) || 0 })}
+                        className="input-field w-full"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {(batchVariant.colors.length > 0 || batchVariant.sizes.length > 0) && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                      📦 Will create {
+                        batchVariant.colors.length > 0 && batchVariant.sizes.length > 0
+                          ? batchVariant.colors.length * batchVariant.sizes.length
+                          : batchVariant.colors.length + batchVariant.sizes.length
+                      } variants
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      {batchVariant.colors.length > 0 && batchVariant.sizes.length > 0
+                        ? `All combinations of ${batchVariant.colors.length} colors × ${batchVariant.sizes.length} sizes`
+                        : batchVariant.colors.length > 0
+                        ? `${batchVariant.colors.length} color variants`
+                        : `${batchVariant.sizes.length} size variants`}
+                    </p>
+                  </div>
+                )}
+
+                {/* Generate Button */}
+                <button
+                  onClick={onGenerateBatchVariants}
+                  className="w-full btn-primary flex items-center justify-center gap-2 py-3"
+                >
+                  <Plus size={18} />
+                  Generate All Variants
+                </button>
+              </div>
+            )}
 
             {/* Variant List */}
             {formData.variants.length > 0 && (
