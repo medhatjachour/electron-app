@@ -162,7 +162,7 @@ export class EncryptionService {
   private constructor() {
     // In production, this should come from environment variable
     // For demo purposes, using a static key
-    this.SECRET_KEY = process.env.ENCRYPTION_KEY || 'sales-electron-secret-key-2024'
+    this.SECRET_KEY = process.env.ENCRYPTION_KEY || '    'bizflow-secret-key-2024''
   }
 
   static getInstance(): EncryptionService {

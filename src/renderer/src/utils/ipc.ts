@@ -107,6 +107,22 @@ const mockIPC = {
       employees.push(newEmployee)
       localStorage.setItem('employees', JSON.stringify(employees))
       return { success: true, employee: newEmployee }
+    },
+    update: async ({ id, employeeData }: any) => {
+      const employees = JSON.parse(localStorage.getItem('employees') || '[]')
+      const index = employees.findIndex((e: any) => e.id === id)
+      if (index !== -1) {
+        employees[index] = { ...employees[index], ...employeeData, updatedAt: new Date().toISOString() }
+        localStorage.setItem('employees', JSON.stringify(employees))
+        return { success: true, employee: employees[index] }
+      }
+      return { success: false, message: 'Employee not found' }
+    },
+    delete: async (id: string) => {
+      const employees = JSON.parse(localStorage.getItem('employees') || '[]')
+      const filtered = employees.filter((e: any) => e.id !== id)
+      localStorage.setItem('employees', JSON.stringify(filtered))
+      return { success: true }
     }
   },
   customers: {
@@ -170,7 +186,9 @@ export const ipc = isElectron ? {
   // Employee operations
   employees: {
     getAll: () => window.electron.ipcRenderer.invoke('employees:getAll'),
-    create: (data: any) => window.electron.ipcRenderer.invoke('employees:create', data)
+    create: (data: any) => window.electron.ipcRenderer.invoke('employees:create', data),
+    update: (id: string, data: any) => window.electron.ipcRenderer.invoke('employees:update', { id, employeeData: data }),
+    delete: (id: string) => window.electron.ipcRenderer.invoke('employees:delete', id)
   },
   
   // Customer operations

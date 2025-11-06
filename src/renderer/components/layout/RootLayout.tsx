@@ -192,11 +192,11 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
         <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-primary/5 to-secondary/5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold">
-              SE
+              BF
             </div>
             {sidebarOpen && (
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                SalesElectron
+                BizFlow
               </span>
             )}
           </div>
@@ -301,7 +301,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
             {/* Breadcrumb */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary lg:hidden flex items-center justify-center text-white font-bold text-sm">
-                SE
+                BF
               </div>
               <div>
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">

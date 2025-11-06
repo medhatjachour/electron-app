@@ -11,6 +11,7 @@ type Employee = {
   email: string
   phone: string
   status: 'active' | 'inactive'
+  salary?: number
   performance?: number
   address?: string
   hireDate?: string
@@ -31,6 +32,7 @@ export default function Employees(): JSX.Element {
     phone: '',
     address: '',
     status: 'active' as 'active' | 'inactive',
+    salary: 0,
     performance: 0
   })
 
@@ -131,7 +133,8 @@ export default function Employees(): JSX.Element {
           id: Date.now().toString(),
           ...employeeData,
           status: employeeData.status || 'active',
-          performance: employeeData.performance || 0
+          performance: employeeData.performance || 0,
+          salary: employeeData.salary || 0
         }
         const updatedEmployees = [...employees, newEmployee]
         setEmployees(updatedEmployees)
@@ -171,7 +174,7 @@ export default function Employees(): JSX.Element {
     if (!validateForm() || !selectedEmployee) return
 
     try {
-      const result = await ipc.employees.update(selectedEmployee.id, formData)
+  const result = await ipc.employees.update(selectedEmployee.id, { employeeData: formData })
       
       if (result.success) {
         await loadEmployees()
@@ -214,6 +217,7 @@ export default function Employees(): JSX.Element {
       phone: employee.phone,
       address: employee.address || '',
       status: employee.status,
+      salary: employee.salary || 0,
       performance: employee.performance || 0
     })
     setShowEditModal(true)
@@ -227,6 +231,7 @@ export default function Employees(): JSX.Element {
       phone: '',
       address: '',
       status: 'active',
+      salary: 0,
       performance: 0
     })
   }
@@ -286,6 +291,11 @@ export default function Employees(): JSX.Element {
                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Phone size={16} className="shrink-0" />
                   {emp.phone}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <Clock size={16} className="shrink-0" />
+                  <span className="font-medium">Salary:</span>
+                  <span className="ml-1">{emp.salary !== undefined ? `$${Number(emp.salary).toFixed(2)}` : '—'}</span>
                 </div>
               </div>
 
@@ -395,6 +405,23 @@ export default function Employees(): JSX.Element {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
                 placeholder="(555) 123-4567"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Salary (monthly)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
+                className="input-field"
+                placeholder="0.00"
               />
             </div>
           </div>
@@ -522,6 +549,23 @@ export default function Employees(): JSX.Element {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Salary (monthly)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
+                className="input-field"
+                placeholder="0.00"
               />
             </div>
           </div>

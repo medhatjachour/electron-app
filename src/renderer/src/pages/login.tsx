@@ -68,8 +68,8 @@ export default function Login() {
               <Store className="w-7 h-7 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">SalesElectron</h1>
-              <p className="text-white/80 text-sm">Point of Sale System</p>
+              <h1 className="text-2xl font-bold text-white">BizFlow</h1>
+              <p className="text-white/80 text-sm">Business Management System</p>
             </div>
           </div>
 
@@ -106,7 +106,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="relative z-10 text-white/70 text-sm">
-          <p>© 2025 SalesElectron. All rights reserved.</p>
+          <p>© 2025 BizFlow. All rights reserved.</p>
         </div>
       </div>
 
@@ -119,7 +119,7 @@ export default function Login() {
               <Store className="w-7 h-7 text-primary" strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">SalesElectron</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BizFlow</h1>
             </div>
           </div>
 

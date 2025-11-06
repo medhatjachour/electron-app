@@ -176,9 +176,12 @@ model Employee {
   role        String
   email       String   @unique
   phone       String
+  salary      Float    @default(0) // Monthly salary
   performance Float    @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  @@index([salary])
 }
 
 model Customer {

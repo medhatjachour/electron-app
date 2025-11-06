@@ -1,8 +1,8 @@
- # Electron POS & Inventory Management System
+# BizFlow - Business Management System
 
 > A modern, full-featured desktop Point of Sale and Inventory Management application built with Electron, React, and TypeScript.
 
-**What is this?** A complete retail management solution that runs as a desktop app on Windows, macOS, and Linux. Manages sales transactions, product inventory with variants, customer data, and provides real-time financial analytics—all stored locally with SQLite.
+**What is this?** A complete retail management solution that runs as a desktop app on Windows, macOS, and Linux. Manages sales transactions, product inventory with variants, customer data, employee records with salaries, comprehensive business reports, and provides real-time financial analytics—all stored locally with SQLite.
 
 **Tech Stack:** Electron.js + React 18 + TypeScript + Prisma ORM + SQLite + TailwindCSS
 
@@ -105,9 +105,11 @@ npx prisma db seed
 npm run dev
 ```
 
-**Demo Login:**
-- Username: `0000`
-- Password: `0000`
+**Default Login Credentials:**
+- Username: `setup`
+- Password: `setup123`
+
+> First-time users: Use the setup account to create your permanent admin user.
 
 ### Building
 
@@ -180,6 +182,27 @@ npm run build:linux
 - Advanced filtering (category, color, size, store)
 - Bulk import/export
 
+### Employee Management
+- Employee records with salary tracking
+- Role assignment (Manager, Cashier, Stock Clerk, etc.)
+- Performance tracking
+- Contact information management
+- Active/inactive status management
+
+### Customer Management
+- Customer database with loyalty tiers (Bronze, Silver, Gold, Platinum)
+- Total spending tracking
+- Contact information storage
+- Purchase history
+
+### Business Reports
+- **Sales Reports** - Daily breakdown, payment methods, top products
+- **Inventory Reports** - Stock levels by category, low stock alerts
+- **Financial Reports** - Revenue, expenses, profit analysis with daily breakdown
+- **Customer Reports** - Analytics with loyalty tier distribution
+- **Quick Insights Dashboard** - Real-time metrics (today's revenue, orders, low stock, new customers)
+- Export to PDF and CSV formats
+
 ### Finance Dashboard
 - Revenue and profit tracking
 - Order analytics
@@ -187,6 +210,7 @@ npm run build:linux
 - Performance radar chart
 - Date range filtering
 - Export reports
+- Expense tracking
 
 ### Settings
 - Theme customization (Light, Dark, System)
@@ -203,6 +227,7 @@ npm run build:linux
 - **IPC Bridge** - Secure preload script
 - **No Node.js in Renderer** - Sandboxed renderer process
 - **Prepared Statements** - SQL injection prevention (Prisma)
+- **DevTools Disabled in Production** - Security hardening for production builds
 
 ## 🧪 Testing (Planned)
 
@@ -239,22 +264,32 @@ npm run test:e2e
 2. Export `registerDomainHandlers(prisma)` function
 3. Register in `handlers/index.ts`
 
+## ✨ Recent Updates
+
+- **Rebranded to BizFlow** - Updated all UI elements, login page, and branding
+- **Employee Salary Tracking** - Added salary field to employee management
+- **Comprehensive Reports System** - 5 report types with PDF/CSV export
+- **Production Security** - DevTools disabled in production builds
+- **Code Cleanup** - Removed unused backup files and legacy code
+- **Professional UI** - Slate color scheme with dark mode support
+
 ## 🐛 Known Issues
 
-- Settings page has 6 placeholder tabs (implementation pending)
-- Some TypeScript strict mode violations (legacy code)
-- Performance optimization pending for large datasets
+- Settings page has some placeholder tabs (implementation in progress)
+- Performance optimization pending for very large datasets (1000+ products)
 
 ## 🔮 Roadmap
 
-- [ ] Add Zod validation for all forms and DTOs
-- [ ] Implement remaining Settings panels
-- [ ] Add React.memo for expensive components
-- [ ] Virtualize long product/sales lists
-- [ ] Set up Jest + React Testing Library
-- [ ] Add CI/CD pipeline (GitHub Actions)
-- [ ] Implement Repository pattern for data access
-- [ ] Add PWA support for web version
+- [ ] Advanced employee expense tracking with categories
+- [ ] Automated payroll reports
+- [ ] Multi-store inventory sync
+- [ ] Role-based access control (RBAC) for multi-user support
+- [ ] Backup/restore functionality
+- [ ] Receipt printing integration
+- [ ] Barcode label printing
+- [ ] Integration with payment gateways
+- [ ] Cloud sync option (optional online backup)
+- [ ] Mobile companion app
 
 ## 📚 Documentation
 
@@ -276,23 +311,20 @@ Contributions are welcome! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Team
+##  Acknowledgments
 
-- **Lead Developer** - Architecture and refactoring
-- **UI/UX** - Modern, accessible design
-- **Database** - Prisma schema and migrations
-
-## 🙏 Acknowledgments
-
-- Electron.js community
-- React and TypeScript teams
-- Prisma team for amazing ORM
-- TailwindCSS for beautiful styling
-- All open-source contributors
+- Electron.js community for the amazing framework
+- React and TypeScript teams for robust tooling
+- Prisma team for the best ORM experience
+- TailwindCSS for beautiful, maintainable styling
+- Lucide React for comprehensive icon library
+- All open-source contributors who make projects like this possible
 
 ---
 
 **Built with ❤️ using Electron + React + TypeScript**
+
+**BizFlow** - Streamline your business operations with confidence.
 
 ## Recommended IDE Setup
 
