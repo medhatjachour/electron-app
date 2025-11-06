@@ -9,8 +9,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff, Store, Zap, Shield, TrendingUp, Lock, User } from 'lucide-react'
 
 export default function Login() {
-  const [username, setUsername] = useState('0000')
-  const [password, setPassword] = useState('0000')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -42,9 +42,9 @@ export default function Login() {
     }
   }
 
-  const handleDemoLogin = async () => {
-    setUsername('0000')
-    setPassword('0000')
+  const handleSetupLogin = async () => {
+    setUsername('setup')
+    setPassword('setup123')
     // Small delay to show the credentials being filled
     setTimeout(() => handleLogin(), 100)
   }
@@ -246,6 +246,25 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Setup Account Info */}
+          <div className="mt-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-3 h-3 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  First Time Setup
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  If this is your first login, use the setup account below to create your permanent admin user.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
@@ -258,17 +277,17 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Demo Login Button */}
+          {/* Setup Login Button */}
           <button
-            onClick={handleDemoLogin}
+            onClick={handleSetupLogin}
             disabled={loading}
-            className="w-full py-3 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-medium rounded-xl border-2 border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-medium rounded-xl border-2 border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center justify-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Try Demo Account
+              Use Setup Account (setup / setup123)
             </span>
           </button>
 

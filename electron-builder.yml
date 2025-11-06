@@ -1,7 +1,8 @@
-appId: com.electron.app
-productName: electron-app
+appId: com.bizflow.app
+productName: BizFlow
 directories:
   buildResources: build
+  output: dist
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -9,21 +10,36 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!prisma/*'
-  - out/**/*
-  - prisma/dev.db
-  - prisma/schema.prisma
+  - '!prisma/migrations/**/*'
+  - '!prisma/seed*.ts'
+  - '!prisma/dev.db-journal'
+  - '!prisma/dev.db-wal'
+  - '!prisma/*-journal'
+  - out/**
+  - node_modules/**
+  - package.json
+  - prisma/template.db
+extraResources:
+  - from: prisma/template.db
+    to: prisma/template.db
 asarUnpack:
   - resources/**
-  - out/generated/**
-  - prisma/**
+  - node_modules/@prisma/**
+  - node_modules/.prisma/**
 win:
-  executableName: electron-app
+  executableName: BizFlow
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

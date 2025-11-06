@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { join } from 'node:path'
+import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -7,17 +8,66 @@ import icon from '../../resources/icon.png?asset'
 import { registerAllHandlers } from './ipc/handlers/index'
 import { initializeDatabase } from './database/init'
 
+// Setup logging to file
+const logDir = join(app.getPath('userData'), 'logs')
+if (!existsSync(logDir)) {
+  mkdirSync(logDir, { recursive: true })
+}
+const logFile = join(logDir, `app-${new Date().toISOString().split('T')[0]}.log`)
+
+// Save original console methods BEFORE overriding
+const originalConsoleLog = console.log
+const originalConsoleError = console.error
+const originalConsoleWarn = console.warn
+
+function logToFile(level: string, ...args: any[]) {
+  const timestamp = new Date().toISOString()
+  const message = args.map(a => {
+    try {
+      return typeof a === 'string' ? a : JSON.stringify(a)
+    } catch {
+      return String(a)
+    }
+  }).join(' ')
+  const logMessage = `[${timestamp}] [${level}] ${message}\n`
+  
+  try {
+    appendFileSync(logFile, logMessage)
+  } catch (err) {
+    originalConsoleError('Failed to write to log file:', err)
+  }
+}
+
+// Override console methods to also log to file
+console.log = (...args) => {
+  originalConsoleLog(...args)
+  logToFile('INFO', ...args)
+}
+
+console.error = (...args) => {
+  originalConsoleError(...args)
+  logToFile('ERROR', ...args)
+}
+
+console.warn = (...args) => {
+  originalConsoleWarn(...args)
+  logToFile('WARN', ...args)
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1400,
+    height: 900,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#ffffff',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true
     }
   })
 
@@ -30,10 +80,8 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // Open DevTools in production to debug white screen
-  if (!is.dev) {
-    mainWindow.webContents.openDevTools()
-  }
+  // Open DevTools to debug production issues (TEMPORARY)
+  mainWindow.webContents.openDevTools()
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -50,30 +98,46 @@ function createWindow(): void {
 
   // Log any renderer errors
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Page failed to load:', errorCode, errorDescription)
+    console.error('[Renderer] Page failed to load:', errorCode, errorDescription)
   })
 
-  mainWindow.webContents.on('crashed', () => {
-    console.error('Renderer process crashed')
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[Renderer] Process gone:', details.reason, details.exitCode)
+  })
+
+  // Console message logging for debugging
+  mainWindow.webContents.on('console-message', (_event, _level, message) => {
+    console.log(`[Renderer Console] ${message}`)
   })
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.bizflow.app')
 
-  // Initialize database (copy to userData on first run)
-  initializeDatabase()
+  console.log('[Main] Starting application...')
+  console.log('[Main] Environment:', is.dev ? 'development' : 'production')
+  console.log('[Main] User data path:', app.getPath('userData'))
 
-  // Register all IPC handlers BEFORE creating windows
-  registerAllHandlers()
+  try {
+    // Initialize database (create in userData on first run)
+    console.log('[Main] Initializing database...')
+    await initializeDatabase()
+
+    // Register all IPC handlers BEFORE creating windows
+    console.log('[Main] Registering IPC handlers...')
+    registerAllHandlers()
+
+    console.log('[Main] ✅ Setup complete, creating window...')
+  } catch (error) {
+    console.error('[Main] ❌ Setup failed:', error)
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -97,6 +161,15 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('[Main] Uncaught exception:', error)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Main] Unhandled rejection at:', promise, 'reason:', reason)
 })
 
 // In this file you can include the rest of your app's specific main process

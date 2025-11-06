@@ -59,6 +59,28 @@ interface API {
     update: (data: { id: string; categoryData: { name: string; description?: string; icon?: string; color?: string } }) => Promise<any>
     delete: (id: string) => Promise<any>
   }
+  users: {
+    getAll: () => Promise<any>
+    getById: (id: string) => Promise<any>
+    create: (userData: {
+      username: string
+      password: string
+      fullName?: string | null
+      email?: string | null
+      phone?: string | null
+      role: string
+    }) => Promise<any>
+    update: (id: string, updateData: {
+      fullName?: string | null
+      email?: string | null
+      phone?: string | null
+      role?: string
+      isActive?: boolean
+    }) => Promise<any>
+    changePassword: (id: string, newPassword: string) => Promise<any>
+    delete: (id: string) => Promise<any>
+    updateLastLogin: (id: string) => Promise<any>
+  }
 }
 
 declare global {

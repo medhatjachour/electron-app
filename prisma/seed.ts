@@ -78,49 +78,63 @@ async function main() {
   const users = await Promise.all([
     prisma.user.create({
       data: {
-        username: '0000',
-        passwordHash: await bcrypt.hash('0000', 10),
+        username: 'admin',
+        passwordHash: await bcrypt.hash('admin123', 10),
         role: 'admin',
+        fullName: 'System Administrator',
+        email: 'admin@bizflow.com',
+        isActive: true,
       },
     }),
     prisma.user.create({
       data: {
-        username: 'manager1',
+        username: 'manager',
         passwordHash: await bcrypt.hash('manager123', 10),
         role: 'manager',
+        fullName: 'Store Manager',
+        email: 'manager@bizflow.com',
+        isActive: true,
       },
     }),
     prisma.user.create({
       data: {
-        username: 'sales1',
+        username: 'sales',
         passwordHash: await bcrypt.hash('sales123', 10),
         role: 'sales',
+        fullName: 'Sales Associate',
+        email: 'sales@bizflow.com',
+        isActive: true,
       },
     }),
     prisma.user.create({
       data: {
-        username: 'sales2',
-        passwordHash: await bcrypt.hash('sales123', 10),
-        role: 'sales',
-      },
-    }),
-    prisma.user.create({
-      data: {
-        username: 'inventory1',
+        username: 'inventory',
         passwordHash: await bcrypt.hash('inventory123', 10),
         role: 'inventory',
+        fullName: 'Inventory Manager',
+        email: 'inventory@bizflow.com',
+        isActive: true,
       },
     }),
     prisma.user.create({
       data: {
-        username: 'finance1',
+        username: 'finance',
         passwordHash: await bcrypt.hash('finance123', 10),
         role: 'finance',
+        fullName: 'Finance Manager',
+        email: 'finance@bizflow.com',
+        isActive: true,
       },
     }),
   ])
   
-  console.log(`✅ Created ${users.length} users\n`)
+  console.log(`✅ Created ${users.length} users`)
+  console.log('   Default credentials:')
+  console.log('   • admin / admin123 (Full access)')
+  console.log('   • manager / manager123 (Management access)')
+  console.log('   • sales / sales123 (Sales only)')
+  console.log('   • inventory / inventory123 (Inventory only)')
+  console.log('   • finance / finance123 (Finance only)\n')
 
   // ==================== STORES ====================
   console.log('🏪 Creating stores...')
@@ -426,7 +440,7 @@ async function main() {
   console.log('💰 Creating 10,000 sales transactions over the past year...')
   
   const paymentMethods = ['cash', 'card']
-  const salesUsers = [users[2], users[3]] // sales1 and sales2
+  const salesUsers = [users[2]] // sales
   const statuses = ['completed', 'completed', 'completed', 'completed', 'completed', 'pending', 'refunded'] // 5/7 completed
   
   const oneYearAgo = new Date()
@@ -514,7 +528,7 @@ async function main() {
         type,
         amount,
         description: descriptions[Math.floor(Math.random() * descriptions.length)],
-        userId: users[5].id, // finance1
+        userId: users[4].id, // finance
         createdAt: transactionDate,
       },
     })

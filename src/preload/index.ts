@@ -5,7 +5,10 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   auth: {
     login: (username: string, password: string) =>
-      ipcRenderer.invoke('auth:login', { username, password })
+      ipcRenderer.invoke('auth:login', { username, password }),
+    // create a new user account (username, password, role)
+    create: (username: string, password: string, role: string = 'sales') =>
+      ipcRenderer.invoke('auth:create', { username, password, role })
   },
   dashboard: {
     getMetrics: () => ipcRenderer.invoke('dashboard:getMetrics')
@@ -58,7 +61,8 @@ const api = {
       userId: string
     }) => ipcRenderer.invoke('finance:addTransaction', data),
     getTransactions: (data: { startDate: Date; endDate: Date }) =>
-      ipcRenderer.invoke('finance:getTransactions', data)
+      ipcRenderer.invoke('finance:getTransactions', data),
+    getStats: () => ipcRenderer.invoke('finance:getStats')
   },
   products: {
     getAll: (options?: { 
@@ -87,6 +91,29 @@ const api = {
     update: (data: { id: string; categoryData: { name: string; description?: string; icon?: string; color?: string } }) => 
       ipcRenderer.invoke('categories:update', data),
     delete: (id: string) => ipcRenderer.invoke('categories:delete', id)
+  },
+  users: {
+    getAll: () => ipcRenderer.invoke('users:getAll'),
+    getById: (id: string) => ipcRenderer.invoke('users:getById', id),
+    create: (userData: {
+      username: string
+      password: string
+      fullName?: string | null
+      email?: string | null
+      phone?: string | null
+      role: string
+    }) => ipcRenderer.invoke('users:create', userData),
+    update: (id: string, updateData: {
+      fullName?: string | null
+      email?: string | null
+      phone?: string | null
+      role?: string
+      isActive?: boolean
+    }) => ipcRenderer.invoke('users:update', id, updateData),
+    changePassword: (id: string, newPassword: string) => 
+      ipcRenderer.invoke('users:changePassword', id, newPassword),
+    delete: (id: string) => ipcRenderer.invoke('users:delete', id),
+    updateLastLogin: (id: string) => ipcRenderer.invoke('users:updateLastLogin', id)
   },
   // Universal backend search
   'search:products': (options: any) => ipcRenderer.invoke('search:products', options),

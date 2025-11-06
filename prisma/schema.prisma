@@ -12,7 +12,12 @@ model User {
   id           String        @id @default(uuid())
   username     String        @unique
   passwordHash String
-  role         String        @default("sales") // Changed from enum to String
+  role         String        @default("sales") // admin, manager, sales, inventory, finance
+  fullName     String?       // Full display name
+  email        String?       @unique
+  phone        String?
+  isActive     Boolean       @default(true) // Can disable users without deleting
+  lastLogin    DateTime?     // Track last login time
   sales        Sale[]
   transactions Transaction[]
   createdAt    DateTime      @default(now())
@@ -20,6 +25,8 @@ model User {
   
   @@index([role])
   @@index([createdAt])
+  @@index([username])
+  @@index([isActive])
 }
 
 model Category {
