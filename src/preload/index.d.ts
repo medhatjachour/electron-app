@@ -81,6 +81,13 @@ interface API {
     delete: (id: string) => Promise<any>
     updateLastLogin: (id: string) => Promise<any>
   }
+  reports: {
+    getSalesData: (options: { startDate: Date; endDate: Date }) => Promise<any>
+    getInventoryData: (options: { startDate: Date; endDate: Date }) => Promise<any>
+    getFinancialData: (options: { startDate: Date; endDate: Date }) => Promise<any>
+    getCustomerData: (options: { startDate: Date; endDate: Date }) => Promise<any>
+    getQuickInsights: () => Promise<any>
+  }
 }
 
 declare global {

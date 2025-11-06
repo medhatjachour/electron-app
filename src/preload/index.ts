@@ -115,6 +115,18 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('users:delete', id),
     updateLastLogin: (id: string) => ipcRenderer.invoke('users:updateLastLogin', id)
   },
+  reports: {
+    getSalesData: (options: { startDate: string; endDate: string; filters?: any }) =>
+      ipcRenderer.invoke('reports:getSalesData', options),
+    getInventoryData: (options: { filters?: any }) =>
+      ipcRenderer.invoke('reports:getInventoryData', options),
+    getFinancialData: (options: { startDate: string; endDate: string }) =>
+      ipcRenderer.invoke('reports:getFinancialData', options),
+    getCustomerData: (options: { startDate: string; endDate: string }) =>
+      ipcRenderer.invoke('reports:getCustomerData', options),
+    getQuickInsights: () =>
+      ipcRenderer.invoke('reports:getQuickInsights')
+  },
   // Universal backend search
   'search:products': (options: any) => ipcRenderer.invoke('search:products', options),
   'search:inventory': (options: any) => ipcRenderer.invoke('search:inventory', options),
