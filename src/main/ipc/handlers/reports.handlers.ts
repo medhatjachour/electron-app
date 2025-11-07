@@ -117,7 +117,7 @@ export function registerReportsHandlers(prisma: any) {
   })
 
   // Get Inventory Report Data
-  ipcMain.handle('reports:getInventoryData', async (_, { filters }) => {
+  ipcMain.handle('reports:getInventoryData', async () => {
     try {
       if (!prisma) return { success: false, data: null }
 
@@ -261,15 +261,45 @@ export function registerReportsHandlers(prisma: any) {
         }
       })
 
+      // Get active employees and calculate salary expenses
+      const employees = await prisma.employee.findMany({
+        where: {
+          createdAt: {
+            lte: new Date(endDate)
+          }
+        }
+      })
+
+      const totalSalaryExpense = employees.reduce((sum, emp) => sum + (emp.salary || 0), 0)
+
+      // Calculate daily/weekly/monthly salary expenses based on date range
+      const startTime = new Date(startDate).getTime()
+      const endTime = new Date(endDate).getTime()
+      const daysInRange = Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24))
+      
+      let salaryExpenseForPeriod = 0
+      if (daysInRange <= 1) {
+        // Daily: divide monthly salary by ~30 days
+        salaryExpenseForPeriod = totalSalaryExpense / 30
+      } else if (daysInRange <= 7) {
+        // Weekly: divide monthly by 4.33 weeks
+        salaryExpenseForPeriod = totalSalaryExpense / 4.33
+      } else {
+        // Monthly or longer: use full monthly salary * number of months
+        const monthsInRange = daysInRange / 30
+        salaryExpenseForPeriod = totalSalaryExpense * monthsInRange
+      }
+
       const income = transactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0)
 
-      const expenses = transactions
+      const expensesFromTransactions = transactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0)
 
-      const netProfit = totalRevenue + income - expenses
+      const totalExpenses = expensesFromTransactions + salaryExpenseForPeriod
+      const netProfit = totalRevenue + income - totalExpenses
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
       // Daily breakdown
@@ -295,23 +325,37 @@ export function registerReportsHandlers(prisma: any) {
         }
       })
 
-      // Expense breakdown by category
+      // Add daily salary expense proportionally
+      const dailySalaryExpense = salaryExpenseForPeriod / Math.max(1, Object.keys(dailyFinancials).length)
+      Object.keys(dailyFinancials).forEach(date => {
+        dailyFinancials[date].expenses += dailySalaryExpense
+        dailyFinancials[date].salaryExpense = dailySalaryExpense
+        dailyFinancials[date].profit = dailyFinancials[date].revenue - dailyFinancials[date].expenses
+      })
+
+      // Expense breakdown by category (add salary as a category)
       const expensesByDescription = transactions
         .filter(t => t.type === 'expense')
         .reduce((acc, t) => {
           acc[t.description] = (acc[t.description] || 0) + t.amount
           return acc
         }, {} as Record<string, number>)
+      
+      // Add salary expense as a category
+      expensesByDescription['Employee Salaries'] = salaryExpenseForPeriod
 
       return {
         success: true,
         data: {
           summary: {
             totalRevenue: totalRevenue + income,
-            totalExpenses: expenses,
+            totalExpenses: totalExpenses,
+            salaryExpense: salaryExpenseForPeriod,
+            otherExpenses: expensesFromTransactions,
             netProfit,
             profitMargin,
             salesCount: sales.length,
+            employeeCount: employees.length,
             dateRange: { startDate, endDate }
           },
           transactions,

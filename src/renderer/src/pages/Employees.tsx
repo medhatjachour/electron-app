@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Users, Clock, Award, Mail, Phone, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Users, Clock, Award, Mail, Phone, Edit2, Trash2 } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
@@ -240,7 +240,7 @@ export default function Employees(): JSX.Element {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r  bg-clip-text">
             Employee Management
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your team and track performance</p>
@@ -365,20 +365,15 @@ export default function Employees(): JSX.Element {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Role *
+                Role / Position *
               </label>
-              <select
+              <input
+                type="text"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="input-field"
-              >
-                <option value="">Select role</option>
-                <option value="Manager">Manager</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Stock Clerk">Stock Clerk</option>
-                <option value="Sales Associate">Sales Associate</option>
-                <option value="Supervisor">Supervisor</option>
-              </select>
+                placeholder="e.g., Manager, Cashier, Sales Associate"
+              />
             </div>
           </div>
 
@@ -511,20 +506,15 @@ export default function Employees(): JSX.Element {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Role *
+                Role / Position *
               </label>
-              <select
+              <input
+                type="text"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="input-field"
-              >
-                <option value="">Select role</option>
-                <option value="Manager">Manager</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Stock Clerk">Stock Clerk</option>
-                <option value="Sales Associate">Sales Associate</option>
-                <option value="Supervisor">Supervisor</option>
-              </select>
+                placeholder="e.g., Manager, Cashier, Sales Associate"
+              />
             </div>
           </div>
 

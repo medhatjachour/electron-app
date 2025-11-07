@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'node:path'
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -67,7 +67,8 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      devTools: false // Disable DevTools completely
     }
   })
 
@@ -75,31 +76,60 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  // Set a clear, branded window title
+  try {
+    mainWindow.setTitle('BizFlow')
+  } catch (err) {
+    console.warn('Could not set window title:', err)
+  }
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
-  // Open DevTools only in development
-  if (is.dev) {
-    mainWindow.webContents.openDevTools()
-  }
+  // Prevent opening DevTools via keyboard shortcuts
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const key = input.key?.toLowerCase?.() || ''
+    // Block F12 or Ctrl+Shift+I / Command+Option+I
+    if (key === 'f12' || ((input.control || input.meta) && input.shift && key === 'i')) {
+      event.preventDefault()
+    }
+  })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
+  // Load renderer: prefer dev URL in development, otherwise load local file.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    console.log('[Main] Loading renderer from URL:', process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']).catch(err => {
+      console.error('[Main] Failed to load renderer URL:', err)
+    })
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-      .catch(err => {
-        console.error('Failed to load index.html:', err)
-        console.log('__dirname:', __dirname)
-        console.log('Attempting to load from:', join(__dirname, '../renderer/index.html'))
-      })
+    const indexPath = join(__dirname, '../renderer/index.html')
+    // Safety: check file exists before loading to avoid white screen + silent fail
+    try {
+      if (!existsSync(indexPath)) {
+        console.error('[Main] Renderer index.html not found at:', indexPath)
+        // Print a small error HTML to help users debug a missing build
+        const errorHtml = `<!doctype html><html><body><h2>Missing renderer build</h2><p>Expected file not found: ${indexPath}</p></body></html>`
+        mainWindow.loadURL('data:text/html,' + encodeURIComponent(errorHtml))
+      } else {
+        mainWindow.loadFile(indexPath).catch(err => {
+          console.error('[Main] Failed to load index.html:', err)
+          const errorHtml = `<!doctype html><html><body><h2>Renderer failed to load</h2><pre>${String(err)}</pre></body></html>`
+          mainWindow.loadURL('data:text/html,' + encodeURIComponent(errorHtml))
+        })
+      }
+    } catch (err) {
+      console.error('[Main] Error while attempting to load renderer:', err)
+      const errorHtml = `<!doctype html><html><body><h2>Renderer load error</h2><pre>${String(err)}</pre></body></html>`
+      mainWindow.loadURL('data:text/html,' + encodeURIComponent(errorHtml))
+    }
   }
 
   // Log any renderer errors
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error('[Renderer] Page failed to load:', errorCode, errorDescription)
   })
 

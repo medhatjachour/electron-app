@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
-  Download, 
   TrendingUp, 
   Package, 
   DollarSign, 
@@ -10,8 +9,7 @@ import {
   Printer,
   FileSpreadsheet,
   BarChart3,
-  AlertCircle,
-  ChevronRight
+  AlertCircle
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
@@ -410,7 +408,7 @@ const Reports: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Business Reports</h1>
+         <h1 className="text-3xl font-bold bg-gradient-to-r bg-clip-text">Business Reports</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Generate comprehensive reports and analytics
           </p>
