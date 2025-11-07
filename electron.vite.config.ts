@@ -21,10 +21,7 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src'),
         '@pages': resolve('src/renderer/src/pages'),
         '@components': resolve('src/renderer/src/components'),
-        '@': resolve('src'),
-        // Shims for Next imports used in the UI
-        'next/router': resolve('src/renderer/next/router.tsx'),
-        'next/link': resolve('src/renderer/next/link.tsx')
+        '@': resolve('src')
       }
     },
     plugins: [react()],
