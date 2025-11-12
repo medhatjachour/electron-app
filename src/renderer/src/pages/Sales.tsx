@@ -592,7 +592,11 @@ export default function Sales(): JSX.Element {
                   {selectedSale.product?.name || 'Unknown Product'}
                 </p>
                 {selectedSale.product?.category && (
-                  <p className="text-xs text-slate-500 mt-1">Category: {selectedSale.product.category}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Category: {typeof selectedSale.product.category === 'string' 
+                      ? selectedSale.product.category 
+                      : selectedSale.product.category?.name || 'Uncategorized'}
+                  </p>
                 )}
               </div>
 

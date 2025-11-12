@@ -24,13 +24,22 @@ import { registerReportsHandlers } from './reports.handlers'
 let isSeeded = false
 let prisma: any = null
 try {
-  // In built app, __dirname is out/main (handlers get bundled into main/index.js)
-  // Go up 1 level to out/, then into generated/prisma
-  const prismaPath = path.resolve(__dirname, '..', 'generated', 'prisma')
+  // In dev mode, use generated Prisma from src/generated/prisma
+  // In production, use the packed src/generated/prisma (unpacked by electron-builder)
+  const isDev = process.env.NODE_ENV === 'development'
+  let PrismaClient
   
-  console.log('[Database] Attempting to load Prisma from:', prismaPath)
-  
-  const { PrismaClient } = require(prismaPath)
+  if (isDev) {
+    const prismaPath = path.resolve(process.cwd(), 'src', 'generated', 'prisma')
+    console.log('[Database] [DEV] Loading Prisma from:', prismaPath)
+    PrismaClient = require(prismaPath).PrismaClient
+  } else {
+    // In production, use the unpacked src/generated/prisma
+    // __dirname in production is: /opt/BizFlow/resources/app.asar/out/main
+    const prismaPath = path.resolve(__dirname, '..', '..', '..', 'app.asar.unpacked', 'src', 'generated', 'prisma')
+    console.log('[Database] [PROD] Loading Prisma from:', prismaPath)
+    PrismaClient = require(prismaPath).PrismaClient
+  }
   if (PrismaClient) {
     // Use centralized database path function
     const dbPath = getDatabasePath()

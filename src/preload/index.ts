@@ -92,6 +92,26 @@ const api = {
       ipcRenderer.invoke('categories:update', data),
     delete: (id: string) => ipcRenderer.invoke('categories:delete', id)
   },
+  employees: {
+    getAll: () => ipcRenderer.invoke('employees:getAll'),
+    getById: (id: string) => ipcRenderer.invoke('employees:getById', id),
+    create: (employeeData: {
+      name: string
+      role: string
+      email: string
+      phone: string
+      salary: number
+    }) => ipcRenderer.invoke('employees:create', employeeData),
+    update: (id: string, employeeData: {
+      name?: string
+      role?: string
+      email?: string
+      phone?: string
+      salary?: number
+      performance?: number
+    }) => ipcRenderer.invoke('employees:update', { id, employeeData }),
+    delete: (id: string) => ipcRenderer.invoke('employees:delete', id)
+  },
   users: {
     getAll: () => ipcRenderer.invoke('users:getAll'),
     getById: (id: string) => ipcRenderer.invoke('users:getById', id),

@@ -16,6 +16,7 @@ files:
   - '!prisma/dev.db-wal'
   - '!prisma/*-journal'
   - out/**
+  - src/generated/**
   - node_modules/**
   - package.json
   - prisma/template.db
@@ -24,11 +25,13 @@ extraResources:
     to: prisma/template.db
 asarUnpack:
   - resources/**
+  - src/generated/**
   - node_modules/@prisma/**
   - node_modules/.prisma/**
 win:
   executableName: BizFlow
   icon: build/icon.ico
+  sign: null
   target:
     - target: nsis
       arch:

@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { RefreshCcw, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Percent, Calendar, BarChart3, Waves, Sparkles, Activity, HelpCircle } from 'lucide-react'
+import { RefreshCcw, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Percent, Calendar, BarChart3, Waves, Sparkles, Activity, HelpCircle, Calculator } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { Line, Doughnut } from 'react-chartjs-2'
 import {
@@ -35,6 +35,7 @@ import RevenueForecasting from './components/RevenueForecasting'
 import CashFlowProjection from './components/CashFlowProjection'
 import ProductInsights from './components/ProductInsights'
 import FinancialHealthDashboard from './components/FinancialHealth'
+import PricingCalculator from './components/PricingCalculator'
 
 // Register ChartJS components
 ChartJS.register(
@@ -81,7 +82,7 @@ type SalesByCategory = {
   revenue: number
 }
 
-type TabType = 'overview' | 'forecasting' | 'cashflow' | 'insights' | 'health'
+type TabType = 'overview' | 'forecasting' | 'cashflow' | 'insights' | 'health' | 'pricing'
 
 export default function Finance() {
   const toast = useToast()
@@ -297,6 +298,13 @@ export default function Finance() {
             onClick={() => setActiveTab('health')}
             icon={<Activity size={18} />}
             label="Financial Health"
+          />
+          <TabButton
+            active={activeTab === 'pricing'}
+            onClick={() => setActiveTab('pricing')}
+            icon={<Calculator size={18} />}
+            label="Pricing Calculator"
+            badge="NEW"
           />
         </div>
       </div>
@@ -748,6 +756,7 @@ export default function Finance() {
       {activeTab === 'cashflow' && <CashFlowProjection />}
       {activeTab === 'insights' && <ProductInsights />}
       {activeTab === 'health' && <FinancialHealthDashboard />}
+      {activeTab === 'pricing' && <PricingCalculator />}
 
       <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />
     </div>
