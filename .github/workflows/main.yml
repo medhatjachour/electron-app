@@ -1,0 +1,85 @@
+appId: com.bizflow.app
+productName: BizFlow
+directories:
+  buildResources: build
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!prisma/migrations/**/*'
+  - '!prisma/seed*.ts'
+  - '!prisma/dev.db-journal'
+  - '!prisma/dev.db-wal'
+  - '!prisma/*-journal'
+  - out/**
+  - src/generated/**
+  - node_modules/**
+  - package.json
+  - prisma/template.db
+extraResources:
+  - from: prisma/template.db
+    to: prisma/template.db
+asarUnpack:
+  - resources/**
+  - src/generated/**
+  - node_modules/@prisma/**
+  - node_modules/.prisma/**
+win:
+  executableName: BizFlow
+  icon: build/icon.ico
+  sign: null  # Set to signing script path for production
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # Optional: Code signing (uncomment for production)
+  # certificateFile: ${WINDOWS_CERTIFICATE_FILE}
+  # certificatePassword: ${WINDOWS_CERTIFICATE_PASSWORD}
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  oneClick: false
+  perMachine: false  # Allow per-user installation
+  allowElevation: true  # Allow elevation if user wants system-wide install
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false  # Keep user data on uninstall
+  runAfterFinish: true  # Launch app after installation
+  # NSIS installer customization
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeader: build/installerHeader.bmp  # Optional: 150x57 pixels
+  installerSidebar: build/installerSidebar.bmp  # Optional: 164x314 pixels
+  # Display language
+  language: 1033  # English
+  # Menu category in Start Menu
+  menuCategory: true
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - snap
+    - deb
+  maintainer: electronjs.org
+  category: Utility
+appImage:
+  artifactName: ${name}-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: generic
+  url: https://example.com/auto-updates
