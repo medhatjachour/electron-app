@@ -160,6 +160,45 @@ const mockIPC = {
       }
       return { success: false, message: 'Sale not found' }
     }
+  },
+  saleTransactions: {
+    getAll: async () => JSON.parse(localStorage.getItem('saleTransactions') || '[]'),
+    getById: async (id: string) => {
+      const transactions = JSON.parse(localStorage.getItem('saleTransactions') || '[]')
+      return transactions.find((t: any) => t.id === id) || null
+    },
+    create: async (data: any) => {
+      const transactions = JSON.parse(localStorage.getItem('saleTransactions') || '[]')
+      const newTransaction = {
+        id: `TXN-${Date.now().toString().slice(-6)}`,
+        ...data.transactionData,
+        items: data.items,
+        createdAt: new Date().toISOString(),
+        user: { username: 'Demo User' }
+      }
+      transactions.unshift(newTransaction)
+      localStorage.setItem('saleTransactions', JSON.stringify(transactions))
+      return { success: true, transaction: newTransaction }
+    },
+    refund: async (id: string) => {
+      const transactions = JSON.parse(localStorage.getItem('saleTransactions') || '[]')
+      const transaction = transactions.find((t: any) => t.id === id)
+      if (transaction) {
+        transaction.status = 'refunded'
+        localStorage.setItem('saleTransactions', JSON.stringify(transactions))
+        return { success: true, transaction }
+      }
+      return { success: false, message: 'Transaction not found' }
+    },
+    getByDateRange: async (data: any) => {
+      const transactions = JSON.parse(localStorage.getItem('saleTransactions') || '[]')
+      const start = new Date(data.startDate)
+      const end = new Date(data.endDate)
+      return transactions.filter((t: any) => {
+        const date = new Date(t.createdAt)
+        return date >= start && date <= end
+      })
+    }
   }
 }
 
@@ -202,5 +241,14 @@ export const ipc = isElectron ? {
     getAll: () => window.electron.ipcRenderer.invoke('sales:getAll'),
     create: (data: any) => window.electron.ipcRenderer.invoke('sales:create', data),
     refund: (saleId: string) => window.electron.ipcRenderer.invoke('sales:refund', saleId)
+  },
+
+  // Sale Transaction operations (new transaction-based sales)
+  saleTransactions: {
+    create: (data: { items: any[], transactionData: any }) => window.electron.ipcRenderer.invoke('saleTransactions:create', data),
+    getAll: () => window.electron.ipcRenderer.invoke('saleTransactions:getAll'),
+    getById: (id: string) => window.electron.ipcRenderer.invoke('saleTransactions:getById', id),
+    refund: (id: string) => window.electron.ipcRenderer.invoke('saleTransactions:refund', id),
+    getByDateRange: (data: { startDate: Date, endDate: Date }) => window.electron.ipcRenderer.invoke('saleTransactions:getByDateRange', data)
   }
 } : mockIPC

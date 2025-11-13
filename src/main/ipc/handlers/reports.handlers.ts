@@ -243,8 +243,8 @@ export function registerReportsHandlers(prisma: any) {
 
       const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0)
 
-      // Get transactions (expenses)
-      const transactions = await prisma.transaction.findMany({
+      // Get financial transactions (expenses)
+      const transactions = await prisma.financialTransaction.findMany({
         where: {
           createdAt: {
             gte: new Date(startDate),

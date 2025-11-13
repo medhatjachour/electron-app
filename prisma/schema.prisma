@@ -9,19 +9,20 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  username     String        @unique
-  passwordHash String
-  role         String        @default("sales") // admin, manager, sales, inventory, finance
-  fullName     String?       // Full display name
-  email        String?       @unique
-  phone        String?
-  isActive     Boolean       @default(true) // Can disable users without deleting
-  lastLogin    DateTime?     // Track last login time
-  sales        Sale[]
-  transactions Transaction[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                    String                 @id @default(uuid())
+  username              String                 @unique
+  passwordHash          String
+  role                  String                 @default("sales") // admin, manager, sales, inventory, finance
+  fullName              String?                // Full display name
+  email                 String?                @unique
+  phone                 String?
+  isActive              Boolean                @default(true) // Can disable users without deleting
+  lastLogin             DateTime?              // Track last login time
+  sales                 Sale[]                 // Old sales (backward compatibility)
+  saleTransactions      SaleTransaction[]      // New transaction-based sales
+  financialTransactions FinancialTransaction[] // Financial records
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   
   @@index([role])
   @@index([createdAt])
@@ -56,7 +57,8 @@ model Product {
   store       Store?           @relation(fields: [storeId], references: [id])
   images      ProductImage[]
   variants    ProductVariant[]
-  sales       Sale[]
+  sales       Sale[]           // Old sales (backward compatibility)
+  saleItems   SaleItem[]       // New transaction-based sale items
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   
@@ -111,40 +113,75 @@ model ProductVariant {
   @@index([color, size, stock])
 }
 
-model Sale {
-  id          String   @id @default(uuid())
-  productId   String
-  variantId   String?  // Optional: which variant was sold
-  userId      String
-  quantity    Int
-  price       Float    // Price per item at time of sale
-  total       Float    // Total = price * quantity
-  paymentMethod String @default("cash") // cash or card
-  status      String   @default("completed") // completed, pending, refunded
-  customerName String? // Optional customer name
-  product     Product  @relation(fields: [productId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// Sales Transaction - One record per checkout/sale operation
+model SaleTransaction {
+  id            String     @id @default(uuid())
+  userId        String
+  paymentMethod String     @default("cash") // cash or card
+  status        String     @default("completed") // completed, pending, refunded
+  customerName  String?    // Optional customer name
+  subtotal      Float      // Sum of all items before tax
+  tax           Float      @default(0) // Tax amount
+  total         Float      // Final total amount
+  user          User       @relation(fields: [userId], references: [id])
+  items         SaleItem[] // Line items in this transaction
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   
-  // Single-column indexes
+  @@index([createdAt])
+  @@index([userId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([createdAt, status])
+  @@index([userId, createdAt])
+}
+
+// Sale Item - Individual products in a sale transaction
+model SaleItem {
+  id               String          @id @default(uuid())
+  transactionId    String
+  productId        String
+  variantId        String?         // Optional: which variant was sold
+  quantity         Int
+  price            Float           // Price per item at time of sale
+  total            Float           // Total = price * quantity
+  transaction      SaleTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id])
+  createdAt        DateTime        @default(now())
+  
+  @@index([transactionId])
+  @@index([productId])
+  @@index([createdAt])
+  @@index([transactionId, productId])
+}
+
+// Keep old Sale model for backward compatibility (will be migrated)
+model Sale {
+  id            String   @id @default(uuid())
+  productId     String
+  variantId     String?
+  userId        String
+  quantity      Int
+  price         Float
+  total         Float
+  paymentMethod String   @default("cash")
+  status        String   @default("completed")
+  customerName  String?
+  product       Product  @relation(fields: [productId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
   @@index([createdAt])
   @@index([userId])
   @@index([productId])
   @@index([status])
-  @@index([paymentMethod])
-  
-  // Composite indexes for analytics and reporting
-  @@index([createdAt, status])
-  @@index([userId, createdAt])
-  @@index([productId, createdAt])
-  @@index([paymentMethod, createdAt])
-  @@index([status, paymentMethod])
 }
 
-model Transaction {
+// Financial Transaction (renamed from Transaction to avoid confusion)
+model FinancialTransaction {
   id          String   @id @default(uuid())
-  type        String   // Changed from enum to String ("income" or "expense")
+  type        String   // "income" or "expense"
   amount      Float
   description String
   userId      String

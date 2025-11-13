@@ -9,6 +9,7 @@ import { seedProductionDatabase } from '../../database/seed-production'
 import { registerAuthHandlers } from './auth.handlers'
 import { registerDashboardHandlers } from './dashboard.handlers'
 import { registerSalesHandlers } from './sales.handlers'
+import { registerSaleTransactionHandlers } from './sale-transactions.handlers'
 import { registerInventoryHandlers } from './inventory.handlers'
 import { registerFinanceHandlers } from './finance.handlers'
 import { registerProductsHandlers } from './products.handlers'
@@ -103,6 +104,9 @@ export function registerAllHandlers() {
   
   registerSalesHandlers(prisma)
   console.log('  ✓ Sales handlers registered')
+  
+  registerSaleTransactionHandlers(prisma)
+  console.log('  ✓ Sale Transaction handlers registered')
   
   registerInventoryHandlers(prisma)
   console.log('  ✓ Inventory handlers registered')

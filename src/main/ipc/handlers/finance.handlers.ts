@@ -9,7 +9,7 @@ export function registerFinanceHandlers(prisma: any) {
   ipcMain.handle('finance:addTransaction', async (_, { type, amount, description, userId }) => {
     try {
       if (prisma) {
-        const transaction = await prisma.transaction.create({ 
+        const transaction = await prisma.financialTransaction.create({ 
           data: { type, amount, description, userId } 
         })
         return { success: true, transaction }
@@ -24,7 +24,7 @@ export function registerFinanceHandlers(prisma: any) {
   ipcMain.handle('finance:getTransactions', async (_, { startDate, endDate }) => {
     try {
       if (prisma) {
-        const transactions = await prisma.transaction.findMany({ 
+        const transactions = await prisma.financialTransaction.findMany({ 
           where: { createdAt: { gte: startDate, lte: endDate } }, 
           orderBy: { createdAt: 'desc' }, 
           include: { user: { select: { username: true } } } 
@@ -44,7 +44,7 @@ export function registerFinanceHandlers(prisma: any) {
         const now = new Date()
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
         
-        const monthlyTransactions = await prisma.transaction.findMany({
+        const monthlyTransactions = await prisma.financialTransaction.findMany({
           where: { createdAt: { gte: startOfMonth } }
         })
         

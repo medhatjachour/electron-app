@@ -31,18 +31,35 @@ asarUnpack:
 win:
   executableName: BizFlow
   icon: build/icon.ico
-  sign: null
+  sign: null  # Set to signing script path for production
   target:
     - target: nsis
       arch:
         - x64
+  # Optional: Code signing (uncomment for production)
+  # certificateFile: ${WINDOWS_CERTIFICATE_FILE}
+  # certificatePassword: ${WINDOWS_CERTIFICATE_PASSWORD}
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  createStartMenuShortcut: true
   oneClick: false
+  perMachine: false  # Allow per-user installation
+  allowElevation: true  # Allow elevation if user wants system-wide install
   allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false  # Keep user data on uninstall
+  runAfterFinish: true  # Launch app after installation
+  # NSIS installer customization
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeader: build/installerHeader.bmp  # Optional: 150x57 pixels
+  installerSidebar: build/installerSidebar.bmp  # Optional: 164x314 pixels
+  # Display language
+  language: 1033  # English
+  # Menu category in Start Menu
+  menuCategory: true
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

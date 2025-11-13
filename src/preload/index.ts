@@ -27,6 +27,29 @@ const api = {
     }) => ipcRenderer.invoke('sales:create', data),
     refund: (saleId: string) => ipcRenderer.invoke('sales:refund', saleId)
   },
+  saleTransactions: {
+    create: (data: {
+      items: Array<{
+        productId: string
+        variantId?: string
+        quantity: number
+        price: number
+      }>
+      transactionData: {
+        userId: string
+        paymentMethod: string
+        customerName?: string
+        subtotal: number
+        tax: number
+        total: number
+      }
+    }) => ipcRenderer.invoke('saleTransactions:create', data),
+    getAll: () => ipcRenderer.invoke('saleTransactions:getAll'),
+    getById: (id: string) => ipcRenderer.invoke('saleTransactions:getById', id),
+    refund: (id: string) => ipcRenderer.invoke('saleTransactions:refund', id),
+    getByDateRange: (data: { startDate: string; endDate: string }) =>
+      ipcRenderer.invoke('saleTransactions:getByDateRange', data)
+  },
   customers: {
     getAll: () => ipcRenderer.invoke('customers:getAll')
   },

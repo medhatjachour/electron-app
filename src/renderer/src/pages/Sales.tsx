@@ -1,61 +1,90 @@
-import { useState, useMemo, useEffect } from 'react'
-import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye } from 'lucide-react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 
-type Sale = {
+type SaleItem = {
   id: string
   productId: string
-  variantId?: string
-  userId: string
+  variantId?: string | null
   quantity: number
   price: number
   total: number
-  paymentMethod: string
-  status: string
-  customerName?: string
-  createdAt: string
   product?: {
     name: string
-    category: string
+    category: string | { name: string }
+    baseSKU: string
   }
+  variant?: {
+    variantSKU: string
+    size?: string
+    color?: string
+  }
+}
+
+type SaleTransaction = {
+  id: string
+  userId: string
+  paymentMethod: string
+  status: string
+  customerName?: string | null
+  subtotal: number
+  tax: number
+  total: number
+  createdAt: string
+  items: SaleItem[]
   user?: {
     username: string
   }
 }
 
 export default function Sales(): JSX.Element {
-  const [sales, setSales] = useState<Sale[]>([])
+  const [transactions, setTransactions] = useState<SaleTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
+  const [selectedTransaction, setSelectedTransaction] = useState<SaleTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
+  const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
   useEffect(() => {
-    loadSales()
+    loadTransactions()
   }, [])
 
-  const loadSales = async () => {
+  const loadTransactions = async () => {
     try {
       setLoading(true)
-      const data = await ipc.sales.getAll()
-      setSales(data)
+      const data = await ipc.saleTransactions.getAll()
+      setTransactions(data)
     } catch (error) {
-      console.error('Failed to load sales:', error)
+      console.error('Failed to load transactions:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredSales = useMemo(() => {
-    let filtered = sales.filter(sale => 
-      (sale.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       sale.product?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       sale.user?.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       sale.id.toLowerCase().includes(searchQuery.toLowerCase()))
+  const toggleExpanded = (transactionId: string) => {
+    setExpandedTransactions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(transactionId)) {
+        newSet.delete(transactionId)
+      } else {
+        newSet.add(transactionId)
+      }
+      return newSet
+    })
+  }
+
+  const filteredTransactions = useMemo(() => {
+    let filtered = transactions.filter(transaction => 
+      (transaction.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       transaction.user?.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       transaction.items.some(item => 
+         item.product?.name.toLowerCase().includes(searchQuery.toLowerCase())
+       ))
     )
 
     // Apply date filter
@@ -67,15 +96,15 @@ export default function Sales(): JSX.Element {
       startOfWeek.setHours(0, 0, 0, 0)
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-      filtered = filtered.filter(sale => {
-        const saleDate = new Date(sale.createdAt)
+      filtered = filtered.filter(transaction => {
+        const transactionDate = new Date(transaction.createdAt)
         switch (dateFilter) {
           case 'today':
-            return saleDate >= startOfToday
+            return transactionDate >= startOfToday
           case 'week':
-            return saleDate >= startOfWeek
+            return transactionDate >= startOfWeek
           case 'month':
-            return saleDate >= startOfMonth
+            return transactionDate >= startOfMonth
           default:
             return true
         }
@@ -83,33 +112,35 @@ export default function Sales(): JSX.Element {
     }
 
     return filtered
-  }, [sales, searchQuery, dateFilter])
+  }, [transactions, searchQuery, dateFilter])
 
   const stats = useMemo(() => {
-    const completedSales = filteredSales.filter(s => s.status === 'completed')
-    const totalRevenue = completedSales.reduce((sum, sale) => sum + sale.total, 0)
-    const totalItems = completedSales.reduce((sum, sale) => sum + sale.quantity, 0)
-    const avgSale = completedSales.length > 0 ? totalRevenue / completedSales.length : 0
+    const completedTransactions = filteredTransactions.filter(t => t.status === 'completed')
+    const totalRevenue = completedTransactions.reduce((sum, transaction) => sum + transaction.total, 0)
+    const totalItems = completedTransactions.reduce((sum, transaction) => 
+      sum + transaction.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+    )
+    const avgSale = completedTransactions.length > 0 ? totalRevenue / completedTransactions.length : 0
 
     // Calculate today's stats
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todaySales = sales.filter(s => {
-      const saleDate = new Date(s.createdAt)
-      return saleDate >= today && s.status === 'completed'
+    const todayTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.createdAt)
+      return transactionDate >= today && t.status === 'completed'
     })
-    const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0)
-    const todayCount = todaySales.length
+    const todayRevenue = todayTransactions.reduce((sum, transaction) => sum + transaction.total, 0)
+    const todayCount = todayTransactions.length
 
     // Calculate yesterday's stats for comparison
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdaySales = sales.filter(s => {
-      const saleDate = new Date(s.createdAt)
-      return saleDate >= yesterday && saleDate < today && s.status === 'completed'
+    const yesterdayTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.createdAt)
+      return transactionDate >= yesterday && transactionDate < today && t.status === 'completed'
     })
-    const yesterdayRevenue = yesterdaySales.reduce((sum, sale) => sum + sale.total, 0)
-    const yesterdayCount = yesterdaySales.length
+    const yesterdayRevenue = yesterdayTransactions.reduce((sum, transaction) => sum + transaction.total, 0)
+    const yesterdayCount = yesterdayTransactions.length
 
     // Calculate percentage changes
     const revenueChange = yesterdayRevenue > 0 
@@ -124,21 +155,21 @@ export default function Sales(): JSX.Element {
     startOfWeek.setDate(today.getDate() - today.getDay())
     startOfWeek.setHours(0, 0, 0, 0)
     
-    const thisWeekSales = sales.filter(s => {
-      const saleDate = new Date(s.createdAt)
-      return saleDate >= startOfWeek && s.status === 'completed'
+    const thisWeekTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.createdAt)
+      return transactionDate >= startOfWeek && t.status === 'completed'
     })
-    const thisWeekRevenue = thisWeekSales.reduce((sum, sale) => sum + sale.total, 0)
+    const thisWeekRevenue = thisWeekTransactions.reduce((sum, transaction) => sum + transaction.total, 0)
 
     const lastWeekStart = new Date(startOfWeek)
     lastWeekStart.setDate(lastWeekStart.getDate() - 7)
     const lastWeekEnd = new Date(startOfWeek)
     
-    const lastWeekSales = sales.filter(s => {
-      const saleDate = new Date(s.createdAt)
-      return saleDate >= lastWeekStart && saleDate < lastWeekEnd && s.status === 'completed'
+    const lastWeekTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.createdAt)
+      return transactionDate >= lastWeekStart && transactionDate < lastWeekEnd && t.status === 'completed'
     })
-    const lastWeekRevenue = lastWeekSales.reduce((sum, sale) => sum + sale.total, 0)
+    const lastWeekRevenue = lastWeekTransactions.reduce((sum, transaction) => sum + transaction.total, 0)
     
     const weeklyRevenueChange = lastWeekRevenue > 0 
       ? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 
@@ -146,7 +177,7 @@ export default function Sales(): JSX.Element {
 
     return {
       totalRevenue,
-      totalSales: completedSales.length,
+      totalSales: completedTransactions.length,
       totalItems,
       avgSale,
       todayRevenue,
@@ -154,59 +185,67 @@ export default function Sales(): JSX.Element {
       revenueChange,
       salesChange,
       weeklyRevenueChange,
-      hasData: sales.length > 0
+      hasData: transactions.length > 0
     }
-  }, [filteredSales, sales])
+  }, [filteredTransactions, transactions])
 
   // Pagination
-  const paginatedSales = useMemo(() => {
+  const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
-    return filteredSales.slice(startIndex, endIndex)
-  }, [filteredSales, currentPage, itemsPerPage])
+    return filteredTransactions.slice(startIndex, endIndex)
+  }, [filteredTransactions, currentPage, itemsPerPage])
 
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage)
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
 
-  const handleRefund = async (saleId: string) => {
-    if (!confirm('Are you sure you want to refund this sale? Stock will be restored.')) {
+  const handleRefund = async (transactionId: string) => {
+    if (!confirm('Are you sure you want to refund this transaction? Stock will be restored for all items.')) {
       return
     }
 
     try {
-      const result = await ipc.sales.refund(saleId)
+      const result = await ipc.saleTransactions.refund(transactionId)
       if (result.success) {
-        alert('Sale refunded successfully! Stock has been restored.')
-        await loadSales()
+        alert('Transaction refunded successfully! Stock has been restored.')
+        await loadTransactions()
       } else {
-        alert('Failed to refund sale: ' + result.message)
+        alert('Failed to refund transaction: ' + result.message)
       }
     } catch (error) {
-      console.error('Failed to refund sale:', error)
+      console.error('Failed to refund transaction:', error)
       alert('Failed to process refund. Please try again.')
     }
   }
 
-  const handleViewSale = (sale: Sale) => {
-    setSelectedSale(sale)
+  const handleViewTransaction = (transaction: SaleTransaction) => {
+    setSelectedTransaction(transaction)
     setShowViewModal(true)
   }
 
   const handleExport = () => {
     try {
-      // Create CSV content
-      const headers = ['Sale ID', 'Date', 'Customer', 'Product', 'Quantity', 'Price', 'Total', 'Payment Method', 'Status', 'Sold By']
-      const rows = filteredSales.map(sale => [
-        sale.id,
-        formatDate(sale.createdAt),
-        sale.customerName || 'Walk-in Customer',
-        sale.product?.name || 'Unknown',
-        sale.quantity,
-        `$${sale.price.toFixed(2)}`,
-        `$${sale.total.toFixed(2)}`,
-        sale.paymentMethod,
-        sale.status,
-        sale.user?.username || 'Unknown'
-      ])
+      // Create CSV content with transaction-based data
+      const headers = ['Transaction ID', 'Date', 'Customer', 'Items', 'Total Items', 'Subtotal', 'Tax', 'Total', 'Payment Method', 'Status', 'Sold By']
+      const rows = filteredTransactions.map(transaction => {
+        const totalItems = transaction.items.reduce((sum, item) => sum + item.quantity, 0)
+        const itemsList = transaction.items.map(item => 
+          `${item.product?.name || 'Unknown'} (${item.quantity}x)`
+        ).join('; ')
+        
+        return [
+          transaction.id,
+          formatDate(transaction.createdAt),
+          transaction.customerName || 'Walk-in Customer',
+          itemsList,
+          totalItems,
+          `$${transaction.subtotal.toFixed(2)}`,
+          `$${transaction.tax.toFixed(2)}`,
+          `$${transaction.total.toFixed(2)}`,
+          transaction.paymentMethod,
+          transaction.status,
+          transaction.user?.username || 'Unknown'
+        ]
+      })
 
       const csv = [
         headers.join(','),
@@ -259,7 +298,7 @@ export default function Sales(): JSX.Element {
         </div>
         <div className="flex gap-3">
           <button 
-            onClick={loadSales}
+            onClick={loadTransactions}
             disabled={loading}
             className="btn-secondary flex items-center gap-2"
           >
@@ -411,13 +450,13 @@ export default function Sales(): JSX.Element {
           </select>
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <Filter size={16} />
-            <span>{filteredSales.length} result{filteredSales.length !== 1 ? 's' : ''}</span>
+            <span>{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
       </div>
       )}
 
-      {/* Sales Table */}
+      {/* Transactions Table */}
       {stats.hasData && (
         <div className="glass-card overflow-hidden">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
@@ -427,7 +466,8 @@ export default function Sales(): JSX.Element {
           <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Sale ID</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white w-12"></th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Transaction ID</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
                   <div className="flex items-center gap-2">
                     <Calendar size={16} />
@@ -450,81 +490,145 @@ export default function Sales(): JSX.Element {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
+                  <td colSpan={9} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                      <p className="text-slate-600 dark:text-slate-400">Loading sales...</p>
+                      <p className="text-slate-600 dark:text-slate-400">Loading transactions...</p>
                     </div>
                   </td>
                 </tr>
-              ) : filteredSales.length === 0 ? (
+              ) : filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
+                  <td colSpan={9} className="px-6 py-12 text-center">
                     <p className="text-slate-600 dark:text-slate-400">
-                      {sales.length === 0 
-                        ? 'No sales yet. Complete a sale in the POS to see it here!' 
-                        : 'No sales match your search or filter criteria.'}
+                      {transactions.length === 0 
+                        ? 'No transactions yet. Complete a sale in the POS to see it here!' 
+                        : 'No transactions match your search or filter criteria.'}
                     </p>
                   </td>
                 </tr>
               ) : (
-                paginatedSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-sm font-semibold text-primary">
-                        {sale.id.slice(0, 8)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {formatDate(sale.createdAt)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="font-medium text-slate-900 dark:text-white">
-                          {sale.customerName || 'Walk-in Customer'}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {sale.product?.name || 'Product'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-slate-900 dark:text-white">{sale.quantity}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-slate-900 dark:text-white">${sale.total.toFixed(2)}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600 dark:text-slate-400 capitalize">
-                        {sale.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(sale.status)}`}>
-                        {sale.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleViewSale(sale)}
-                          className="text-primary hover:bg-primary/10 px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                        >
-                          <Eye size={14} />
-                          View
-                        </button>
-                        {sale.status === 'completed' && (
-                          <button 
-                            onClick={() => handleRefund(sale.id)}
-                            className="text-error hover:bg-error/10 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                paginatedTransactions.map((transaction) => {
+                  const isExpanded = expandedTransactions.has(transaction.id)
+                  const totalItems = transaction.items.reduce((sum, item) => sum + item.quantity, 0)
+                  
+                  return (
+                    <React.Fragment key={transaction.id}>
+                      <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => toggleExpanded(transaction.id)}
+                            className="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
                           >
-                            Refund
+                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="font-mono text-sm font-semibold text-primary">
+                            {transaction.id.slice(0, 8)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          {formatDate(transaction.createdAt)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-slate-900 dark:text-white">
+                            {transaction.customerName || 'Walk-in Customer'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-slate-900 dark:text-white">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-slate-900 dark:text-white">${transaction.total.toFixed(2)}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-slate-600 dark:text-slate-400 capitalize">
+                            {transaction.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(transaction.status)}`}>
+                            {transaction.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleViewTransaction(transaction)}
+                              className="text-primary hover:bg-primary/10 px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Eye size={14} />
+                              View
+                            </button>
+                            {transaction.status === 'completed' && (
+                              <button 
+                                onClick={() => handleRefund(transaction.id)}
+                                className="text-error hover:bg-error/10 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                Refund
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${transaction.id}-items`} className="bg-slate-50 dark:bg-slate-800/30">
+                          <td colSpan={9} className="px-6 py-4">
+                            <div className="ml-8 space-y-2">
+                              <h4 className="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-3">Transaction Items:</h4>
+                              <div className="grid gap-2">
+                                {transaction.items.map((item, idx) => (
+                                  <div key={item.id || idx} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-slate-900 dark:text-white">
+                                        {item.product?.name || 'Unknown Product'}
+                                      </div>
+                                      <div className="text-xs text-slate-500 mt-1">
+                                        {item.variant && (
+                                          <span className="mr-3">
+                                            SKU: {item.variant.variantSKU} 
+                                            {item.variant.size && ` | Size: ${item.variant.size}`}
+                                            {item.variant.color && ` | Color: ${item.variant.color}`}
+                                          </span>
+                                        )}
+                                        {!item.variant && item.product?.baseSKU && (
+                                          <span className="mr-3">SKU: {item.product.baseSKU}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-6 text-sm">
+                                      <div className="text-slate-600 dark:text-slate-400">
+                                        Qty: <span className="font-semibold text-slate-900 dark:text-white">{item.quantity}</span>
+                                      </div>
+                                      <div className="text-slate-600 dark:text-slate-400">
+                                        @ ${item.price.toFixed(2)}
+                                      </div>
+                                      <div className="font-semibold text-slate-900 dark:text-white min-w-[80px] text-right">
+                                        ${item.total.toFixed(2)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-6 text-sm">
+                                <div className="text-slate-600 dark:text-slate-400">
+                                  Subtotal: <span className="font-semibold text-slate-900 dark:text-white">${transaction.subtotal.toFixed(2)}</span>
+                                </div>
+                                <div className="text-slate-600 dark:text-slate-400">
+                                  Tax: <span className="font-semibold text-slate-900 dark:text-white">${transaction.tax.toFixed(2)}</span>
+                                </div>
+                                <div className="text-slate-900 dark:text-white font-bold">
+                                  Total: ${transaction.total.toFixed(2)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -535,19 +639,19 @@ export default function Sales(): JSX.Element {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          totalItems={filteredSales.length}
+          totalItems={filteredTransactions.length}
           itemsPerPage={itemsPerPage}
-          itemName="sales"
+          itemName="transactions"
         />
       </div>
       )}
 
-      {/* View Sale Modal */}
-      {showViewModal && selectedSale && (
+      {/* View Transaction Modal */}
+      {showViewModal && selectedTransaction && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="glass-card p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sale Details</h2>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Transaction Details</h2>
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -557,16 +661,16 @@ export default function Sales(): JSX.Element {
             </div>
 
             <div className="space-y-6">
-              {/* Sale ID and Status */}
+              {/* Transaction ID and Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Sale ID</p>
-                  <p className="font-mono font-bold text-primary">{selectedSale.id}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Transaction ID</p>
+                  <p className="font-mono font-bold text-primary">{selectedTransaction.id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Status</p>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedSale.status)}`}>
-                    {selectedSale.status}
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedTransaction.status)}`}>
+                    {selectedTransaction.status}
                   </span>
                 </div>
               </div>
@@ -574,67 +678,96 @@ export default function Sales(): JSX.Element {
               {/* Date and Time */}
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Date & Time</p>
-                <p className="font-medium text-slate-900 dark:text-white">{formatDate(selectedSale.createdAt)}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{formatDate(selectedTransaction.createdAt)}</p>
               </div>
 
               {/* Customer */}
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Customer</p>
                 <p className="font-medium text-slate-900 dark:text-white">
-                  {selectedSale.customerName || 'Walk-in Customer'}
+                  {selectedTransaction.customerName || 'Walk-in Customer'}
                 </p>
-              </div>
-
-              {/* Product */}
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Product</p>
-                <p className="font-medium text-slate-900 dark:text-white">
-                  {selectedSale.product?.name || 'Unknown Product'}
-                </p>
-                {selectedSale.product?.category && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    Category: {typeof selectedSale.product.category === 'string' 
-                      ? selectedSale.product.category 
-                      : selectedSale.product.category?.name || 'Uncategorized'}
-                  </p>
-                )}
               </div>
 
               {/* Sold By */}
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Sold By</p>
                 <p className="font-medium text-slate-900 dark:text-white">
-                  {selectedSale.user?.username || 'Unknown User'}
+                  {selectedTransaction.user?.username || 'Unknown User'}
                 </p>
               </div>
 
-              {/* Sale Details */}
+              {/* Items */}
+              <div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Items</p>
+                <div className="space-y-2">
+                  {selectedTransaction.items.map((item, idx) => (
+                    <div key={item.id || idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 dark:text-white">
+                            {item.product?.name || 'Unknown Product'}
+                          </p>
+                          {item.variant && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              SKU: {item.variant.variantSKU}
+                              {item.variant.size && ` | Size: ${item.variant.size}`}
+                              {item.variant.color && ` | Color: ${item.variant.color}`}
+                            </p>
+                          )}
+                          {!item.variant && item.product?.baseSKU && (
+                            <p className="text-xs text-slate-500 mt-1">SKU: {item.product.baseSKU}</p>
+                          )}
+                          {item.product?.category && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Category: {typeof item.product.category === 'string' 
+                                ? item.product.category 
+                                : item.product.category?.name || 'Uncategorized'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-sm mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Quantity: <span className="font-semibold text-slate-900 dark:text-white">{item.quantity}</span>
+                        </span>
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Price: <span className="font-semibold text-slate-900 dark:text-white">${item.price.toFixed(2)}</span>
+                        </span>
+                        <span className="font-bold text-slate-900 dark:text-white">${item.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transaction Summary */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Quantity:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{selectedSale.quantity} units</span>
+                  <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">${selectedTransaction.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Price per unit:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">${selectedSale.price.toFixed(2)}</span>
+                  <span className="text-slate-600 dark:text-slate-400">Tax:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">${selectedTransaction.tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600 dark:text-slate-400">Payment Method:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white capitalize">{selectedSale.paymentMethod}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white capitalize">{selectedTransaction.paymentMethod}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
                   <span className="text-lg font-bold text-slate-900 dark:text-white">Total:</span>
-                  <span className="text-2xl font-bold text-primary">${selectedSale.total.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-primary">${selectedTransaction.total.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
-                {selectedSale.status === 'completed' && (
+                {selectedTransaction.status === 'completed' && (
                   <button
                     onClick={() => {
                       setShowViewModal(false)
-                      handleRefund(selectedSale.id)
+                      handleRefund(selectedTransaction.id)
                     }}
                     className="flex-1 btn-secondary text-error hover:bg-error/10"
                   >

@@ -476,20 +476,24 @@ export function registerSearchHandlers(prisma: any) {
         }
       }
 
-      // Fetch current period data
-      const [currentSales, previousSales] = await Promise.all([
-        prisma.sale.findMany({
-          where: currentWhere,
+      // Fetch current period data using SaleTransaction and SaleItem
+      const [currentTransactions, previousTransactions] = await Promise.all([
+        prisma.saleTransaction.findMany({
+          where: { ...currentWhere, status: 'completed' },
           include: {
-            product: {
+            items: {
               include: {
-                category: true
+                product: {
+                  include: {
+                    category: true
+                  }
+                }
               }
             }
           }
         }),
-        prisma.sale.findMany({
-          where: previousWhere,
+        prisma.saleTransaction.findMany({
+          where: { ...previousWhere, status: 'completed' },
           select: {
             id: true,
             total: true,
@@ -499,55 +503,57 @@ export function registerSearchHandlers(prisma: any) {
       ])
 
       // Calculate current metrics
-      const currentRevenue = currentSales.reduce((sum, sale) => sum + sale.total, 0)
-      const currentTransactions = currentSales.length
+      const currentRevenue = currentTransactions.reduce((sum, txn) => sum + txn.total, 0)
+      const currentTransactionCount = currentTransactions.length
 
       // Calculate previous metrics
-      const previousRevenue = previousSales.reduce((sum, sale) => sum + sale.total, 0)
-      const previousTransactions = previousSales.length
+      const previousRevenue = previousTransactions.reduce((sum, txn) => sum + txn.total, 0)
+      const previousTransactionCount = previousTransactions.length
 
       // Calculate changes
       const revenueChange = previousRevenue > 0 
         ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
         : 0
-      const transactionsChange = previousTransactions > 0
-        ? ((currentTransactions - previousTransactions) / previousTransactions) * 100
+      const transactionsChange = previousTransactionCount > 0
+        ? ((currentTransactionCount - previousTransactionCount) / previousTransactionCount) * 100
         : 0
 
       // Average order value
-      const avgOrderValue = currentTransactions > 0 ? currentRevenue / currentTransactions : 0
-      const previousAvgOrderValue = previousTransactions > 0 ? previousRevenue / previousTransactions : 0
+      const avgOrderValue = currentTransactionCount > 0 ? currentRevenue / currentTransactionCount : 0
+      const previousAvgOrderValue = previousTransactionCount > 0 ? previousRevenue / previousTransactionCount : 0
       const avgOrderValueChange = previousAvgOrderValue > 0
         ? ((avgOrderValue - previousAvgOrderValue) / previousAvgOrderValue) * 100
         : 0
 
-      // Top products analysis
+      // Top products analysis from transaction items
       const productSales = new Map<string, { name: string; revenue: number; qty: number; cost: number }>()
       
-      // Calculate total cost and profit from ALL sales
+      // Calculate total cost and profit from ALL transaction items
       let totalCost = 0
       let totalRevenue = 0
       
-      currentSales.forEach(sale => {
-        const productId = sale.product.id
-        const productName = sale.product.name
-        const revenue = sale.total
-        // Cost calculation: use baseCost from product (actual cost), NOT selling price
-        const unitCost = sale.product.baseCost || 0
-        const cost = sale.quantity * unitCost
-        
-        // Accumulate total cost and revenue for ALL products
-        totalCost += cost
-        totalRevenue += revenue
-        
-        if (productSales.has(productId)) {
-          const existing = productSales.get(productId)!
-          existing.revenue += revenue
-          existing.qty += sale.quantity
-          existing.cost += cost
-        } else {
-          productSales.set(productId, { name: productName, revenue, qty: sale.quantity, cost })
-        }
+      currentTransactions.forEach(transaction => {
+        transaction.items.forEach(item => {
+          const productId = item.product.id
+          const productName = item.product.name
+          const revenue = item.total
+          // Cost calculation: use baseCost from product (actual cost)
+          const unitCost = item.product.baseCost || 0
+          const cost = item.quantity * unitCost
+          
+          // Accumulate total cost and revenue for ALL products
+          totalCost += cost
+          totalRevenue += revenue
+          
+          if (productSales.has(productId)) {
+            const existing = productSales.get(productId)!
+            existing.revenue += revenue
+            existing.qty += item.quantity
+            existing.cost += cost
+          } else {
+            productSales.set(productId, { name: productName, revenue, qty: item.quantity, cost })
+          }
+        })
       })
 
       const topProducts = Array.from(productSales.values())
@@ -564,9 +570,9 @@ export function registerSearchHandlers(prisma: any) {
 
       // Sales by day
       const salesByDay = new Map<string, number>()
-      currentSales.forEach(sale => {
-        const day = new Date(sale.createdAt).toISOString().split('T')[0]
-        salesByDay.set(day, (salesByDay.get(day) || 0) + sale.total)
+      currentTransactions.forEach(transaction => {
+        const day = new Date(transaction.createdAt).toISOString().split('T')[0]
+        salesByDay.set(day, (salesByDay.get(day) || 0) + transaction.total)
       })
 
       const salesByDayArray = Array.from(salesByDay.entries())
@@ -575,10 +581,12 @@ export function registerSearchHandlers(prisma: any) {
 
       // Sales by category
       const categoryMap = new Map<string, number>()
-      currentSales.forEach(sale => {
-        const categoryName = sale.product.category?.name || 'Uncategorized'
-        const revenue = sale.total
-        categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + revenue)
+      currentTransactions.forEach(transaction => {
+        transaction.items.forEach(item => {
+          const categoryName = item.product.category?.name || 'Uncategorized'
+          const revenue = item.total
+          categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + revenue)
+        })
       })
 
       const salesByCategory = Array.from(categoryMap.entries())
@@ -592,7 +600,7 @@ export function registerSearchHandlers(prisma: any) {
       return {
         currentMetrics: {
           revenue: currentRevenue,
-          transactions: currentTransactions,
+          transactions: currentTransactionCount,
           avgOrderValue,
           revenueChange,
           transactionsChange,
@@ -603,7 +611,7 @@ export function registerSearchHandlers(prisma: any) {
         },
         previousMetrics: {
           revenue: previousRevenue,
-          transactions: previousTransactions,
+          transactions: previousTransactionCount,
           avgOrderValue: previousAvgOrderValue
         },
         topProducts,

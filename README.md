@@ -1,10 +1,20 @@
 # BizFlow - Business Management System
 
+[![Windows Build](https://github.com/medhatjachour/electron-app/actions/workflows/build-windows.yml/badge.svg)](https://github.com/medhatjachour/electron-app/actions/workflows/build-windows.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/github/package-json/v/medhatjachour/electron-app)](package.json)
+
 > A modern, full-featured desktop Point of Sale and Inventory Management application built with Electron, React, and TypeScript.
 
 **What is this?** A complete retail management solution that runs as a desktop app on Windows, macOS, and Linux. Manages sales transactions, product inventory with variants, customer data, employee records with salaries, comprehensive business reports, and provides real-time financial analytics—all stored locally with SQLite.
 
 **Tech Stack:** Electron.js + React 18 + TypeScript + Prisma ORM + SQLite + TailwindCSS
+
+## 📥 Download
+
+**Windows**: [Download Latest Release](https://github.com/medhatjachour/electron-app/releases/latest) (`.exe` installer)
+
+*macOS and Linux builds coming soon*
 
 ---
 

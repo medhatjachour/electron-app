@@ -207,24 +207,30 @@ export function usePOS() {
       
       const finalCustomerName = selectedCustomer?.name || customerQuery.trim() || null
       
-      // Create sales
-      const salePromises = cart.map(async (item) => {
-        const saleData = {
-          productId: item.productId,
-          variantId: item.variantId || null,
+      // Prepare transaction items
+      const items = cart.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        quantity: item.quantity,
+        price: item.price
+      }))
+      
+      // Create single transaction with all items
+      const result = await ipc.saleTransactions.create({
+        items,
+        transactionData: {
           userId: user.id,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.price * item.quantity,
           paymentMethod: paymentMethod,
-          status: 'completed',
-          customerName: finalCustomerName
+          customerName: finalCustomerName,
+          subtotal: subtotal,
+          tax: tax,
+          total: total
         }
-        
-        return await ipc.sales.create(saleData)
       })
       
-      await Promise.all(salePromises)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create transaction')
+      }
       
       setShowSuccess(true)
       await loadProducts()
