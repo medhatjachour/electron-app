@@ -54,8 +54,9 @@ nsis:
   # NSIS installer customization
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
-  installerHeader: build/installerHeader.bmp  # Optional: 150x57 pixels
-  installerSidebar: build/installerSidebar.bmp  # Optional: 164x314 pixels
+  # Custom installer images (optional - commented out, using defaults)
+  # installerHeader: build/installerHeader.bmp  # 150x57 pixels
+  # installerSidebar: build/installerSidebar.bmp  # 164x314 pixels
   # Display language
   language: 1033  # English
   # Menu category in Start Menu
