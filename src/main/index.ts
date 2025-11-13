@@ -68,7 +68,7 @@ function createWindow(): void {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: false // Disable DevTools completely
+      devTools: !is.dev // Enable DevTools in development, disable in production
     }
   })
 
@@ -107,17 +107,24 @@ function createWindow(): void {
     })
   } else {
     const indexPath = join(__dirname, '../renderer/index.html')
+    console.log('[Main] Loading renderer from file:', indexPath)
+    console.log('[Main] __dirname:', __dirname)
+    console.log('[Main] File exists:', existsSync(indexPath))
+    
     // Safety: check file exists before loading to avoid white screen + silent fail
     try {
       if (!existsSync(indexPath)) {
         console.error('[Main] Renderer index.html not found at:', indexPath)
         // Print a small error HTML to help users debug a missing build
-        const errorHtml = `<!doctype html><html><body><h2>Missing renderer build</h2><p>Expected file not found: ${indexPath}</p></body></html>`
+        const errorHtml = `<!doctype html><html><body><h2>Missing renderer build</h2><p>Expected file not found: ${indexPath}</p><p>__dirname: ${__dirname}</p></body></html>`
         mainWindow.loadURL('data:text/html,' + encodeURIComponent(errorHtml))
       } else {
-        mainWindow.loadFile(indexPath).catch(err => {
+        console.log('[Main] Loading HTML file...')
+        mainWindow.loadFile(indexPath).then(() => {
+          console.log('[Main] HTML file loaded successfully')
+        }).catch(err => {
           console.error('[Main] Failed to load index.html:', err)
-          const errorHtml = `<!doctype html><html><body><h2>Renderer failed to load</h2><pre>${String(err)}</pre></body></html>`
+          const errorHtml = `<!doctype html><html><body><h2>Renderer failed to load</h2><pre>${String(err)}</pre><p>Path: ${indexPath}</p></body></html>`
           mainWindow.loadURL('data:text/html,' + encodeURIComponent(errorHtml))
         })
       }
