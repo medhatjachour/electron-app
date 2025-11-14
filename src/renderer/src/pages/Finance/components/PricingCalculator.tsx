@@ -101,33 +101,43 @@ export default function PricingCalculator() {
       const employeesData = await window.api.employees.getAll()
       console.log('Employees API response:', employeesData)
       
-      // Load all sales
+      // Load sale transactions (last 30 days) via new API
+      const now = new Date()
+      const endDate = new Date(now)
+      endDate.setHours(23, 59, 59, 999)
+      const startDate = new Date(now)
+      startDate.setDate(startDate.getDate() - 30)
+      startDate.setHours(0, 0, 0, 0)
+
       // @ts-ignore
-      const salesData = await window.api.sales.getAll()
-      console.log('Sales API response:', salesData)
+      const saleTransactionsApi = window.api?.saleTransactions
+      const saleTransactionsData = await saleTransactionsApi?.getByDateRange?.({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
+      console.log('SaleTransactions API response:', saleTransactionsData)
       
       // Ensure we have arrays
       const safeProductsData = Array.isArray(productsData) ? productsData : []
       const safeEmployeesData = Array.isArray(employeesData) ? employeesData : []
-      const safeSalesData = Array.isArray(salesData) ? salesData : []
+      const safeTransactionsData = Array.isArray(saleTransactionsData) ? saleTransactionsData : []
       
-      // Filter sales by last 30 days
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - 30)
-      
-      const filteredSales = safeSalesData.filter((sale: any) => {
-        const saleDate = new Date(sale.createdAt)
-        return saleDate >= startDate && saleDate <= endDate
+      // Only consider completed transactions within the window
+      const completedTransactions = safeTransactionsData.filter((transaction: any) => {
+        if (!transaction) return false
+        const saleDate = new Date(transaction.createdAt)
+        return transaction.status === 'completed' && saleDate >= startDate && saleDate <= endDate
       })
-      
-      console.log('Filtered sales (last 30 days):', filteredSales.length)
+      console.log('Completed sale transactions (last 30 days):', completedTransactions.length)
       
       // Calculate monthly sales per product
       const salesByProduct = new Map<string, number>()
-      filteredSales.forEach((sale: any) => {
-        const current = salesByProduct.get(sale.productId) || 0
-        salesByProduct.set(sale.productId, current + sale.quantity)
+      completedTransactions.forEach((transaction: any) => {
+        (transaction.items || []).forEach((item: any) => {
+          if (!item?.productId) return
+          const current = salesByProduct.get(item.productId) || 0
+          salesByProduct.set(item.productId, current + (item.quantity || 0))
+        })
       })
       
       // Format products with sales data
@@ -415,7 +425,18 @@ export default function PricingCalculator() {
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Include in Pricing</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Include in Pricing</span>
+                    <div className="relative group">
+                      <HelpCircle size={14} className="text-slate-400 hover:text-slate-600 cursor-help" />
+                      <div className="absolute bottom-full left-0 mb-2 w-80 bg-slate-800 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="text-left">
+                          <strong>Operating Expenses in Pricing:</strong><br />
+                          When enabled, expenses are allocated proportionally across products based on their sales volume. Higher-selling products carry more of the expense burden.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -426,9 +447,17 @@ export default function PricingCalculator() {
                     <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">
-                  Total: ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">
+                    Total: ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                  {includeExpenses && (
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                      <CheckCircle size={12} />
+                      Included in calculations
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -633,6 +662,16 @@ export default function PricingCalculator() {
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign size={18} />
                     <span className="text-sm font-medium opacity-90">Monthly Revenue</span>
+                    <div className="relative group">
+                      <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="text-center">
+                          <strong>Monthly Revenue Calculation:</strong><br />
+                          Recommended Price × Monthly Sales Volume<br />
+                          <em>(for all selected products)</em>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <p className="text-2xl font-bold">
                     ${totalMonthlyRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -643,6 +682,16 @@ export default function PricingCalculator() {
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp size={18} />
                     <span className="text-sm font-medium opacity-90">Monthly Profit</span>
+                    <div className="relative group">
+                      <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="text-center">
+                          <strong>Monthly Profit Calculation:</strong><br />
+                          (Recommended Price - Cost - Expenses - Tax) × Monthly Sales<br />
+                          <em>(for all selected products)</em>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <p className="text-2xl font-bold">
                     ${totalMonthlyProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -653,6 +702,16 @@ export default function PricingCalculator() {
                   <div className="flex items-center gap-2 mb-2">
                     <Percent size={18} />
                     <span className="text-sm font-medium opacity-90">Avg Margin</span>
+                    <div className="relative group">
+                      <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="text-center">
+                          <strong>Average Margin:</strong><br />
+                          Mean of each product's profit margin where<br />
+                          (Recommended − Cost − Expenses − Tax) ÷ Recommended Price.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <p className="text-2xl font-bold">
                     {(results.reduce((sum, r) => sum + r.profitMargin, 0) / results.length).toFixed(1)}%
@@ -742,11 +801,18 @@ export default function PricingCalculator() {
                   <div className="flex-1">
                     <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How Pricing is Calculated</h4>
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>• <strong>Base:</strong> Product cost + allocated operating expenses (proportional to sales volume)</li>
+                      <li>• <strong>Base:</strong> Product cost + {includeExpenses ? 'allocated operating expenses' : 'no operating expenses'} (proportional to sales volume)</li>
                       <li>• <strong>Inflation:</strong> {inflationRate.toFixed(1)}% adjustment added to cover rising costs</li>
                       <li>• <strong>Profit Margin:</strong> {desiredProfitMargin.toFixed(0)}% added for business profitability</li>
                       <li>• <strong>Tax:</strong> {taxRate.toFixed(1)}% added on final selling price</li>
                     </ul>
+                    {includeExpenses && totalExpenses > 0 && (
+                      <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          <strong>💡 Operating Expenses Allocation:</strong> ${totalExpenses.toLocaleString()} total expenses distributed across products based on sales volume ratio.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

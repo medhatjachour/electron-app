@@ -22,12 +22,12 @@
     "prisma:generate": "prisma generate",
     "create-template-db": "node scripts/generate-template-db.js",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed": "ts-node prisma/seed-comprehensive.ts",
     "prisma:studio": "prisma studio",
     "prisma:push": "prisma db push"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed-comprehensive.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",

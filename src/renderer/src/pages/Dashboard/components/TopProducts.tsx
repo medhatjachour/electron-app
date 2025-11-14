@@ -17,30 +17,36 @@ export default function TopProducts() {
   const loadTopProducts = async () => {
     try {
       setLoading(true)
-      // @ts-ignore
-      const [sales, products] = await Promise.all([
-        // @ts-ignore
-        (globalThis as any).api?.sales?.getAll(),
-        // @ts-ignore
-        (globalThis as any).api?.inventory?.getAll(),
-      ])
+      const saleTransactionsApi = (globalThis as any).api?.saleTransactions
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 30)
+      startDate.setHours(0, 0, 0, 0)
 
-      // Calculate product sales
+      const transactions = await saleTransactionsApi?.getByDateRange?.({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
+
+      // Calculate product sales using transaction items
       const productSales = new Map<string, { name: string; revenue: number; quantity: number }>()
       
-      ;(sales || []).forEach((sale: any) => {
-        const product = (products || []).find((p: any) => p.id === sale.productId)
-        if (!product) return
+      ;(transactions || []).forEach((transaction: any) => {
+        if (transaction.status !== 'completed') return
 
-        const existing = productSales.get(sale.productId) || { 
-          name: product.name, 
-          revenue: 0, 
-          quantity: 0 
-        }
-        
-        existing.revenue += sale.total
-        existing.quantity += sale.quantity
-        productSales.set(sale.productId, existing)
+        (transaction.items || []).forEach((item: any) => {
+          if (!item?.productId) return
+
+          const existing = productSales.get(item.productId) || { 
+            name: item.product?.name || 'Unknown Product',
+            revenue: 0,
+            quantity: 0
+          }
+
+          existing.revenue += item.total ?? item.price * item.quantity
+          existing.quantity += item.quantity
+          productSales.set(item.productId, existing)
+        })
       })
 
       const sorted = Array.from(productSales.values())
