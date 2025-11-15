@@ -43,12 +43,19 @@ type PricingResult = {
   monthlyProfit: number
 }
 
+const PAGE_SIZE = 50
+
 export default function PricingCalculator() {
   const [loading, setLoading] = useState(true)
   const [calculating, setCalculating] = useState(false)
-  const [products, setProducts] = useState<Product[]>([])
+  const [pagedProducts, setPagedProducts] = useState<Product[]>([])
+  const [productCache, setProductCache] = useState<Record<string, Product>>({})
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalProductsCount, setTotalProductsCount] = useState(0)
+  const [autoSelectNewItems, setAutoSelectNewItems] = useState(true)
   
   // Operating Expenses
   const [expenses, setExpenses] = useState<OperatingExpenses>({
@@ -67,39 +74,36 @@ export default function PricingCalculator() {
   const [results, setResults] = useState<PricingResult[]>([])
 
   useEffect(() => {
-    loadData()
+    loadData(1, '')
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (page = 1, query = searchQuery) => {
     try {
       setLoading(true)
+      setCurrentPage(page)
       
       // Load products with sales data - use inventory search endpoint
       // @ts-ignore
       const inventoryResponse = await window.api['search:inventory']({
         filters: {
-          query: '',
+          query,
           categoryIds: [],
           stockStatus: []
         },
         sort: { field: 'name', direction: 'asc' },
         pagination: {
-          page: 1,
-          limit: 1000
+          page,
+          limit: PAGE_SIZE
         },
         includeImages: false,
         includeMetrics: false
       })
-      console.log('Inventory API response:', inventoryResponse)
       
-      // Extract products from inventory response
-      const productsData = inventoryResponse?.items || []
-      console.log('Products from inventory:', productsData.length)
+      const productsData = Array.isArray(inventoryResponse?.items) ? inventoryResponse.items : []
       
       // Load employees for salary calculation
       // @ts-ignore
       const employeesData = await window.api.employees.getAll()
-      console.log('Employees API response:', employeesData)
       
       // Load sale transactions (last 30 days) via new API
       const now = new Date()
@@ -115,10 +119,8 @@ export default function PricingCalculator() {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
       })
-      console.log('SaleTransactions API response:', saleTransactionsData)
       
       // Ensure we have arrays
-      const safeProductsData = Array.isArray(productsData) ? productsData : []
       const safeEmployeesData = Array.isArray(employeesData) ? employeesData : []
       const safeTransactionsData = Array.isArray(saleTransactionsData) ? saleTransactionsData : []
       
@@ -128,7 +130,6 @@ export default function PricingCalculator() {
         const saleDate = new Date(transaction.createdAt)
         return transaction.status === 'completed' && saleDate >= startDate && saleDate <= endDate
       })
-      console.log('Completed sale transactions (last 30 days):', completedTransactions.length)
       
       // Calculate monthly sales per product
       const salesByProduct = new Map<string, number>()
@@ -141,7 +142,7 @@ export default function PricingCalculator() {
       })
       
       // Format products with sales data
-      const formattedProducts: Product[] = safeProductsData.map((p: any) => ({
+      const formattedProducts: Product[] = productsData.map((p: any) => ({
         id: p.id,
         name: p.name,
         currentPrice: p.basePrice || 0,
@@ -149,11 +150,31 @@ export default function PricingCalculator() {
         monthlySales: salesByProduct.get(p.id) || 0
       }))
       
-      console.log('Formatted products:', formattedProducts.length)
-      setProducts(formattedProducts)
-      
-      // Select all products by default
-      setSelectedProducts(new Set(formattedProducts.map(p => p.id)))
+      setPagedProducts(formattedProducts)
+
+      const responsePage = inventoryResponse?.page || page
+      const responseTotalPages = Math.max(inventoryResponse?.totalPages || 1, 1)
+      const responseTotalCount = inventoryResponse?.totalCount || formattedProducts.length
+
+      setCurrentPage(responsePage)
+      setTotalPages(responseTotalPages)
+      setTotalProductsCount(responseTotalCount)
+
+      setProductCache(prev => {
+        const next = { ...prev }
+        formattedProducts.forEach(product => {
+          next[product.id] = product
+        })
+        return next
+      })
+
+      if (autoSelectNewItems) {
+        setSelectedProducts(prev => {
+          const updated = new Set(prev)
+          formattedProducts.forEach(product => updated.add(product.id))
+          return updated
+        })
+      }
       
       // Calculate total salaries
       const totalSalaries = safeEmployeesData.reduce((sum: number, emp: any) => sum + (emp.salary || 0), 0)
@@ -170,7 +191,9 @@ export default function PricingCalculator() {
     setCalculating(true)
     
     try {
-      const selectedProductsList = products.filter(p => selectedProducts.has(p.id))
+      const selectedProductsList = Array.from(selectedProducts)
+        .map(id => productCache[id])
+        .filter((product): product is Product => Boolean(product))
       
       if (selectedProductsList.length === 0) {
         setCalculating(false)
@@ -240,27 +263,41 @@ export default function PricingCalculator() {
   }
 
   const toggleProductSelection = (productId: string) => {
-    const newSelection = new Set(selectedProducts)
-    if (newSelection.has(productId)) {
-      newSelection.delete(productId)
-    } else {
-      newSelection.add(productId)
-    }
-    setSelectedProducts(newSelection)
+    setAutoSelectNewItems(false)
+    setSelectedProducts(prev => {
+      const newSelection = new Set(prev)
+      if (newSelection.has(productId)) {
+        newSelection.delete(productId)
+      } else {
+        newSelection.add(productId)
+      }
+      return newSelection
+    })
   }
 
   const selectAllProducts = () => {
-    setSelectedProducts(new Set(products.map(p => p.id)))
+    setSelectedProducts(prev => {
+      const newSelection = new Set(prev)
+      pagedProducts.forEach(product => newSelection.add(product.id))
+      return newSelection
+    })
   }
 
   const deselectAllProducts = () => {
+    setAutoSelectNewItems(false)
     setSelectedProducts(new Set())
   }
 
-  // Filter products based on search query
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+    loadData(1, value)
+  }
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return
+    loadData(page, searchQuery)
+  }
 
   const exportResults = () => {
     if (results.length === 0) return
@@ -303,6 +340,8 @@ export default function PricingCalculator() {
   const totalExpenses = expenses.monthlyBills + expenses.totalSalaries + expenses.otherExpenses
   const totalMonthlyRevenue = results.reduce((sum, r) => sum + r.monthlyRevenue, 0)
   const totalMonthlyProfit = results.reduce((sum, r) => sum + r.monthlyProfit, 0)
+  const startIndex = totalProductsCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const endIndex = totalProductsCount === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, totalProductsCount)
 
   return (
     <div className="space-y-6">
@@ -561,7 +600,7 @@ export default function PricingCalculator() {
                 <Users size={20} className="text-green-600" />
                 <h3 className="font-semibold text-slate-900 dark:text-white">Select Products</h3>
                 <span className="text-sm text-slate-500">
-                  ({selectedProducts.size} of {products.length} selected)
+                  ({selectedProducts.size} selected of {totalProductsCount || pagedProducts.length})
                 </span>
               </div>
               <div className="flex gap-2">
@@ -569,13 +608,13 @@ export default function PricingCalculator() {
                   onClick={selectAllProducts}
                   className="text-sm px-3 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                 >
-                  Select All
+                  Select Page
                 </button>
                 <button
                   onClick={deselectAllProducts}
                   className="text-sm px-3 py-1 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
                 >
-                  Clear
+                  Clear All
                 </button>
               </div>
             </div>
@@ -586,13 +625,13 @@ export default function PricingCalculator() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search products..."
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => handleSearch('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   ×
@@ -600,25 +639,32 @@ export default function PricingCalculator() {
               )}
             </div>
 
-            {products.length === 0 ? (
+            {totalProductsCount === 0 ? (
               <div className="text-center py-8">
                 <AlertCircle size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
                 <p className="text-slate-500">No products found</p>
                 <p className="text-sm text-slate-400 mt-1">Add products to your inventory to start calculating prices</p>
               </div>
-            ) : filteredProducts.length === 0 ? (
+            ) : pagedProducts.length === 0 ? (
               <div className="text-center py-8">
                 <Search size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                <p className="text-slate-500">No products match "{searchQuery}"</p>
-                <p className="text-sm text-slate-400 mt-1">Try a different search term</p>
+                <p className="text-slate-500">
+                  {searchQuery ? `No products match "${searchQuery}"` : 'No products available on this page'}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  {searchQuery ? 'Try a different search term' : 'Adjust filters or return to a previous page'}
+                </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="text-xs text-slate-500 mb-2">
-                  Showing {filteredProducts.length} of {products.length} products
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    Showing {startIndex}-{endIndex} of {totalProductsCount} products
+                  </span>
+                  <span>Page {currentPage} of {totalPages}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
-                  {filteredProducts.map(product => (
+                  {pagedProducts.map(product => (
                   <label
                     key={product.id}
                     className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -648,6 +694,22 @@ export default function PricingCalculator() {
                     </div>
                   </label>
                 ))}
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    className="px-3 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="px-3 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
                 </div>
               </div>
             )}

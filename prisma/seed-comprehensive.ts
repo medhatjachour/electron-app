@@ -176,7 +176,10 @@ async function main() {
   console.log('📦 Creating products...')
   const placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
-  const products = await Promise.all([
+  const TARGET_PRODUCT_COUNT = 250
+  const products: any[] = []
+
+  const baseProducts = await Promise.all([
     // Electronics
     prisma.product.create({
       data: {
@@ -358,6 +361,54 @@ async function main() {
       },
     })
   ])
+  products.push(...baseProducts)
+
+  const extraToCreate = Math.max(TARGET_PRODUCT_COUNT - products.length, 0)
+
+  if (extraToCreate > 0) {
+  console.log(`🛠️ Generating ${extraToCreate} additional products...`)
+
+  const extraProductPromises: Promise<any>[] = []
+
+    for (let i = 0; i < extraToCreate; i++) {
+      const index = i + 1
+      const idSuffix = String(index).padStart(3, '0')
+      const category = categories[i % categories.length]
+      const store = stores[i % stores.length]
+      const basePrice = Number((Math.random() * 150 + 10).toFixed(2))
+      const baseCost = Number((basePrice * (0.5 + Math.random() * 0.2)).toFixed(2))
+      const stock = Math.floor(Math.random() * 60) + 10
+
+      extraProductPromises.push(
+        prisma.product.create({
+          data: {
+            name: `Autogen Product ${idSuffix}`,
+            baseSKU: `AUTO-${idSuffix}`,
+            categoryId: category.id,
+            description: `Automatically generated product ${idSuffix} for testing`,
+            basePrice,
+            baseCost,
+            hasVariants: false,
+            storeId: store.id,
+            images: { create: [{ imageData: placeholder, order: 0 }] },
+            variants: {
+              create: [{
+                color: 'Standard',
+                size: 'One Size',
+                sku: `AUTO-${idSuffix}-STD`,
+                price: basePrice,
+                stock
+              }]
+            }
+          }
+        })
+      )
+    }
+
+    const extraProducts = await Promise.all(extraProductPromises)
+    products.push(...extraProducts)
+  }
+
   console.log(`✅ Created ${products.length} products\n`)
 
   // ==================== SALE TRANSACTIONS ====================
@@ -372,7 +423,8 @@ async function main() {
   const saleTransactions = []
 
   // Create transactions for the last 30 days
-  for (let i = 0; i < 25; i++) {
+  const totalTransactions = 200
+  for (let i = 0; i < totalTransactions; i++) {
     const daysAgo = Math.floor(Math.random() * 30)
     const transactionDate = new Date()
     transactionDate.setDate(transactionDate.getDate() - daysAgo)
