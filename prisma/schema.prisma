@@ -117,23 +117,27 @@ model ProductVariant {
 model SaleTransaction {
   id            String     @id @default(uuid())
   userId        String
+  customerId    String?    // Optional: Link to Customer for tracking
   paymentMethod String     @default("cash") // cash or card
   status        String     @default("completed") // completed, pending, refunded
-  customerName  String?    // Optional customer name
+  customerName  String?    // Optional customer name (kept for backward compatibility)
   subtotal      Float      // Sum of all items before tax
   tax           Float      @default(0) // Tax amount
   total         Float      // Final total amount
   user          User       @relation(fields: [userId], references: [id])
+  customer      Customer?  @relation(fields: [customerId], references: [id])
   items         SaleItem[] // Line items in this transaction
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   
   @@index([createdAt])
   @@index([userId])
+  @@index([customerId])
   @@index([status])
   @@index([paymentMethod])
   @@index([createdAt, status])
   @@index([userId, createdAt])
+  @@index([customerId, createdAt])
 }
 
 // Sale Item - Individual products in a sale transaction
@@ -222,14 +226,15 @@ model Employee {
 }
 
 model Customer {
-  id          String   @id @default(uuid())
-  name        String
-  email       String   @unique
-  phone       String
-  loyaltyTier String   @default("Bronze")
-  totalSpent  Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String            @id @default(uuid())
+  name             String
+  email            String            @unique
+  phone            String
+  loyaltyTier      String            @default("Bronze")
+  totalSpent       Float             @default(0) // Cached value, recalculated from transactions
+  saleTransactions SaleTransaction[] // Sales linked to this customer
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   
   @@index([email])
   @@index([phone])

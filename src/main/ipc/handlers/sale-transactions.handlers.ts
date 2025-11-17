@@ -32,6 +32,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
         const saleTransaction = await tx.saleTransaction.create({
           data: {
             userId: transactionData.userId,
+            customerId: transactionData.customerId || null,
             paymentMethod: transactionData.paymentMethod || 'cash',
             status: 'completed',
             customerName: transactionData.customerName || null,
@@ -75,6 +76,29 @@ export function registerSaleTransactionHandlers(prisma: any) {
         maxWait: 30000,
         timeout: 30000
       })
+
+      // After successful transaction, recalculate customer totalSpent if customerId provided
+      if (transactionData.customerId) {
+        try {
+          const customerTotal = await prisma.saleTransaction.aggregate({
+            where: {
+              customerId: transactionData.customerId,
+              status: 'completed'
+            },
+            _sum: { total: true }
+          })
+          
+          await prisma.customer.update({
+            where: { id: transactionData.customerId },
+            data: { totalSpent: customerTotal._sum.total || 0 }
+          })
+          
+          console.log(`[Customer] Updated totalSpent for customer ${transactionData.customerId}`)
+        } catch (error) {
+          console.error('Error updating customer totalSpent:', error)
+          // Don't fail the transaction if this update fails
+        }
+      }
 
       return { success: true, ...result }
     } catch (error) {
@@ -209,6 +233,28 @@ export function registerSaleTransactionHandlers(prisma: any) {
 
         return updated
       })
+
+      // After successful refund, recalculate customer totalSpent if customerId exists
+      if (result.customerId) {
+        try {
+          const customerTotal = await prisma.saleTransaction.aggregate({
+            where: {
+              customerId: result.customerId,
+              status: 'completed'
+            },
+            _sum: { total: true }
+          })
+          
+          await prisma.customer.update({
+            where: { id: result.customerId },
+            data: { totalSpent: customerTotal._sum.total || 0 }
+          })
+          
+          console.log(`[Customer] Updated totalSpent after refund for customer ${result.customerId}`)
+        } catch (error) {
+          console.error('Error updating customer totalSpent after refund:', error)
+        }
+      }
 
       return { success: true, transaction: result }
     } catch (error) {

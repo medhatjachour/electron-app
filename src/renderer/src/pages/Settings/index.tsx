@@ -6,10 +6,8 @@
 import { useState } from 'react'
 import { 
   Settings as SettingsIcon, 
-  Store, 
   User, 
   Bell, 
-  Shield, 
   CreditCard, 
   Receipt, 
   Database,
@@ -24,13 +22,11 @@ import { useSettings } from './useSettings'
 import GeneralSettings from './GeneralSettings'
 import DisplaySettings from './DisplaySettings'
 import CategorySettings from './CategorySettings'
-import StoreSettings from './StoreSettings'
 import UserProfileSettings from './UserProfileSettings'
 import UserManagementSettings from './UserManagementSettings'
 import PaymentMethodsSettings from './PaymentMethodsSettings'
 import TaxReceiptSettings from './TaxReceiptSettings'
 import NotificationsSettings from './NotificationsSettings'
-import SecuritySettings from './SecuritySettings'
 import BackupSettings from './BackupSettings'
 import type { SettingsTab } from './types'
 
@@ -41,8 +37,6 @@ export default function Settings() {
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   const {
-    storeSettings,
-    setStoreSettings,
     taxReceiptSettings,
     setTaxReceiptSettings,
     notificationSettings,
@@ -62,13 +56,11 @@ export default function Settings() {
     { id: 'general' as SettingsTab, name: 'General', icon: SettingsIcon },
     { id: 'display' as SettingsTab, name: 'Display', icon: Monitor },
     { id: 'categories' as SettingsTab, name: 'Categories', icon: Tag },
-    { id: 'store' as SettingsTab, name: 'Store Info', icon: Store },
     { id: 'user' as SettingsTab, name: 'User Profile', icon: User },
     { id: 'users' as SettingsTab, name: 'User Management', icon: Users },
     { id: 'payments' as SettingsTab, name: 'Payments', icon: CreditCard },
     { id: 'tax' as SettingsTab, name: 'Tax & Receipt', icon: Receipt },
     { id: 'notifications' as SettingsTab, name: 'Notifications', icon: Bell },
-    { id: 'security' as SettingsTab, name: 'Security', icon: Shield },
     { id: 'backup' as SettingsTab, name: 'Backup', icon: Database },
   ]
 
@@ -160,13 +152,6 @@ export default function Settings() {
             <CategorySettings />
           )}
 
-          {activeTab === 'store' && (
-            <StoreSettings
-              settings={storeSettings}
-              onChange={setStoreSettings}
-            />
-          )}
-
           {activeTab === 'user' && (
             <UserProfileSettings
               settings={userProfile}
@@ -196,16 +181,6 @@ export default function Settings() {
             <NotificationsSettings
               settings={notificationSettings}
               onChange={setNotificationSettings}
-            />
-          )}
-
-          {activeTab === 'security' && (
-            <SecuritySettings
-              settings={{ 
-                twoFactorEnabled: false, 
-                sessionTimeout: 30 
-              }}
-              onChange={() => {}}
             />
           )}
 

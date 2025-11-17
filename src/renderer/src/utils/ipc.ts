@@ -233,7 +233,11 @@ export const ipc = isElectron ? {
   // Customer operations
   customers: {
     getAll: () => window.electron.ipcRenderer.invoke('customers:getAll'),
-    create: (data: any) => window.electron.ipcRenderer.invoke('customers:create', data)
+    create: (data: any) => window.electron.ipcRenderer.invoke('customers:create', data),
+    update: (id: string, customerData: any) => window.electron.ipcRenderer.invoke('customers:update', { id, customerData }),
+    delete: (id: string) => window.electron.ipcRenderer.invoke('customers:delete', id),
+    getPurchaseHistory: (customerId: string) => window.electron.ipcRenderer.invoke('customers:getPurchaseHistory', customerId),
+    recalculateTotalSpent: (customerId: string) => window.electron.ipcRenderer.invoke('customers:recalculateTotalSpent', customerId)
   },
   
   // Sales operations

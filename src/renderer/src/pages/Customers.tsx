@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
@@ -11,6 +11,7 @@ type Customer = {
   phone: string
   loyaltyTier: string
   totalSpent: number
+  purchaseCount?: number
   createdAt?: string
   updatedAt?: string
 }
@@ -28,9 +29,12 @@ export default function Customers(): JSX.Element {
     name: '',
     email: '',
     phone: '',
-    loyaltyTier: 'Bronze' as 'Bronze' | 'Silver' | 'Gold' | 'Platinum',
-    totalSpent: 0
+    loyaltyTier: 'Bronze' as 'Bronze' | 'Silver' | 'Gold' | 'Platinum'
   })
+  
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [selectedCustomerHistory, setSelectedCustomerHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     loadCustomers()
@@ -81,8 +85,8 @@ export default function Customers(): JSX.Element {
 
     try {
       const customerData = {
-        ...formData,
-        totalSpent: 0 // New customers start with 0 spent
+        ...formData
+        // totalSpent is automatically 0 for new customers
       }
 
       const result = await ipc.customers.create(customerData)
@@ -160,10 +164,25 @@ export default function Customers(): JSX.Element {
       name: customer.name,
       email: customer.email,
       phone: customer.phone,
-      loyaltyTier: customer.loyaltyTier as 'Bronze' | 'Silver' | 'Gold' | 'Platinum',
-      totalSpent: customer.totalSpent
+      loyaltyTier: customer.loyaltyTier as 'Bronze' | 'Silver' | 'Gold' | 'Platinum'
     })
     setShowEditModal(true)
+  }
+
+  const openHistoryModal = async (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setShowHistoryModal(true)
+    setLoadingHistory(true)
+    
+    try {
+      const history = await ipc.customers.getPurchaseHistory(customer.id)
+      setSelectedCustomerHistory(history)
+    } catch (error) {
+      console.error('Failed to load purchase history:', error)
+      toast.error('Failed to load purchase history')
+    } finally {
+      setLoadingHistory(false)
+    }
   }
 
   const resetForm = () => {
@@ -171,8 +190,7 @@ export default function Customers(): JSX.Element {
       name: '',
       email: '',
       phone: '',
-      loyaltyTier: 'Bronze',
-      totalSpent: 0
+      loyaltyTier: 'Bronze'
     })
   }
 
@@ -332,32 +350,40 @@ export default function Customers(): JSX.Element {
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400">Total Spent</p>
                       <p className="text-2xl font-bold text-primary">${customer.totalSpent.toFixed(2)}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-success">
-                      <Heart size={16} fill="currentColor" />
-                      <span className="text-sm font-semibold">Loyal</span>
+                    <div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Purchases</p>
+                      <p className="text-2xl font-bold text-success">{customer.purchaseCount || 0}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => openHistoryModal(customer)}
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors"
+                    title="View purchase history"
+                  >
+                    <TrendingUp size={16} />
+                    <span className="text-xs">History</span>
+                  </button>
                   <button
                     onClick={() => openEditModal(customer)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                   >
                     <Edit2 size={16} />
-                    Edit
+                    <span className="text-xs">Edit</span>
                   </button>
                   <button
                     onClick={() => handleDeleteCustomer(customer.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-error/10 text-error hover:bg-error/20 rounded-lg transition-colors"
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-error/10 text-error hover:bg-error/20 rounded-lg transition-colors"
                   >
                     <Trash2 size={16} />
-                    Delete
+                    <span className="text-xs">Delete</span>
                   </button>
                 </div>
               </div>
@@ -500,36 +526,23 @@ export default function Customers(): JSX.Element {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Loyalty Tier
-              </label>
-              <select
-                value={formData.loyaltyTier}
-                onChange={(e) => setFormData({ ...formData, loyaltyTier: e.target.value as any })}
-                className="input-field"
-              >
-                <option value="Bronze">🥉 Bronze</option>
-                <option value="Silver">⭐ Silver</option>
-                <option value="Gold">👑 Gold</option>
-                <option value="Platinum">💎 Platinum</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Total Spent
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.totalSpent}
-                onChange={(e) => setFormData({ ...formData, totalSpent: Number(e.target.value) })}
-                className="input-field"
-                placeholder="0.00"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Loyalty Tier
+            </label>
+            <select
+              value={formData.loyaltyTier}
+              onChange={(e) => setFormData({ ...formData, loyaltyTier: e.target.value as any })}
+              className="input-field"
+            >
+              <option value="Bronze">🥉 Bronze</option>
+              <option value="Silver">⭐ Silver</option>
+              <option value="Gold">👑 Gold</option>
+              <option value="Platinum">💎 Platinum</option>
+            </select>
+            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+              Note: Total Spent is automatically calculated from purchases
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -545,6 +558,91 @@ export default function Customers(): JSX.Element {
             </button>
             <button onClick={handleEditCustomer} className="btn-primary">
               Update Customer
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Purchase History Modal */}
+      <Modal
+        isOpen={showHistoryModal}
+        onClose={() => {
+          setShowHistoryModal(false)
+          setSelectedCustomer(null)
+          setSelectedCustomerHistory([])
+        }}
+        title={`Purchase History - ${selectedCustomer?.name}`}
+      >
+        <div className="space-y-4">
+          {loadingHistory ? (
+            <div className="py-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+              <p className="text-slate-600 dark:text-slate-400">Loading purchase history...</p>
+            </div>
+          ) : selectedCustomerHistory.length === 0 ? (
+            <div className="py-12 text-center">
+              <ShoppingCart size={48} className="mx-auto text-slate-400 mb-4" />
+              <p className="text-slate-600 dark:text-slate-400">No purchases yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {selectedCustomerHistory.map((transaction: any) => (
+                <div key={transaction.id} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {new Date(transaction.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      transaction.status === 'completed' 
+                        ? 'bg-success/20 text-success'
+                        : 'bg-error/20 text-error'
+                    }`}>
+                      {transaction.status}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1 mb-3">
+                    {transaction.items.map((item: any) => (
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {item.quantity}x {item.product.name}
+                        </span>
+                        <span className="font-medium text-slate-900 dark:text-white">
+                          ${item.total.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-600 flex justify-between items-center">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {transaction.paymentMethod.toUpperCase()}
+                    </span>
+                    <span className="text-lg font-bold text-primary">
+                      ${transaction.total.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Total Purchases</p>
+              <p className="text-2xl font-bold text-primary">
+                ${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowHistoryModal(false)
+                setSelectedCustomer(null)
+                setSelectedCustomerHistory([])
+              }}
+              className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+            >
+              Close
             </button>
           </div>
         </div>
