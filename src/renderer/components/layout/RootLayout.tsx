@@ -37,70 +37,70 @@ const navigation: NavItem[] = [
     translationKey: 'dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['admin', 'sales', 'inventory', 'finance']
+    roles: ['admin', 'manager', 'sales', 'inventory', 'finance']
   },
   {
     name: 'Stores',
     translationKey: 'stores',
     href: '/stores',
     icon: Store,
-    roles: ['admin']
+    roles: ['admin', 'manager']
   },
   {
     name: 'Products',
     translationKey: 'products',
     href: '/products',
     icon: BoxIcon,
-    roles: ['admin', 'inventory']
+    roles: ['admin', 'manager', 'inventory']
   },
   {
     name: 'POS',
     translationKey: 'pos',
     href: '/pos',
     icon: CreditCard,
-    roles: ['admin', 'sales']
+    roles: ['admin', 'manager', 'sales']
   },
   {
     name: 'Inventory',
     translationKey: 'inventory',
     href: '/inventory',
     icon: Package,
-    roles: ['admin', 'inventory']
+    roles: ['admin', 'manager', 'inventory']
   },
   {
     name: 'Sales',
     translationKey: 'sales',
     href: '/sales',
     icon: ShoppingCart,
-    roles: ['admin', 'sales']
+    roles: ['admin', 'manager', 'sales']
   },
   {
     name: 'Employees',
     translationKey: 'employees',
     href: '/employees',
     icon: Users,
-    roles: ['admin']
+    roles: ['admin', 'manager']
   },
   {
     name: 'Customers',
     translationKey: 'customers',
     href: '/customers',
     icon: UserSquare2,
-    roles: ['admin', 'sales']
+    roles: ['admin', 'manager', 'sales']
   },
   {
     name: 'Reports',
     translationKey: 'reports',
     href: '/reports',
     icon: FileBarChart,
-    roles: ['admin', 'finance']
+    roles: ['admin', 'manager', 'finance']
   },
   {
     name: 'Finance',
     translationKey: 'finance',
     href: '/finance',
     icon: Wallet,
-    roles: ['admin', 'finance']
+    roles: ['admin', 'manager', 'finance']
   },
   {
     name: 'Settings',

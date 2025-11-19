@@ -19,13 +19,23 @@ export default function SalesChart() {
   const loadChartData = async () => {
     try {
       setLoading(true)
-      // @ts-ignore
-      const sales = await (globalThis as any).api?.sales?.getAll()
-      setAllSales(sales || [])
-
+      const saleTransactionsApi = (globalThis as any).api?.saleTransactions
       const days = period === '7days' ? 7 : 30
-      const data: any[] = []
 
+      // Fetch double the range so we can compare with previous period
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - (days * 2) + 1)
+      startDate.setHours(0, 0, 0, 0)
+
+      const transactions = await saleTransactionsApi?.getByDateRange?.({
+        startDate: startDate.toISOString(),
+        endDate: new Date().toISOString()
+      })
+
+      setAllSales(transactions || [])
+
+      const data: any[] = []
       for (let i = days - 1; i >= 0; i--) {
         const date = new Date()
         date.setDate(date.getDate() - i)
@@ -34,7 +44,7 @@ export default function SalesChart() {
         const nextDate = new Date(date)
         nextDate.setDate(nextDate.getDate() + 1)
 
-        const daySales = (sales || []).filter((sale: any) => {
+        const daySales = (transactions || []).filter((sale: any) => {
           const saleDate = new Date(sale.createdAt)
           return saleDate >= date && saleDate < nextDate && sale.status === 'completed'
         })

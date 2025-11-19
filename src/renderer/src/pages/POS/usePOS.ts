@@ -206,6 +206,7 @@ export function usePOS() {
       }
       
       const finalCustomerName = selectedCustomer?.name || customerQuery.trim() || null
+      const finalCustomerId = selectedCustomer?.id || null
       
       // Prepare transaction items
       const items = cart.map((item) => ({
@@ -220,6 +221,7 @@ export function usePOS() {
         items,
         transactionData: {
           userId: user.id,
+          customerId: finalCustomerId,
           paymentMethod: paymentMethod,
           customerName: finalCustomerName,
           subtotal: subtotal,

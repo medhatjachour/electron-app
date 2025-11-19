@@ -243,16 +243,34 @@ export function registerUserHandlers(prisma: any) {
         }
       }
 
-      // Delete user
-      await prisma.user.delete({
-        where: { id: userId }
+      // Use transaction to delete user and all related records
+      await prisma.$transaction(async (tx: any) => {
+        // Delete related sale transactions first
+        await tx.saleTransaction.deleteMany({
+          where: { userId }
+        })
+
+        // Delete related old sales
+        await tx.sale.deleteMany({
+          where: { userId }
+        })
+
+        // Delete related financial transactions
+        await tx.financialTransaction.deleteMany({
+          where: { userId }
+        })
+
+        // Finally delete the user
+        await tx.user.delete({
+          where: { id: userId }
+        })
       })
 
-      console.log('[Users] Deleted user:', existingUser.username)
+      console.log('[Users] Deleted user and related records:', existingUser.username)
       return { success: true }
     } catch (error) {
       console.error('[Users] Failed to delete user:', error)
-      return { success: false, error: 'Failed to delete user' }
+      return { success: false, error: 'Failed to delete user. Please try again.' }
     }
   })
 

@@ -69,19 +69,20 @@ export default function Dashboard() {
       tomorrow.setDate(tomorrow.getDate() + 1)
       
       // Fetch dashboard data using optimized endpoints with date filtering
+      const saleTransactionsApi = (globalThis as any).api?.saleTransactions
       const [productStats, todaySales, yesterdaySales, customerStats] = await Promise.all([
         // Use optimized stats endpoint instead of loading all products
         // @ts-ignore
         (globalThis as any).api?.products?.getStats?.() || Promise.resolve({ totalProducts: 0, lowStockCount: 0 }),
         // Only fetch today's sales (filtered at database level)
         // @ts-ignore
-        (globalThis as any).api?.sales?.getByDateRange?.({ 
+        saleTransactionsApi?.getByDateRange?.({ 
           startDate: today.toISOString(),
           endDate: tomorrow.toISOString()
         }) || Promise.resolve([]),
         // Only fetch yesterday's sales (filtered at database level)
         // @ts-ignore
-        (globalThis as any).api?.sales?.getByDateRange?.({ 
+        saleTransactionsApi?.getByDateRange?.({ 
           startDate: yesterday.toISOString(), 
           endDate: today.toISOString() 
         }) || Promise.resolve([]),

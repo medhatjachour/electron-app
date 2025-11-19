@@ -17,14 +17,26 @@ export default function RecentActivity() {
   const loadActivities = async () => {
     try {
       setLoading(true)
-      // @ts-ignore
-      const sales = await (globalThis as any).api?.sales?.getAll()
+      const saleTransactionsApi = (globalThis as any).api?.saleTransactions
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 14)
+      startDate.setHours(0, 0, 0, 0)
+
+      const transactions = await saleTransactionsApi?.getByDateRange?.({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
       
-      const recentSales = (sales || [])
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      const recentActivities = (transactions || [])
+        .filter((transaction: any) => transaction.status === 'completed')
+        .map((transaction: any) => ({
+          ...transaction,
+          totalItems: (transaction.items || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+        }))
         .slice(0, 10)
 
-      setActivities(recentSales)
+      setActivities(recentActivities)
     } catch (error) {
       console.error('Error loading activities:', error)
     } finally {
@@ -78,7 +90,7 @@ export default function RecentActivity() {
                   {activity.customerName && ` - ${activity.customerName}`}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {activity.quantity} item{activity.quantity > 1 ? 's' : ''} • {getTimeAgo(activity.createdAt)}
+                  {activity.totalItems || 0} item{(activity.totalItems || 0) === 1 ? '' : 's'} • {getTimeAgo(activity.createdAt)}
                 </p>
               </div>
               <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">

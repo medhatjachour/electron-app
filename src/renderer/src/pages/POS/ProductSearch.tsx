@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { Search, Filter, X, ChevronDown } from 'lucide-react'
+import { Search, Filter, X, ChevronDown, RefreshCcw } from 'lucide-react'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useDebounce } from '../../hooks/useDebounce'
@@ -32,6 +32,9 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 10000 })
   const [sortBy, setSortBy] = useState<SortOption>('name')
   
+  // Default to showing newest products first
+  const [defaultSort] = useState({ field: 'createdAt' as const, direction: 'desc' as const })
+  
   const ITEMS_PER_PAGE = 50
 
   // Load filter metadata (categories, colors, sizes, price range)
@@ -52,20 +55,27 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     sizes: selectedSizes.length > 0 ? selectedSizes : undefined
   }), [debouncedSearchQuery, selectedCategoryIds, stockFilter, priceRange, selectedColors, selectedSizes])
 
-  // Memoize sort options
-  const sortOptions = useMemo(() => ({
-    field: sortBy === 'name' ? 'name' as const :
-           sortBy === 'price-low' || sortBy === 'price-high' ? 'basePrice' as const :
-           'createdAt' as const,
-    direction: (sortBy === 'price-high' || sortBy === 'stock-high' ? 'desc' : 'asc') as 'asc' | 'desc'
-  }), [sortBy])
+  // Memoize sort options - if no sort selected, default to newest first
+  const sortOptions = useMemo(() => {
+    if (sortBy === 'name') {
+      // User hasn't changed sort - use newest first
+      return defaultSort
+    }
+    return {
+      field: sortBy === 'price-low' || sortBy === 'price-high' ? 'basePrice' as const :
+             sortBy === 'stock-low' || sortBy === 'stock-high' ? 'createdAt' as const :
+             'name' as const,
+      direction: (sortBy === 'price-high' || sortBy === 'stock-high' ? 'desc' : 'asc') as 'asc' | 'desc'
+    }
+  }, [sortBy, defaultSort])
 
   // Backend search with filters - Optimized for POS speed
   const {
     data: products,
     loading,
     totalCount,
-    pagination
+    pagination,
+    refetch
   } = useBackendSearch<Product>({
     endpoint: 'search:products',
     filters: searchFilters,
@@ -226,6 +236,17 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 Clear
               </button>
             )}
+
+            {/* Refresh Button */}
+            <button 
+              onClick={() => refetch()}
+              disabled={loading}
+              className="px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh products"
+            >
+              <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
+              
+            </button>
           </div>
         </div>
 
