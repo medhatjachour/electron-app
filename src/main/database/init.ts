@@ -59,10 +59,9 @@ export async function initializeDatabase(): Promise<void> {
       fs.copyFileSync(templateDbPath, dbPath)
       console.log('[DB Init] ✅ Database initialized from template')
     } else {
-      // Fallback: create empty file (application will attempt to seed but schema may need initialization)
-      console.log('[DB Init] Template not found, creating empty database...')
-      fs.writeFileSync(dbPath, '')
-      console.log('[DB Init] ⚠️ Empty database created - schema may need to be initialized. Run create-template-db before packaging to include a working template.')
+      // Fallback: create database with schema using Prisma migrations
+      console.log('[DB Init] Template not found, creating database with schema...')
+      await createDatabaseWithSchema(dbPath)
     }
     
     console.log('[DB Init] ℹ️ Default admin user: username="0000", password="0000"')
@@ -81,6 +80,148 @@ export function getDatabasePath(): string {
   return isDev 
     ? path.resolve(process.cwd(), 'prisma', 'dev.db')
     : path.join(app.getPath('userData'), 'database.db')
+}
+
+/**
+ * Create production database with schema from migrations
+ * Uses embedded Prisma migrations to initialize the database
+ */
+async function createDatabaseWithSchema(dbPath: string): Promise<void> {
+  try {
+    console.log('[DB Init] 🔧 Creating database with schema from migrations...')
+    
+    // Create empty database file
+    fs.writeFileSync(dbPath, '')
+    
+    // Import Prisma dynamically
+    const { PrismaClient } = await import(path.join(__dirname, '..', '..', 'generated', 'prisma'))
+    
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: `file:${dbPath}`
+        }
+      }
+    })
+
+    try {
+      // Execute the migrations SQL to create schema
+      // This reads from the migration files bundled with the app
+      const migrationsPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'prisma', 'migrations')
+      
+      console.log('[DB Init] Looking for migrations in:', migrationsPath)
+      
+      if (fs.existsSync(migrationsPath)) {
+        const migrationDirs = fs.readdirSync(migrationsPath).filter(f => 
+          fs.statSync(path.join(migrationsPath, f)).isDirectory()
+        ).sort()
+        
+        console.log(`[DB Init] Found ${migrationDirs.length} migrations to apply`)
+        
+        for (const migDir of migrationDirs) {
+          const sqlFile = path.join(migrationsPath, migDir, 'migration.sql')
+          if (fs.existsSync(sqlFile)) {
+            const sql = fs.readFileSync(sqlFile, 'utf-8')
+            console.log(`[DB Init] Applying migration: ${migDir}`)
+            
+            // Split SQL by statements and execute each
+            const statements = sql.split(';').filter(s => s.trim())
+            for (const statement of statements) {
+              if (statement.trim()) {
+                await prisma.$executeRawUnsafe(statement)
+              }
+            }
+          }
+        }
+        
+        console.log('[DB Init] ✅ Schema created successfully from migrations')
+      } else {
+        console.log('[DB Init] ⚠️ Migrations folder not found, attempting direct schema creation...')
+        // Fallback: Create basic tables manually
+        await createBasicSchema(prisma)
+      }
+      
+      // Create default admin user
+      await createDefaultAdminUser(prisma)
+      
+    } finally {
+      await prisma.$disconnect()
+    }
+    
+    console.log('[DB Init] 🎉 Database initialization complete!')
+    
+  } catch (error) {
+    console.error('[DB Init] ❌ Failed to create database:', error)
+    throw error
+  }
+}
+
+/**
+ * Create basic schema tables (fallback method)
+ */
+async function createBasicSchema(prisma: any): Promise<void> {
+  console.log('[DB Init] Creating basic schema tables...')
+  
+  // Execute raw SQL to create essential tables
+  const schema = `
+    CREATE TABLE IF NOT EXISTS "User" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "username" TEXT NOT NULL UNIQUE,
+      "passwordHash" TEXT NOT NULL,
+      "role" TEXT NOT NULL DEFAULT 'sales',
+      "fullName" TEXT,
+      "email" TEXT UNIQUE,
+      "phone" TEXT,
+      "isActive" BOOLEAN NOT NULL DEFAULT 1,
+      "lastLogin" DATETIME,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX IF NOT EXISTS "User_role_idx" ON "User"("role");
+    CREATE INDEX IF NOT EXISTS "User_username_idx" ON "User"("username");
+    CREATE INDEX IF NOT EXISTS "User_isActive_idx" ON "User"("isActive");
+  `
+  
+  const statements = schema.split(';').filter(s => s.trim())
+  for (const statement of statements) {
+    if (statement.trim()) {
+      await prisma.$executeRawUnsafe(statement)
+    }
+  }
+  
+  console.log('[DB Init] ✅ Basic schema created')
+}
+
+/**
+ * Create default admin user for first-time setup
+ */
+async function createDefaultAdminUser(prisma: any): Promise<void> {
+  try {
+    const bcrypt = await import('bcryptjs')
+    
+    const userCount = await prisma.user.count()
+    if (userCount === 0) {
+      console.log('[DB Init] Creating default admin user...')
+      const passwordHash = await bcrypt.hash('0000', 10)
+      
+      await prisma.user.create({
+        data: {
+          id: '00000000-0000-0000-0000-000000000000',
+          username: '0000',
+          passwordHash,
+          role: 'admin',
+          fullName: 'Administrator',
+          isActive: true
+        }
+      })
+      
+      console.log('[DB Init] ✅ Default admin user created')
+      console.log('[DB Init] 📝 Login: username="0000", password="0000"')
+    }
+  } catch (error) {
+    console.error('[DB Init] ⚠️ Failed to create admin user:', error)
+  }
 }
 
 /**

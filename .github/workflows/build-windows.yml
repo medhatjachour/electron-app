@@ -58,12 +58,26 @@ jobs:
       
       - name: Prepare template database
         run: |
-          if (!(Test-Path "prisma/template.db")) {
-            Write-Host "Creating template database..."
-            npx prisma migrate deploy
-            npx prisma db seed
+          Write-Host "Creating fresh template database..."
+          if (Test-Path "prisma/template.db") {
+            Remove-Item "prisma/template.db" -Force
+            Write-Host "Removed existing template database"
+          }
+          
+          # Create fresh template database
+          $env:DATABASE_URL = "file:./prisma/template.db"
+          Write-Host "Running Prisma migrations..."
+          npx prisma migrate deploy
+          
+          Write-Host "Seeding database..."
+          npx prisma db seed
+          
+          if (Test-Path "prisma/template.db") {
+            $size = (Get-Item "prisma/template.db").Length / 1KB
+            Write-Host "✓ Template database created: $([math]::Round($size, 2)) KB"
           } else {
-            Write-Host "Template database already exists"
+            Write-Error "Failed to create template database!"
+            exit 1
           }
         shell: pwsh
       
