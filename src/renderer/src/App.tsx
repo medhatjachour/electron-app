@@ -7,7 +7,7 @@
  * - Route-based Code Splitting
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy, ReactNode, useState } from 'react'
 import RootLayout from '../components/layout/RootLayout'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -181,9 +181,9 @@ export default function AppRoutes() {
           <DisplaySettingsProvider>
             <ToastProvider>
               <AuthProvider>
-                <BrowserRouter>
+                <HashRouter>
                   <AppContent />
-                </BrowserRouter>
+                </HashRouter>
               </AuthProvider>
             </ToastProvider>
           </DisplaySettingsProvider>
