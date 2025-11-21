@@ -39,6 +39,8 @@ win:
   # Optional: Code signing (uncomment for production)
   # certificateFile: ${WINDOWS_CERTIFICATE_FILE}
   # certificatePassword: ${WINDOWS_CERTIFICATE_PASSWORD}
+  # Ensure native modules work properly
+  requestedExecutionLevel: asInvoker
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
