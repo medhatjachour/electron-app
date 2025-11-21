@@ -68,7 +68,7 @@ function createWindow(): void {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: true // TEMPORARILY ENABLED FOR DEBUGGING - TODO: Change back to false after fixing white screen
+      devTools: false // Disable DevTools completely
     }
   })
 
@@ -88,19 +88,14 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // TEMPORARILY DISABLED - Enable DevTools for debugging white screen
-  // TODO: Uncomment after fixing the issue
-  // // Prevent opening DevTools via keyboard shortcuts
-  // mainWindow.webContents.on('before-input-event', (event, input) => {
-  //   const key = input.key?.toLowerCase?.() || ''
-  //   // Block F12 or Ctrl+Shift+I / Command+Option+I
-  //   if (key === 'f12' || ((input.control || input.meta) && input.shift && key === 'i')) {
-  //     event.preventDefault()
-  //   }
-  // })
-  
-  // TEMPORARY: Auto-open DevTools to see console errors
-  mainWindow.webContents.openDevTools({ mode: 'detach' })
+  // Prevent opening DevTools via keyboard shortcuts
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const key = input.key?.toLowerCase?.() || ''
+    // Block F12 or Ctrl+Shift+I / Command+Option+I
+    if (key === 'f12' || ((input.control || input.meta) && input.shift && key === 'i')) {
+      event.preventDefault()
+    }
+  })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.

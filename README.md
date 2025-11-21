@@ -24,63 +24,67 @@
 
 ### 🏠 Dashboard Overview
 ![Dashboard](./samples/1-dashboard.png)
-*Real-time business metrics, revenue tracking, and quick insights*
+*Real-time business metrics, revenue tracking, and comprehensive analytics at a glance*
+
+---
+
+### � Inventory Management
+![Inventory](./samples/2-pos.png)
+*Track stock levels, manage product variants, and monitor inventory in real-time*
 
 ---
 
 ### 💰 Point of Sale (POS)
-![POS Interface](./samples/2-pos.png)
-*Intuitive checkout interface with product search and cart management*
+![POS Interface](./samples/3-products.png)
+*Fast, intuitive checkout interface with product search and cart management*
 
 ---
 
-### 📦 Product Management
-![Products](./samples/3-products.png)
-*Comprehensive product catalog with variants, images, and inventory tracking*
+### ✨ Adding Product Features
+![Add Product](./samples/4-sales.png)
+*Create and manage products with variants, images, pricing, and category assignment*
 
 ---
 
-### 📊 Sales Analytics
-![Sales](./samples/4-sales.png)
-*Detailed sales reports with filtering and export capabilities*
+### �️ Product Management
+![Product Catalog](./samples/5-stores.png)
+*Comprehensive product catalog with filtering, search, and bulk operations*
 
 ---
 
 ### 🏪 Store Management
-![Stores](./samples/5-stores.png)
-*Multi-store setup with location and operational details*
+![Store Setup](./samples/6-finance.png)
+*Multi-store configuration with location details and operational hours*
 
 ---
 
-### 💸 Finance Dashboard
-![Finance](./samples/6-finance.png)
-*Financial analytics with revenue, profit, and expense tracking*
-
----
-
-### 👥 Employee Management
+### � Employee Records
 ![Employees](./samples/7-employees.png)
-*Employee records with salary tracking and role management*
-
-
+*Employee management with salary tracking, roles, and performance metrics*
 
 ---
 
-### 📈 Reports & Analytics
+### 🤝 Customer Database
+![Customers](./samples/8-customers.png)
+*Customer relationship management with loyalty tiers and purchase history*
+
+---
+
+### 📊 Business Reports
 ![Reports](./samples/9-reports.png)
-*Comprehensive business reports with PDF/CSV export*
+*Comprehensive analytics and reports with PDF/CSV export capabilities*
 
 ---
 
 ### ⚙️ Settings & Configuration
 ![Settings](./samples/10-settings.png)
-*Theme, language, and application settings*
+*Customize theme, language, store details, and application preferences*
 
 ---
 
-### 🔐 Login & Security
+### 🔐 Secure Login
 ![Login](./samples/11-login.png)
-*Secure authentication with role-based access*
+*Role-based authentication with secure password handling and session management*
 
 </div>
 
