@@ -64,20 +64,31 @@ jobs:
             Write-Host "Removed existing template database"
           }
           
-          # Create fresh template database
+          # Set DATABASE_URL to create template in prisma folder
           $env:DATABASE_URL = "file:./prisma/template.db"
+          
           Write-Host "Running Prisma migrations..."
           npx prisma migrate deploy
           
           Write-Host "Seeding database..."
           npx prisma db seed
           
+          # Verify template database was created
           if (Test-Path "prisma/template.db") {
             $size = (Get-Item "prisma/template.db").Length / 1KB
-            Write-Host "✓ Template database created: $([math]::Round($size, 2)) KB"
+            Write-Host "✓ Template database created successfully: $([math]::Round($size, 2)) KB"
           } else {
-            Write-Error "Failed to create template database!"
-            exit 1
+            Write-Host "❌ Template database not found in expected location!"
+            Write-Host "Checking current directory..."
+            if (Test-Path "template.db") {
+              Write-Host "Found template.db in root, moving to prisma folder..."
+              Move-Item "template.db" "prisma/template.db" -Force
+              $size = (Get-Item "prisma/template.db").Length / 1KB
+              Write-Host "✓ Template database moved: $([math]::Round($size, 2)) KB"
+            } else {
+              Write-Error "Failed to create template database!"
+              exit 1
+            }
           }
         shell: pwsh
       

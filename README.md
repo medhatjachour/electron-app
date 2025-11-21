@@ -20,23 +20,73 @@
 
 ## 📸 Screenshots
 
-### Dashboard
-![Dashboard](./samples/1.png)
+<div align="center">
 
-### Point of Sale (POS)
-![POS Interface](./samples/POS.png)
+### 🏠 Dashboard Overview
+![Dashboard](./samples/1-dashboard.png)
+*Real-time business metrics, revenue tracking, and quick insights*
 
-### Product Management
-![Products](./samples/products.png)
+---
 
-### Sales Analytics
-![Sales](./samples/sales%20.png)
+### 💰 Point of Sale (POS)
+![POS Interface](./samples/2-pos.png)
+*Intuitive checkout interface with product search and cart management*
 
-### Store Management
-![Stores](./samples/stores%20.png)
+---
 
-### Finance Dashboard
-![Finance](./samples/finince%20.png)
+### 📦 Product Management
+![Products](./samples/3-products.png)
+*Comprehensive product catalog with variants, images, and inventory tracking*
+
+---
+
+### 📊 Sales Analytics
+![Sales](./samples/4-sales.png)
+*Detailed sales reports with filtering and export capabilities*
+
+---
+
+### 🏪 Store Management
+![Stores](./samples/5-stores.png)
+*Multi-store setup with location and operational details*
+
+---
+
+### 💸 Finance Dashboard
+![Finance](./samples/6-finance.png)
+*Financial analytics with revenue, profit, and expense tracking*
+
+---
+
+### 👥 Employee Management
+![Employees](./samples/7-employees.png)
+*Employee records with salary tracking and role management*
+
+---
+
+### 🛍️ Customer Management
+![Customers](./samples/8-customers.png)
+*Customer database with loyalty tiers and spending history*
+
+---
+
+### 📈 Reports & Analytics
+![Reports](./samples/9-reports.png)
+*Comprehensive business reports with PDF/CSV export*
+
+---
+
+### ⚙️ Settings & Configuration
+![Settings](./samples/10-settings.png)
+*Theme, language, and application settings*
+
+---
+
+### 🔐 Login & Security
+![Login](./samples/11-login.png)
+*Secure authentication with role-based access*
+
+</div>
 
 ---
 
