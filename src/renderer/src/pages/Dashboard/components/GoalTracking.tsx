@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Target, TrendingUp, Edit2, Plus } from 'lucide-react'
+import { Target, TrendingUp, Edit2, Plus, X, Save } from 'lucide-react'
 
 type Goal = {
   id: string
@@ -44,6 +44,14 @@ export default function GoalTracking() {
   ])
 
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    target: 0,
+    period: 'monthly' as 'daily' | 'weekly' | 'monthly',
+    type: 'revenue' as 'revenue' | 'sales' | 'customers'
+  })
 
   useEffect(() => {
     loadGoalProgress()
@@ -99,17 +107,176 @@ export default function GoalTracking() {
     return 'text-red-600 dark:text-red-400'
   }
 
+  const handleAddGoal = () => {
+    setEditingGoal(null)
+    setFormData({
+      name: '',
+      target: 0,
+      period: 'monthly',
+      type: 'revenue'
+    })
+    setShowModal(true)
+  }
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal)
+    setFormData({
+      name: goal.name,
+      target: goal.target,
+      period: goal.period,
+      type: goal.type
+    })
+    setShowModal(true)
+  }
+
+  const handleSaveGoal = () => {
+    if (!formData.name || formData.target <= 0) {
+      alert('Please fill in all fields with valid values')
+      return
+    }
+
+    if (editingGoal) {
+      // Update existing goal
+      setGoals(prev => prev.map(g => 
+        g.id === editingGoal.id 
+          ? { ...g, ...formData, target: Number(formData.target) }
+          : g
+      ))
+    } else {
+      // Add new goal
+      const newGoal: Goal = {
+        id: Date.now().toString(),
+        name: formData.name,
+        target: Number(formData.target),
+        current: 0,
+        period: formData.period,
+        type: formData.type
+      }
+      setGoals(prev => [...prev, newGoal])
+    }
+
+    setShowModal(false)
+    setEditingGoal(null)
+    
+    // Reload progress after saving
+    setTimeout(() => loadGoalProgress(), 500)
+  }
+
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-          <Target size={18} className="text-primary" />
-          Goal Tracking
-        </h3>
-        <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-          <Plus size={16} className="text-slate-600 dark:text-slate-400" />
-        </button>
-      </div>
+    <>
+      {/* Goal Tracking Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                {editingGoal ? 'Edit Goal' : 'Add New Goal'}
+              </h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-slate-600 dark:text-slate-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Goal Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Goal Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Monthly Revenue"
+                />
+              </div>
+
+              {/* Target Value */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Target Value
+                </label>
+                <input
+                  type="number"
+                  value={formData.target || ''}
+                  onChange={(e) => setFormData({ ...formData, target: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., 50000"
+                  min="0"
+                />
+              </div>
+
+              {/* Period */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Period
+                </label>
+                <select
+                  value={formData.period}
+                  onChange={(e) => setFormData({ ...formData, period: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Type
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="revenue">Revenue</option>
+                  <option value="sales">Sales (Transactions)</option>
+                  <option value="customers">Customers</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleSaveGoal}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <Save size={18} />
+                {editingGoal ? 'Update Goal' : 'Add Goal'}
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Goal Tracking Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Target size={18} className="text-primary" />
+            Goal Tracking
+          </h3>
+          <button 
+            onClick={handleAddGoal}
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            title="Add new goal"
+          >
+            <Plus size={16} className="text-slate-600 dark:text-slate-400" />
+          </button>
+        </div>
 
       {loading ? (
         <div className="space-y-4">
@@ -148,7 +315,11 @@ export default function GoalTracking() {
                     <span className={`text-sm font-bold ${getProgressTextColor(percentage)}`}>
                       {percentage.toFixed(0)}%
                     </span>
-                    <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                    <button 
+                      onClick={() => handleEditGoal(goal)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                      title="Edit goal"
+                    >
                       <Edit2 size={14} className="text-slate-600 dark:text-slate-400" />
                     </button>
                   </div>
@@ -171,7 +342,8 @@ export default function GoalTracking() {
             )
           })}
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }
