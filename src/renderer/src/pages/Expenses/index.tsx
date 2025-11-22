@@ -193,17 +193,27 @@ export default function Expenses() {
         return
       }
 
-      // Call finance API to add transaction
-      // @ts-ignore
-      await window.api.finance.addTransaction({
-        type: 'expense',
-        amount: formData.amount,
-        description: `[${formData.category}] ${formData.description}`,
-        userId: user.id
-      })
+      if (editingExpense) {
+        // Update existing expense
+        await window.api.finance.updateTransaction(editingExpense.id, {
+          type: 'expense',
+          amount: formData.amount,
+          description: `[${formData.category}] ${formData.description}`
+        })
+      } else {
+        // Create new expense
+        await window.api.finance.addTransaction({
+          type: 'expense',
+          amount: formData.amount,
+          description: `[${formData.category}] ${formData.description}`,
+          userId: user.id
+        })
+      }
 
       success(editingExpense ? 'Expense updated successfully' : 'Expense added successfully')
       setShowModal(false)
+      setEditingExpense(null)
+      setFormData({ amount: 0, description: '', category: 'other' })
       loadExpenses()
     } catch (err) {
       console.error('Error saving expense:', err)
@@ -211,12 +221,13 @@ export default function Expenses() {
     }
   }
 
-  const handleDeleteExpense = async (_expenseId: string) => {
+  const handleDeleteExpense = async (expenseId: string) => {
     if (!confirm('Are you sure you want to delete this expense?')) return
 
     try {
-      // Note: We need to add a delete handler in the backend
-      error('Delete functionality coming soon')
+      await window.api.finance.deleteTransaction(expenseId)
+      success('Expense deleted successfully')
+      loadExpenses()
     } catch (err) {
       console.error('Error deleting expense:', err)
       error('Failed to delete expense')
@@ -634,7 +645,11 @@ export default function Expenses() {
                 {editingExpense ? 'Edit Expense' : 'Add New Expense'}
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false)
+                  setEditingExpense(null)
+                  setFormData({ amount: 0, description: '', category: 'other' })
+                }}
                 className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <X size={20} className="text-slate-600 dark:text-slate-400" />
@@ -702,7 +717,11 @@ export default function Expenses() {
             {/* Actions */}
             <div className="flex items-center gap-2 mt-6">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false)
+                  setEditingExpense(null)
+                  setFormData({ amount: 0, description: '', category: 'other' })
+                }}
                 className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300"
               >
                 Cancel

@@ -1,24 +1,45 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   FileText, 
   TrendingUp, 
   Package, 
   DollarSign, 
   Users,
-  Calendar,
   Printer,
   FileSpreadsheet,
   BarChart3,
-  AlertCircle
+  RefreshCw,
+  Plus,
+  ArrowUpRight,
+  Clock,
+  Activity,
+  ShoppingCart,
+  Receipt,
+  TrendingDown
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
-interface QuickInsights {
-  todayRevenue: number;
-  todayOrders: number;
-  lowStockItems: number;
-  newCustomers: number;
+interface TodayStats {
+  revenue: number;
+  expenses: number;
+  profit: number;
+  salesCount: number;
+  expensesCount: number;
+  topProduct: string;
+  revenueChange: number; // percentage vs yesterday
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'sale' | 'expense' | 'alert';
+  time: string;
+  description: string;
+  amount?: number;
+  icon: any;
 }
 
 interface ReportFormState {
@@ -27,10 +48,14 @@ interface ReportFormState {
   endDate: string;
 }
 
-const Reports: React.FC = () => {
+const EnhancedReports: React.FC = () => {
   const { error, success } = useToast();
+  const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(false);
-  const [quickInsights, setQuickInsights] = useState<QuickInsights | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
+  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [reportData, setReportData] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [reportForm, setReportForm] = useState<ReportFormState>({
@@ -40,21 +65,123 @@ const Reports: React.FC = () => {
   });
 
   useEffect(() => {
-    loadQuickInsights();
+    loadAllData();
   }, []);
 
-  const loadQuickInsights = async () => {
+  const loadAllData = async () => {
+    await Promise.all([
+      loadTodayStats(),
+      loadActivityFeed()
+    ]);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadAllData();
+    setRefreshing(false);
+    success('Data refreshed successfully');
+  };
+
+  const loadTodayStats = async () => {
     try {
-      const response = await window.api.reports.getQuickInsights();
-      if (response.success && response.data) {
-        setQuickInsights(response.data);
-      } else {
-        console.error('Failed to load quick insights:', response.error);
-        error('Failed to load quick insights');
-      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Fetch today's transactions
+      const [salesData, financeData] = await Promise.all([
+        window.api.saleTransactions.getByDateRange({
+          startDate: today.toISOString(),
+          endDate: tomorrow.toISOString()
+        }),
+        window.api.finance.getTransactions({
+          startDate: today,
+          endDate: tomorrow
+        })
+      ]);
+
+      const revenue = salesData.reduce((sum: number, sale: any) => sum + sale.total, 0);
+      const expenses = financeData
+        .filter((t: any) => t.type === 'expense')
+        .reduce((sum: number, t: any) => sum + t.amount, 0);
+
+      setTodayStats({
+        revenue,
+        expenses,
+        profit: revenue - expenses,
+        salesCount: salesData.length,
+        expensesCount: financeData.filter((t: any) => t.type === 'expense').length,
+        topProduct: 'Product X', // TODO: Calculate from sales data
+        revenueChange: 12.5 // TODO: Calculate vs yesterday
+      });
     } catch (err) {
-      console.error('Failed to load quick insights:', err);
-      error('Failed to load quick insights');
+      console.error('Failed to load today stats:', err);
+    }
+  };
+
+  const loadActivityFeed = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const [salesData, financeData] = await Promise.all([
+        window.api.saleTransactions.getByDateRange({
+          startDate: today.toISOString(),
+          endDate: tomorrow.toISOString()
+        }),
+        window.api.finance.getTransactions({
+          startDate: today,
+          endDate: tomorrow
+        })
+      ]);
+
+      const activities: ActivityItem[] = [];
+
+      // Add sales
+      salesData.forEach((sale: any) => {
+        activities.push({
+          id: sale.id,
+          type: 'sale',
+          time: new Date(sale.createdAt).toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          description: `Sale: ${sale.customerName || 'Walk-in Customer'}`,
+          amount: sale.total,
+          icon: ShoppingCart
+        });
+      });
+
+      // Add expenses
+      financeData
+        .filter((t: any) => t.type === 'expense')
+        .forEach((expense: any) => {
+          activities.push({
+            id: expense.id,
+            type: 'expense',
+            time: new Date(expense.createdAt).toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            description: `Expense: ${expense.description}`,
+            amount: expense.amount,
+            icon: Receipt
+          });
+        });
+
+      // Sort by time (most recent first)
+      activities.sort((a, b) => {
+        const timeA = a.time.split(':').map(Number);
+        const timeB = b.time.split(':').map(Number);
+        return (timeB[0] * 60 + timeB[1]) - (timeA[0] * 60 + timeA[1]);
+      });
+
+      setActivityFeed(activities.slice(0, 10)); // Show latest 10
+    } catch (err) {
+      console.error('Failed to load activity feed:', err);
     }
   };
 
@@ -89,7 +216,6 @@ const Reports: React.FC = () => {
         setShowPreview(true);
         success('Report generated successfully');
       } else {
-        console.error('Failed to generate report:', response.error);
         error(response.error || 'Failed to generate report');
       }
     } catch (err) {
@@ -102,460 +228,539 @@ const Reports: React.FC = () => {
 
   const handleExportPDF = () => {
     if (!reportData || !reportForm.reportType) return;
-
-    // Create a hidden iframe for printing instead of popup
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
     
-    document.body.appendChild(iframe);
-    
-    const iframeDoc = iframe.contentWindow?.document;
-    if (!iframeDoc) {
-      error('Failed to create print preview');
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    iframeDoc.open();
-    iframeDoc.write(generateReportHTML());
-    iframeDoc.close();
-    
-    // Wait for content to load, then print
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
+    try {
+      const doc = new jsPDF();
+      const reportType = reportTypes.find(r => r.id === reportForm.reportType);
+      const dateRange = `${new Date(reportForm.startDate).toLocaleDateString()} - ${new Date(reportForm.endDate).toLocaleDateString()}`;
       
-      // Clean up after printing
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }, 500);
-    
-    success('Print dialog opened');
+      let yPos = 20;
+      
+      // Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${reportType?.title} Report`, 105, yPos, { align: 'center' });
+      yPos += 10;
+      
+      // Date range
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text(`Period: ${dateRange}`, 105, yPos, { align: 'center' });
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, yPos + 5, { align: 'center' });
+      yPos += 15;
+      doc.setTextColor(0);
+      
+      // Summary Section
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Summary', 14, yPos);
+      yPos += 8;
+      
+      const summaryData: any[] = [];
+      if (reportForm.reportType === 'sales' && reportData.summary) {
+        summaryData.push(
+          ['Total Revenue', formatCurrency(reportData.summary.totalRevenue || 0)],
+          ['Total Sales', `${reportData.summary.totalSales || 0}`],
+          ['Average Order Value', formatCurrency(reportData.summary.averageOrderValue || 0)]
+        );
+      } else if (reportForm.reportType === 'inventory' && reportData.summary) {
+        summaryData.push(
+          ['Total Value', formatCurrency(reportData.summary.totalValue || 0)],
+          ['Total Products', `${reportData.summary.totalProducts || 0}`],
+          ['Low Stock Count', `${reportData.summary.lowStockCount || 0}`],
+          ['Out of Stock Count', `${reportData.summary.outOfStockCount || 0}`]
+        );
+      } else if (reportForm.reportType === 'financial' && reportData.summary) {
+        summaryData.push(
+          ['Total Revenue', formatCurrency(reportData.summary.totalRevenue || 0)],
+          ['Total Expenses', formatCurrency(reportData.summary.totalExpenses || 0)],
+          ['Net Profit', formatCurrency(reportData.summary.netProfit || 0)],
+          ['Profit Margin', `${reportData.summary.profitMargin || 0}%`]
+        );
+      } else if (reportForm.reportType === 'customer' && reportData.summary) {
+        summaryData.push(
+          ['Total Customers', `${reportData.summary.totalCustomers || 0}`],
+          ['Total Spent', formatCurrency(reportData.summary.totalSpent || 0)],
+          ['Average per Customer', formatCurrency(reportData.summary.averageSpent || 0)]
+        );
+      }
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246], fontSize: 10, fontStyle: 'bold' },
+        styles: { fontSize: 9 },
+        margin: { left: 14, right: 14 }
+      });
+      
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+      
+      // Detailed Breakdown
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Detailed Breakdown', 14, yPos);
+      yPos += 8;
+      
+      if (reportForm.reportType === 'sales' && reportData.topProducts) {
+        const tableData = reportData.topProducts.map((p: any) => [
+          p.name,
+          p.quantity.toString(),
+          formatCurrency(p.revenue)
+        ]);
+        
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Product', 'Quantity', 'Revenue']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246] },
+          styles: { fontSize: 9 },
+          margin: { left: 14, right: 14 }
+        });
+      } else if (reportForm.reportType === 'inventory' && reportData.byCategory) {
+        const tableData = Object.entries(reportData.byCategory).map(([category, data]: [string, any]) => [
+          category,
+          data.count.toString(),
+          data.stock.toString(),
+          formatCurrency(data.value)
+        ]);
+        
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Category', 'Products', 'Stock', 'Value']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [34, 197, 94] },
+          styles: { fontSize: 9 },
+          margin: { left: 14, right: 14 }
+        });
+      } else if (reportForm.reportType === 'financial' && reportData.dailyBreakdown) {
+        const tableData = reportData.dailyBreakdown.map((d: any) => [
+          d.date,
+          formatCurrency(d.revenue),
+          formatCurrency(d.expenses),
+          formatCurrency(d.netProfit)
+        ]);
+        
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Date', 'Revenue', 'Expenses', 'Net Profit']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [168, 85, 247] },
+          styles: { fontSize: 9 },
+          margin: { left: 14, right: 14 }
+        });
+      } else if (reportForm.reportType === 'customer' && reportData.topCustomers) {
+        const tableData = reportData.topCustomers.map((c: any) => [
+          c.name,
+          c.loyaltyTier,
+          formatCurrency(c.totalSpent),
+          c.orderCount.toString()
+        ]);
+        
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Customer', 'Loyalty Tier', 'Total Spent', 'Orders']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [249, 115, 22] },
+          styles: { fontSize: 9 },
+          margin: { left: 14, right: 14 }
+        });
+      }
+      
+      // Save the PDF
+      const fileName = `${reportType?.title}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      success(`PDF report saved: ${fileName}`);
+    } catch (err) {
+      console.error('Export error:', err);
+      error('Failed to export PDF');
+    }
   };
 
   const handleExportCSV = () => {
     if (!reportData || !reportForm.reportType) return;
-
-    let csvContent = '';
-    switch (reportForm.reportType) {
-      case 'sales':
-        csvContent = generateSalesCSV();
-        break;
-      case 'inventory':
-        csvContent = generateInventoryCSV();
-        break;
-      case 'financial':
-        csvContent = generateFinancialCSV();
-        break;
-      case 'customer':
-        csvContent = generateCustomerCSV();
-        break;
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${reportForm.reportType}-report-${reportForm.startDate}-to-${reportForm.endDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
     
-    success('Report exported as CSV');
-  };
+    try {
+      let csvContent = '';
+      const reportType = reportTypes.find(r => r.id === reportForm.reportType);
+      const dateRange = `${new Date(reportForm.startDate).toLocaleDateString()} - ${new Date(reportForm.endDate).toLocaleDateString()}`;
 
-  const generateReportHTML = () => {
-    const title = reportForm.reportType?.toUpperCase() + ' REPORT';
-    const dateRange = `${reportForm.startDate} to ${reportForm.endDate}`;
-    
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-    h1 { color: #1e40af; margin-bottom: 10px; }
-    .date-range { color: #64748b; margin-bottom: 30px; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background-color: #f1f5f9; font-weight: 600; }
-    .summary { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .summary-item { margin: 10px 0; }
-    .label { font-weight: 600; color: #64748b; }
-    @media print {
-      body { padding: 20px; }
+      // Header
+      csvContent += `${reportType?.title} Report\n`;
+      csvContent += `Period: ${dateRange}\n`;
+      csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+
+      // Summary
+      csvContent += 'SUMMARY\n';
+      if (reportForm.reportType === 'sales' && reportData.summary) {
+        csvContent += `Total Revenue,${reportData.summary.totalRevenue || 0}\n`;
+        csvContent += `Total Sales,${reportData.summary.totalSales || 0}\n`;
+        csvContent += `Average Order Value,${reportData.summary.averageOrderValue || 0}\n`;
+      } else if (reportForm.reportType === 'inventory' && reportData.summary) {
+        csvContent += `Total Value,${reportData.summary.totalValue || 0}\n`;
+        csvContent += `Total Products,${reportData.summary.totalProducts || 0}\n`;
+        csvContent += `Low Stock Count,${reportData.summary.lowStockCount || 0}\n`;
+        csvContent += `Out of Stock Count,${reportData.summary.outOfStockCount || 0}\n`;
+      } else if (reportForm.reportType === 'financial' && reportData.summary) {
+        csvContent += `Total Revenue,${reportData.summary.totalRevenue || 0}\n`;
+        csvContent += `Total Expenses,${reportData.summary.totalExpenses || 0}\n`;
+        csvContent += `Net Profit,${reportData.summary.netProfit || 0}\n`;
+        csvContent += `Profit Margin,${reportData.summary.profitMargin || 0}%\n`;
+      } else if (reportForm.reportType === 'customer' && reportData.summary) {
+        csvContent += `Total Customers,${reportData.summary.totalCustomers || 0}\n`;
+        csvContent += `Total Spent,${reportData.summary.totalSpent || 0}\n`;
+        csvContent += `Average Spent,${reportData.summary.averageSpent || 0}\n`;
+      }
+
+      csvContent += '\nDETAILED BREAKDOWN\n';
+
+      // Detailed data
+      if (reportForm.reportType === 'sales' && reportData.topProducts) {
+        csvContent += 'Product,Quantity,Revenue\n';
+        reportData.topProducts.forEach((p: any) => {
+          csvContent += `"${p.name}",${p.quantity},${p.revenue}\n`;
+        });
+      } else if (reportForm.reportType === 'inventory' && reportData.byCategory) {
+        csvContent += 'Category,Products,Stock,Value\n';
+        Object.entries(reportData.byCategory).forEach(([category, data]: [string, any]) => {
+          csvContent += `"${category}",${data.count},${data.stock},${data.value}\n`;
+        });
+      } else if (reportForm.reportType === 'financial' && reportData.dailyBreakdown) {
+        csvContent += 'Date,Revenue,Expenses,Net Profit\n';
+        reportData.dailyBreakdown.forEach((d: any) => {
+          csvContent += `${d.date},${d.revenue},${d.expenses},${d.netProfit}\n`;
+        });
+      } else if (reportForm.reportType === 'customer' && reportData.topCustomers) {
+        csvContent += 'Customer,Loyalty Tier,Total Spent,Order Count\n';
+        reportData.topCustomers.forEach((c: any) => {
+          csvContent += `"${c.name}",${c.loyaltyTier},${c.totalSpent},${c.orderCount}\n`;
+        });
+      }
+
+      // Create download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${reportType?.title}_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      success('CSV file downloaded successfully');
+    } catch (err) {
+      console.error('Export error:', err);
+      error('Failed to export CSV');
     }
-  </style>
-</head>
-<body>
-  <h1>${title}</h1>
-  <div class="date-range">Period: ${dateRange}</div>
-  ${generateReportContent()}
-</body>
-</html>
-    `;
-  };
-
-  const generateReportContent = () => {
-    if (!reportData || !reportForm.reportType) return '';
-
-    switch (reportForm.reportType) {
-      case 'sales':
-        return `
-          <div class="summary">
-            <div class="summary-item"><span class="label">Total Revenue:</span> ${formatCurrency(reportData.summary?.totalRevenue || 0)}</div>
-            <div class="summary-item"><span class="label">Total Sales:</span> ${reportData.summary?.totalSales || 0}</div>
-            <div class="summary-item"><span class="label">Average Order Value:</span> ${formatCurrency(reportData.summary?.averageOrderValue || 0)}</div>
-          </div>
-          <h2>Top Products</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Quantity Sold</th>
-                <th>Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(reportData.topProducts || []).map((p: any) => `
-                <tr>
-                  <td>${p.name}</td>
-                  <td>${p.quantity}</td>
-                  <td>${formatCurrency(p.revenue)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      
-      case 'inventory':
-        return `
-          <div class="summary">
-            <div class="summary-item"><span class="label">Total Inventory Value:</span> ${formatCurrency(reportData.summary?.totalValue || 0)}</div>
-            <div class="summary-item"><span class="label">Total Products:</span> ${reportData.summary?.totalProducts || 0}</div>
-            <div class="summary-item"><span class="label">Low Stock Items:</span> ${reportData.summary?.lowStockCount || 0}</div>
-            <div class="summary-item"><span class="label">Out of Stock:</span> ${reportData.summary?.outOfStockCount || 0}</div>
-          </div>
-          <h2>Inventory by Category</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Products</th>
-                <th>Stock</th>
-                <th>Total Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${Object.entries(reportData.byCategory || {}).map(([category, data]: [string, any]) => `
-                <tr>
-                  <td>${category}</td>
-                  <td>${data.count}</td>
-                  <td>${formatNumber(data.stock)}</td>
-                  <td>${formatCurrency(data.value)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      
-      case 'financial':
-        return `
-          <div class="summary">
-            <div class="summary-item"><span class="label">Total Revenue:</span> ${formatCurrency(reportData.summary?.totalRevenue || 0)}</div>
-            <div class="summary-item"><span class="label">Total Expenses:</span> ${formatCurrency(reportData.summary?.totalExpenses || 0)}</div>
-            <div class="summary-item"><span class="label">Net Profit:</span> ${formatCurrency(reportData.summary?.netProfit || 0)}</div>
-            <div class="summary-item"><span class="label">Profit Margin:</span> ${reportData.summary?.profitMargin || 0}%</div>
-          </div>
-          <h2>Daily Financial Breakdown</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Revenue</th>
-                <th>Expenses</th>
-                <th>Net Profit</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(reportData.dailyBreakdown || []).map((d: any) => `
-                <tr>
-                  <td>${d.date}</td>
-                  <td>${formatCurrency(d.revenue)}</td>
-                  <td>${formatCurrency(d.expenses)}</td>
-                  <td>${formatCurrency(d.netProfit)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      
-      case 'customer':
-        return `
-          <div class="summary">
-            <div class="summary-item"><span class="label">Total Customers:</span> ${reportData.summary?.totalCustomers || 0}</div>
-            <div class="summary-item"><span class="label">Total Spent:</span> ${formatCurrency(reportData.summary?.totalSpent || 0)}</div>
-            <div class="summary-item"><span class="label">Average Spent per Customer:</span> ${formatCurrency(reportData.summary?.averageSpent || 0)}</div>
-          </div>
-          <h2>Top Customers</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Loyalty Tier</th>
-                <th>Total Spent</th>
-                <th>Orders</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(reportData.topCustomers || []).map((c: any) => `
-                <tr>
-                  <td>${c.name}</td>
-                  <td>${c.loyaltyTier}</td>
-                  <td>${formatCurrency(c.totalSpent)}</td>
-                  <td>${c.orderCount}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      
-      default:
-        return '';
-    }
-  };
-
-  const generateSalesCSV = () => {
-    const headers = 'Product,Quantity Sold,Revenue\n';
-    const rows = (reportData.topProducts || []).map((p: any) => 
-      `"${p.name}",${p.quantity},${p.revenue}`
-    ).join('\n');
-    return headers + rows;
-  };
-
-  const generateInventoryCSV = () => {
-    const headers = 'Category,Products,Stock,Total Value\n';
-    const rows = Object.entries(reportData.byCategory || {}).map(([category, data]: [string, any]) => 
-      `"${category}",${data.count},${data.stock},${data.value}`
-    ).join('\n');
-    return headers + rows;
-  };
-
-  const generateFinancialCSV = () => {
-    const headers = 'Date,Revenue,Expenses,Net Profit\n';
-    const rows = (reportData.dailyBreakdown || []).map((d: any) => 
-      `${d.date},${d.revenue},${d.expenses},${d.netProfit}`
-    ).join('\n');
-    return headers + rows;
-  };
-
-  const generateCustomerCSV = () => {
-    const headers = 'Customer,Loyalty Tier,Total Spent,Orders\n';
-    const rows = (reportData.topCustomers || []).map((c: any) => 
-      `"${c.name}","${c.loyaltyTier}",${c.totalSpent},${c.orderCount}`
-    ).join('\n');
-    return headers + rows;
   };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
   const reportTypes = [
-    {
-      id: 'sales',
-      title: 'Sales Report',
-      description: 'Detailed sales analysis with revenue breakdown',
-      icon: TrendingUp,
-      color: 'text-blue-600'
-    },
-    {
-      id: 'inventory',
-      title: 'Inventory Report',
-      description: 'Stock levels, values, and low stock alerts',
-      icon: Package,
-      color: 'text-green-600'
-    },
-    {
-      id: 'financial',
-      title: 'Financial Report',
-      description: 'Revenue, expenses, and profit analysis',
-      icon: DollarSign,
-      color: 'text-purple-600'
-    },
-    {
-      id: 'customer',
-      title: 'Customer Report',
-      description: 'Customer analytics and loyalty insights',
-      icon: Users,
-      color: 'text-orange-600'
-    }
+    { id: 'sales', title: 'Sales', icon: TrendingUp, color: 'text-blue-600' },
+    { id: 'inventory', title: 'Inventory', icon: Package, color: 'text-green-600' },
+    { id: 'financial', title: 'Financial', icon: DollarSign, color: 'text-purple-600' },
+    { id: 'customer', title: 'Customer', icon: Users, color: 'text-orange-600' }
   ];
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+      {/* Header with Refresh */}
       <div className="flex items-center justify-between">
         <div>
-         <h1 className="text-3xl font-bold bg-gradient-to-r bg-clip-text">Business Reports</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports & Analytics</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Generate comprehensive reports and analytics
+            Generate business reports and monitor today's activity
           </p>
         </div>
-      </div>
-
-      {/* Quick Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-500/10 rounded-lg">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-          <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Today's Revenue</h3>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {quickInsights ? formatCurrency(quickInsights.todayRevenue) : '$0.00'}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-500/10 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-          <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Today's Orders</h3>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {quickInsights ? quickInsights.todayOrders : '0'}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-orange-500/10 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-            </div>
-          </div>
-          <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Low Stock Items</h3>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {quickInsights ? quickInsights.lowStockItems : '0'}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-500/10 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-          <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">New Customers (30d)</h3>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {quickInsights ? quickInsights.newCustomers : '0'}
-          </p>
-        </div>
-      </div>
-
-      {/* Report Types */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {reportTypes.map((report) => {
-          const Icon = report.icon;
-          return (
-            <div
-              key={report.id}
-              className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-primary/50 dark:hover:border-primary/50 transition-all cursor-pointer group"
-              onClick={() => setReportForm({ ...reportForm, reportType: report.id as any })}
-            >
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-lg ${report.color.replace('text-', 'bg-').replace('600', '500/10')}`}>
-                  <Icon className={`w-7 h-7 ${report.color.replace('600', '600 dark:').replace('600 dark:', '600 dark:text-').replace('600 dark:text-', '600 dark:text-') + '400'}`} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">{report.title}</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{report.description}</p>
-                  <button
-                    className="flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm group-hover:gap-3 transition-all"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setReportForm({ ...reportForm, reportType: report.id as any });
-                    }}
-                  >
-                    <FileText className="w-4 h-4" />
-                    Generate Report
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Generate Report Modal */}
-      {reportForm.reportType && (
-        <Modal
-          isOpen={!!reportForm.reportType && !showPreview}
-          onClose={() => setReportForm({ ...reportForm, reportType: null })}
-          title={`Generate ${reportTypes.find(r => r.id === reportForm.reportType)?.title}`}
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
         >
-          <div className="space-y-6">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                <Calendar className="w-4 h-4" />
-                Date Range
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={reportForm.startDate}
-                    onChange={(e) => setReportForm({ ...reportForm, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">End Date</label>
-                  <input
-                    type="date"
-                    value={reportForm.endDate}
-                    onChange={(e) => setReportForm({ ...reportForm, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
+          <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
 
-            <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+      {/* GENERATE REPORTS - Top Section with Beautiful Design */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-xl p-6 shadow-lg border border-blue-200 dark:border-slate-600">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-primary rounded-xl shadow-md">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Generate Business Reports</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Select report type and date range</p>
+          </div>
+        </div>
+        
+        {/* Report Type Selection - Beautiful Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {reportTypes.map((report) => {
+            const Icon = report.icon;
+            const isActive = reportForm.reportType === report.id;
+            return (
               <button
-                onClick={handleGenerateReport}
-                disabled={loading}
-                className="flex-1 bg-primary text-white px-4 py-2.5 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-colors"
+                key={report.id}
+                onClick={() => setReportForm({ ...reportForm, reportType: report.id as any })}
+                className={`p-4 rounded-xl font-medium transition-all transform hover:scale-105 ${
+                  isActive
+                    ? 'bg-primary text-white shadow-xl ring-4 ring-primary/30'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:shadow-lg border border-slate-200 dark:border-slate-600'
+                }`}
               >
-                <FileText className="w-4 h-4" />
-                {loading ? 'Generating...' : 'Generate Report'}
+                <Icon size={24} className={`mx-auto mb-2 ${isActive ? 'text-white' : report.color}`} />
+                <p className="font-semibold">{report.title}</p>
               </button>
-              <button
-                onClick={() => setReportForm({ ...reportForm, reportType: null })}
-                className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
+            );
+          })}
+        </div>
+
+        {/* Date Range & Generate Button */}
+        {reportForm.reportType && (
+          <div className="flex flex-wrap items-end gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-600">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                📅 Start Date
+              </label>
+              <input
+                type="date"
+                value={reportForm.startDate}
+                onChange={(e) => setReportForm({ ...reportForm, startDate: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                📅 End Date
+              </label>
+              <input
+                type="date"
+                value={reportForm.endDate}
+                onChange={(e) => setReportForm({ ...reportForm, endDate: e.target.value })}
+                className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              />
+            </div>
+            <button
+              onClick={handleGenerateReport}
+              disabled={loading}
+              className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              <BarChart3 size={20} />
+              {loading ? 'Generating...' : 'Generate Report'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* TODAY'S ACTIVITY */}
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-6 rounded-xl border border-primary/20">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity size={24} className="text-primary" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Activity</h2>
+          <span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            LIVE
+          </span>
+        </div>
+
+        {/* Today's Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Revenue</span>
+              <DollarSign size={18} className="text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {todayStats ? formatCurrency(todayStats.revenue) : '$0.00'}
+            </p>
+            <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
+              <ArrowUpRight size={14} />
+              <span>{todayStats?.revenueChange || 0}% vs yesterday</span>
             </div>
           </div>
-        </Modal>
-      )}
 
-      {/* Report Preview Modal */}
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Expenses</span>
+              <TrendingDown size={18} className="text-red-600 dark:text-red-400" />
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {todayStats ? formatCurrency(todayStats.expenses) : '$0.00'}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">{todayStats?.expensesCount || 0} transactions</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Profit</span>
+              <TrendingUp size={18} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {todayStats ? formatCurrency(todayStats.profit) : '$0.00'}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {todayStats && todayStats.revenue > 0 
+                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% margin` 
+                : 'No sales yet'}
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Sales</span>
+              <ShoppingCart size={18} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {todayStats?.salesCount || 0}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {todayStats && todayStats.salesCount > 0 
+                ? `Avg: ${formatCurrency(todayStats.revenue / todayStats.salesCount)}` 
+                : 'No transactions'}
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/pos')}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} />
+            New Sale
+          </button>
+          <button
+            onClick={() => navigate('/expenses')}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Plus size={16} />
+            Add Expense
+          </button>
+          <button
+            onClick={() => navigate('/inventory')}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Package size={16} />
+            Manage Inventory
+          </button>
+        </div>
+      </div>
+
+      {/* Activity Feed & Quick Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Feed - Today Only */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Activity Feed</h3>
+              <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+            <span className="text-xs text-slate-500 font-medium">{activityFeed.length} events</span>
+          </div>
+          
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {activityFeed.length > 0 ? (
+              activityFeed.map((activity) => {
+                const Icon = activity.icon;
+                return (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      activity.type === 'sale' 
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
+                      <Icon size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {activity.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock size={12} className="text-slate-400" />
+                        <span className="text-xs text-slate-500">{activity.time}</span>
+                      </div>
+                    </div>
+                    {activity.amount && (
+                      <span className={`text-sm font-bold ${
+                        activity.type === 'sale' 
+                          ? 'text-green-600 dark:text-green-400' 
+                          : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        {activity.type === 'sale' ? '+' : '-'}{formatCurrency(activity.amount)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-12">
+                <Activity size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                <p className="text-slate-600 dark:text-slate-400">No activity today yet</p>
+                <p className="text-sm text-slate-500 mt-1">Start selling or add expenses to see activity</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Today's Quick Insights */}
+        <div className="space-y-4">
+          <div className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-5 rounded-xl shadow-sm border-2 border-red-200 dark:border-red-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Receipt size={20} className="text-red-600 dark:text-red-400" />
+              <h4 className="font-bold text-slate-900 dark:text-white">Today's Expenses</h4>
+            </div>
+            <p className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
+              {todayStats ? formatCurrency(todayStats.expenses) : '$0.00'}
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">💸 {todayStats?.expensesCount || 0} transactions</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl shadow-sm border-2 border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-2 mb-3">
+              <ShoppingCart size={20} className="text-green-600 dark:text-green-400" />
+              <h4 className="font-bold text-slate-900 dark:text-white">Today's Sales</h4>
+            </div>
+            <p className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
+              {todayStats?.salesCount || 0}
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">📦 Transactions completed</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={20} className="text-blue-600 dark:text-blue-400" />
+              <h4 className="font-bold text-slate-900 dark:text-white">Today's Profit</h4>
+            </div>
+            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+              {todayStats ? formatCurrency(todayStats.profit) : '$0.00'}
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+              💰 {todayStats && todayStats.revenue > 0 
+                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% margin` 
+                : 'No sales yet'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Preview Modal - Comprehensive */}
       {showPreview && reportData && (
         <Modal
           isOpen={showPreview}
@@ -564,112 +769,121 @@ const Reports: React.FC = () => {
             setReportData(null);
             setReportForm({ ...reportForm, reportType: null });
           }}
-          title={`${reportTypes.find(r => r.id === reportForm.reportType)?.title} - Preview`}
+          title={`${reportTypes.find(r => r.id === reportForm.reportType)?.title} Report`}
         >
-          <div className="space-y-4">
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Date Range */}
+            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                📅 Period: <span className="font-semibold text-slate-900 dark:text-white">
+                  {new Date(reportForm.startDate).toLocaleDateString()} - {new Date(reportForm.endDate).toLocaleDateString()}
+                </span>
+              </p>
+            </div>
+
             {/* Summary Section */}
             <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-6 rounded-lg border border-primary/20">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Summary</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">📊 Summary</h3>
               <div className="grid grid-cols-2 gap-4">
-                {reportForm.reportType === 'sales' && (
+                {reportForm.reportType === 'sales' && reportData.summary && (
                   <>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Revenue</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(reportData.summary?.totalRevenue || 0)}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Sales</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {reportData.summary?.totalSales || 0}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg Order Value</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(reportData.summary?.averageOrderValue || 0)}
-                      </p>
-                    </div>
-                  </>
-                )}
-                
-                {reportForm.reportType === 'inventory' && (
-                  <>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Value</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(reportData.summary?.totalValue || 0)}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Products</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {reportData.summary?.totalProducts || 0}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Low Stock</p>
-                      <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                        {reportData.summary?.lowStockCount || 0}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Out of Stock</p>
-                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        {reportData.summary?.outOfStockCount || 0}
-                      </p>
-                    </div>
-                  </>
-                )}
-                
-                {reportForm.reportType === 'financial' && (
-                  <>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Revenue</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {formatCurrency(reportData.summary?.totalRevenue || 0)}
+                        {formatCurrency(reportData.summary.totalRevenue || 0)}
                       </p>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Expenses</p>
-                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        {formatCurrency(reportData.summary?.totalExpenses || 0)}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Net Profit</p>
-                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {formatCurrency(reportData.summary?.netProfit || 0)}
-                      </p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Profit Margin</p>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Sales</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {reportData.summary?.profitMargin || 0}%
+                        {reportData.summary.totalSales || 0}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg col-span-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Average Order Value</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(reportData.summary.averageOrderValue || 0)}
                       </p>
                     </div>
                   </>
                 )}
                 
-                {reportForm.reportType === 'customer' && (
+                {reportForm.reportType === 'inventory' && reportData.summary && (
                   <>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Value</p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(reportData.summary.totalValue || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Products</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        {reportData.summary.totalProducts || 0}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Low Stock</p>
+                      <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                        {reportData.summary.lowStockCount || 0}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Out of Stock</p>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {reportData.summary.outOfStockCount || 0}
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                {reportForm.reportType === 'financial' && reportData.summary && (
+                  <>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Revenue</p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(reportData.summary.totalRevenue || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Expenses</p>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {formatCurrency(reportData.summary.totalExpenses || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Net Profit</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(reportData.summary.netProfit || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Profit Margin</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        {reportData.summary.profitMargin || 0}%
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                {reportForm.reportType === 'customer' && reportData.summary && (
+                  <>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Customers</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {reportData.summary?.totalCustomers || 0}
+                        {reportData.summary.totalCustomers || 0}
                       </p>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Spent</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(reportData.summary?.totalSpent || 0)}
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(reportData.summary.totalSpent || 0)}
                       </p>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm col-span-2">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg Spent per Customer</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(reportData.summary?.averageSpent || 0)}
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg col-span-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg per Customer</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(reportData.summary.averageSpent || 0)}
                       </p>
                     </div>
                   </>
@@ -677,135 +891,130 @@ const Reports: React.FC = () => {
               </div>
             </div>
 
-            {/* Detailed Data Table */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 max-h-80 overflow-y-auto">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Detailed Breakdown</h3>
-              
-              {reportForm.reportType === 'sales' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Product</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Quantity</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {(reportData.topProducts || []).map((p: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{p.name}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-medium">{p.quantity}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-semibold">{formatCurrency(p.revenue)}</td>
+            {/* Detailed Data */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">📋 Detailed Breakdown</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="max-h-80 overflow-y-auto">
+                  {reportForm.reportType === 'sales' && reportData.topProducts && (
+                    <table className="w-full">
+                      <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Product</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Quantity</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Revenue</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              
-              {reportForm.reportType === 'inventory' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Category</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Products</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Stock</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {Object.entries(reportData.byCategory || {}).map(([category, data]: [string, any], i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{category}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-medium">{data.count}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-medium">{formatNumber(data.stock)}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-semibold">{formatCurrency(data.value)}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {reportData.topProducts.map((p: any, i: number) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{p.name}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">{p.quantity}</td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(p.revenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {reportForm.reportType === 'inventory' && reportData.byCategory && (
+                    <table className="w-full">
+                      <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Category</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Products</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Stock</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Value</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              
-              {reportForm.reportType === 'financial' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Date</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Revenue</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Expenses</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Profit</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {(reportData.dailyBreakdown || []).map((d: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{d.date}</td>
-                          <td className="px-4 py-3 text-sm text-right text-green-600 dark:text-green-400 font-medium">{formatCurrency(d.revenue)}</td>
-                          <td className="px-4 py-3 text-sm text-right text-red-600 dark:text-red-400 font-medium">{formatCurrency(d.expenses)}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-semibold">{formatCurrency(d.netProfit)}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {Object.entries(reportData.byCategory).map(([category, data]: [string, any], i) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{category}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">{data.count}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">{data.stock}</td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(data.value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {reportForm.reportType === 'financial' && reportData.dailyBreakdown && (
+                    <table className="w-full">
+                      <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Date</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Revenue</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Expenses</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Profit</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              
-              {reportForm.reportType === 'customer' && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Customer</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Tier</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Spent</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Orders</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {(reportData.topCustomers || []).map((c: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{c.name}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                              {c.loyaltyTier}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-semibold">{formatCurrency(c.totalSpent)}</td>
-                          <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-white font-medium">{c.orderCount}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {reportData.dailyBreakdown.map((d: any, i: number) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{d.date}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(d.revenue)}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium text-red-600 dark:text-red-400">{formatCurrency(d.expenses)}</td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">{formatCurrency(d.netProfit)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {reportForm.reportType === 'customer' && reportData.topCustomers && (
+                    <table className="w-full">
+                      <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Customer</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Tier</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Spent</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Orders</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {reportData.topCustomers.map((c: any, i: number) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">{c.name}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                {c.loyaltyTier}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(c.totalSpent)}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">{c.orderCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
+            {/* Actions */}
             <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
               <button
                 onClick={handleExportPDF}
-                className="flex-1 bg-primary text-white px-4 py-2.5 rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2 font-medium transition-colors"
+                className="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2 font-semibold transition-all transform hover:scale-105"
               >
-                <Printer className="w-4 h-4" />
-                Print / Save as PDF
+                <Printer className="w-5 h-5" />
+                Print / PDF
               </button>
               <button
                 onClick={handleExportCSV}
-                className="flex-1 bg-green-600 dark:bg-green-500 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center justify-center gap-2 font-medium transition-colors"
+                className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 font-semibold transition-all transform hover:scale-105"
               >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export as CSV
+                <FileSpreadsheet className="w-5 h-5" />
+                Export CSV
               </button>
               <button
                 onClick={() => {
                   setShowPreview(false);
                   setReportData(null);
-                  setReportForm({ ...reportForm, reportType: null });
                 }}
-                className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="px-6 py-3 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold transition-colors"
               >
                 Close
               </button>
@@ -817,4 +1026,4 @@ const Reports: React.FC = () => {
   );
 };
 
-export default Reports;
+export default EnhancedReports;

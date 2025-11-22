@@ -74,4 +74,39 @@ export function registerFinanceHandlers(prisma: any) {
       throw error
     }
   })
+
+  ipcMain.handle('finance:updateTransaction', async (_, { id, data }) => {
+    try {
+      if (prisma) {
+        const transaction = await prisma.financialTransaction.update({
+          where: { id },
+          data: {
+            amount: data.amount,
+            description: data.description,
+            type: data.type
+          }
+        })
+        return { success: true, transaction }
+      }
+      return { success: true, transaction: { id, ...data } }
+    } catch (error) {
+      console.error('Error updating transaction:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('finance:deleteTransaction', async (_, id) => {
+    try {
+      if (prisma) {
+        await prisma.financialTransaction.delete({
+          where: { id }
+        })
+        return { success: true }
+      }
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+      throw error
+    }
+  })
 }
