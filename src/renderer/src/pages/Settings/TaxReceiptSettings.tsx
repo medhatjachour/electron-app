@@ -26,22 +26,30 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
       </div>
 
       {/* Tax Rate */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Tax Rate (%) *
+          Sales Tax Rate (%) *
         </label>
-        <input
-          type="number"
-          className="input-field"
-          value={settings.taxRate}
-          onChange={(e) => handleChange('taxRate', parseFloat(e.target.value) || 0)}
-          placeholder="10"
-          min="0"
-          max="100"
-          step="0.01"
-        />
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            className="w-32 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+            value={settings.taxRate}
+            onChange={(e) => handleChange('taxRate', parseFloat(e.target.value) || 0)}
+            placeholder="10"
+            min="0"
+            max="100"
+            step="0.1"
+          />
+          <span className="text-slate-600 dark:text-slate-400 font-medium">%</span>
+        </div>
+        <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            <span className="font-semibold">Example:</span> ${settings.taxRate.toFixed(2)} tax on a $100.00 sale
+          </p>
+        </div>
         <p className="text-xs text-slate-500">
-          Enter the tax rate as a percentage (e.g., 10 for 10%)
+          This tax rate will be applied to all sales in the POS system.
         </p>
       </div>
 

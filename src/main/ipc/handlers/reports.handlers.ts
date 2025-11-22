@@ -26,13 +26,17 @@ export function registerReportsHandlers(prisma: any) {
         whereClause.userId = filters.userId
       }
 
-      // Get sales with related data
-      const sales = await prisma.sale.findMany({
+      // Get sale transactions with related data
+      const saleTransactions = await prisma.saleTransaction.findMany({
         where: whereClause,
         include: {
-          product: {
+          items: {
             include: {
-              category: true
+              product: {
+                include: {
+                  category: true
+                }
+              }
             }
           },
           user: {
@@ -40,7 +44,8 @@ export function registerReportsHandlers(prisma: any) {
               username: true,
               fullName: true
             }
-          }
+          },
+          customer: true
         },
         orderBy: {
           createdAt: 'desc'
@@ -48,47 +53,47 @@ export function registerReportsHandlers(prisma: any) {
       })
 
       // Calculate statistics
-      const totalSales = sales.length
-      const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0)
+      const totalSales = saleTransactions.length
+      const totalRevenue = saleTransactions.reduce((sum, sale) => sum + sale.total, 0)
       const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0
       
       // Group by payment method
-      const byPaymentMethod = sales.reduce((acc, sale) => {
+      const byPaymentMethod = saleTransactions.reduce((acc, sale) => {
         acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + sale.total
         return acc
       }, {} as Record<string, number>)
 
-      // Group by category
-      const byCategory = sales.reduce((acc, sale) => {
-        const category = sale.product?.category?.name || 'Uncategorized'
-        acc[category] = (acc[category] || 0) + sale.total
-        return acc
-      }, {} as Record<string, number>)
-
-      // Top products
-      const productSales = sales.reduce((acc, sale) => {
-        const productName = sale.product?.name || 'Unknown'
-        if (!acc[productName]) {
-          acc[productName] = { name: productName, quantity: 0, revenue: 0 }
-        }
-        acc[productName].quantity += sale.quantity
-        acc[productName].revenue += sale.total
-        return acc
-      }, {} as Record<string, any>)
+      // Group by category and calculate top products
+      const byCategory: Record<string, number> = {}
+      const productSales: Record<string, any> = {}
+      
+      saleTransactions.forEach(transaction => {
+        transaction.items.forEach((item: any) => {
+          const category = item.product?.category?.name || 'Uncategorized'
+          byCategory[category] = (byCategory[category] || 0) + item.total
+          
+          const productName = item.product?.name || 'Unknown'
+          if (!productSales[productName]) {
+            productSales[productName] = { name: productName, quantity: 0, revenue: 0 }
+          }
+          productSales[productName].quantity += item.quantity
+          productSales[productName].revenue += item.total
+        })
+      })
 
       const topProducts = Object.values(productSales)
         .sort((a: any, b: any) => b.revenue - a.revenue)
         .slice(0, 10)
 
       // Daily breakdown
-      const dailySales = sales.reduce((acc, sale) => {
-        const date = new Date(sale.createdAt).toISOString().split('T')[0]
+      const dailySales = saleTransactions.reduce((acc, transaction) => {
+        const date = new Date(transaction.createdAt).toISOString().split('T')[0]
         if (!acc[date]) {
           acc[date] = { date, sales: 0, revenue: 0, orders: 0 }
         }
         acc[date].orders += 1
-        acc[date].revenue += sale.total
-        acc[date].sales += sale.quantity
+        acc[date].revenue += transaction.total
+        acc[date].sales += transaction.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
         return acc
       }, {} as Record<string, any>)
 
@@ -101,7 +106,7 @@ export function registerReportsHandlers(prisma: any) {
             averageOrderValue,
             dateRange: { startDate, endDate }
           },
-          sales,
+          saleTransactions,
           byPaymentMethod,
           byCategory,
           topProducts,
@@ -230,8 +235,8 @@ export function registerReportsHandlers(prisma: any) {
     try {
       if (!prisma) return { success: false, data: null }
 
-      // Get sales revenue
-      const sales = await prisma.sale.findMany({
+      // Get sales revenue from SaleTransaction (new model)
+      const saleTransactions = await prisma.saleTransaction.findMany({
         where: {
           createdAt: {
             gte: new Date(startDate),
@@ -241,7 +246,7 @@ export function registerReportsHandlers(prisma: any) {
         }
       })
 
-      const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0)
+      const totalRevenue = saleTransactions.reduce((sum, sale) => sum + sale.total, 0)
 
       // Get financial transactions (expenses)
       const transactions = await prisma.financialTransaction.findMany({
@@ -303,7 +308,7 @@ export function registerReportsHandlers(prisma: any) {
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
       // Daily breakdown
-      const dailyFinancials = sales.reduce((acc, sale) => {
+      const dailyFinancials = saleTransactions.reduce((acc, sale) => {
         const date = new Date(sale.createdAt).toISOString().split('T')[0]
         if (!acc[date]) {
           acc[date] = { date, revenue: 0, expenses: 0, profit: 0 }
@@ -330,7 +335,7 @@ export function registerReportsHandlers(prisma: any) {
       Object.keys(dailyFinancials).forEach(date => {
         dailyFinancials[date].expenses += dailySalaryExpense
         dailyFinancials[date].salaryExpense = dailySalaryExpense
-        dailyFinancials[date].profit = dailyFinancials[date].revenue - dailyFinancials[date].expenses
+        dailyFinancials[date].netProfit = dailyFinancials[date].revenue - dailyFinancials[date].expenses
       })
 
       // Expense breakdown by category (add salary as a category)
@@ -354,7 +359,7 @@ export function registerReportsHandlers(prisma: any) {
             otherExpenses: expensesFromTransactions,
             netProfit,
             profitMargin,
-            salesCount: sales.length,
+            salesCount: saleTransactions.length,
             employeeCount: employees.length,
             dateRange: { startDate, endDate }
           },
@@ -398,13 +403,31 @@ export function registerReportsHandlers(prisma: any) {
         return created >= new Date(startDate) && created <= new Date(endDate)
       })
 
+      // Get order counts for top customers
+      const customerOrderCounts: Record<string, number> = {}
+      const allTransactions = await prisma.saleTransaction.findMany({
+        where: {
+          customerId: { not: null }
+        },
+        select: {
+          customerId: true
+        }
+      })
+      
+      allTransactions.forEach(t => {
+        if (t.customerId) {
+          customerOrderCounts[t.customerId] = (customerOrderCounts[t.customerId] || 0) + 1
+        }
+      })
+
       // Top customers
       const topCustomers = customers.slice(0, 10).map(c => ({
         name: c.name,
         email: c.email,
         phone: c.phone,
         totalSpent: c.totalSpent,
-        loyaltyTier: c.loyaltyTier
+        loyaltyTier: c.loyaltyTier,
+        orderCount: customerOrderCounts[c.id] || 0
       }))
 
       return {
@@ -436,8 +459,8 @@ export function registerReportsHandlers(prisma: any) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
-      // Today's sales
-      const todaySales = await prisma.sale.findMany({
+      // Today's sales from SaleTransaction
+      const todaySales = await prisma.saleTransaction.findMany({
         where: {
           createdAt: {
             gte: today

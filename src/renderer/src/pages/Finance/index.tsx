@@ -61,6 +61,9 @@ type FinanceMetrics = {
   totalProfit: number
   profitMargin: number
   totalCost: number
+  totalExpenses?: number
+  grossProfit?: number
+  profitChange?: number
 }
 
 type TopProduct = {
@@ -370,12 +373,15 @@ export default function Finance() {
             <KPICard
               title="Total Profit"
               value={`$${currentMetrics?.totalProfit.toFixed(2) || '0.00'}`}
-              change={0}
+              change={currentMetrics?.profitChange || 0}
               icon={<TrendingUp size={24} />}
               color="green"
-              subtitle={`Cost: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`}
-              showChange={false}
-              tooltip="Net profit calculated as Revenue minus Total Cost. This is your actual earnings after deducting product costs."
+              subtitle={currentMetrics?.totalExpenses 
+                ? `COGS: $${currentMetrics.totalCost.toFixed(0)} | Expenses: $${currentMetrics.totalExpenses.toFixed(0)}`
+                : `Cost: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`
+              }
+              showChange={currentMetrics?.profitChange !== undefined}
+              tooltip="Net profit calculated as Revenue minus COGS (Cost of Goods Sold) minus Operational Expenses. This is your actual earnings after all costs."
             />
             <KPICard
               title="Profit Margin"

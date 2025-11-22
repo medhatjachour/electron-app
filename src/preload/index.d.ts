@@ -19,6 +19,13 @@ interface API {
   customers: {
     getAll: () => Promise<any>
   }
+  saleTransactions: {
+    create: (data: any) => Promise<any>
+    getAll: () => Promise<any>
+    getById: (id: string) => Promise<any>
+    refund: (id: string) => Promise<any>
+    getByDateRange: (data: { startDate: string; endDate: string }) => Promise<any>
+  }
   inventory: {
     getProducts: () => Promise<any>
     addProduct: (data: {
@@ -44,6 +51,12 @@ interface API {
       userId: string
     }) => Promise<any>
     getTransactions: (data: { startDate: Date; endDate: Date }) => Promise<any>
+    updateTransaction: (id: string, data: {
+      type?: 'income' | 'expense'
+      amount?: number
+      description?: string
+    }) => Promise<any>
+    deleteTransaction: (id: string) => Promise<any>
   }
   products: {
     getAll: () => Promise<any>
@@ -80,6 +93,26 @@ interface API {
     changePassword: (id: string, newPassword: string) => Promise<any>
     delete: (id: string) => Promise<any>
     updateLastLogin: (id: string) => Promise<any>
+  }
+  employees: {
+    getAll: () => Promise<any>
+    getById: (id: string) => Promise<any>
+    create: (employeeData: {
+      name: string
+      role: string
+      email: string
+      phone: string
+      salary: number
+    }) => Promise<any>
+    update: (id: string, employeeData: {
+      name?: string
+      role?: string
+      email?: string
+      phone?: string
+      salary?: number
+      performance?: number
+    }) => Promise<any>
+    delete: (id: string) => Promise<any>
   }
   reports: {
     getSalesData: (options: { startDate: Date; endDate: Date }) => Promise<any>

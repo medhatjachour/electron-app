@@ -17,6 +17,7 @@ import {
   Users,
   UserSquare2,
   FileBarChart,
+  Receipt,
   Menu,
   X,
   ChevronLeft,
@@ -100,6 +101,13 @@ const navigation: NavItem[] = [
     translationKey: 'finance',
     href: '/finance',
     icon: Wallet,
+    roles: ['admin', 'manager', 'finance']
+  },
+  {
+    name: 'Expenses',
+    translationKey: 'expenses',
+    href: '/expenses',
+    icon: Receipt,
     roles: ['admin', 'manager', 'finance']
   },
   {
@@ -195,7 +203,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
               BF
             </div>
             {sidebarOpen && (
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="text-xl font-bold ">
                 BizFlow
               </span>
             )}

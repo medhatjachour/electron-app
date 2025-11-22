@@ -10,7 +10,7 @@ interface GeneralSettingsProps {
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void
   actualTheme: 'light' | 'dark'
   language: string
-  onLanguageChange: (lang: 'en' | 'es' | 'fr' | 'ar' | 'zh') => void
+  onLanguageChange: (lang: 'en' | 'ar') => void
 }
 
 export default function GeneralSettings({
@@ -28,8 +28,6 @@ export default function GeneralSettings({
 
   const languages = [
     { code: 'en', name: 'English' },
-    { code: 'es', name: 'Español' },
-    { code: 'fr', name: 'Français' },
     { code: 'ar', name: 'العربية' }
   ]
 
@@ -79,19 +77,40 @@ export default function GeneralSettings({
       <div>
         <label className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white mb-4">
           <Globe className="w-5 h-5" />
-          Language
+          Language / اللغة
         </label>
-        <select
-          value={language}
-          onChange={(e) => onLanguageChange(e.target.value as 'en' | 'es' | 'fr' | 'ar' | 'zh')}
-          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
-        >
-          {languages.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-2 gap-4">
+          {languages.map((lang) => {
+            const isActive = language === lang.code
+            
+            return (
+              <button
+                key={lang.code}
+                onClick={() => onLanguageChange(lang.code as 'en' | 'ar')}
+                className={`relative p-6 rounded-xl border-2 transition-all ${
+                  isActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute top-2 right-2">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                )}
+                <p className="text-xl font-semibold text-slate-900 dark:text-white text-center">
+                  {lang.name}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-sm text-slate-500 mt-3">
+          {language === 'ar' 
+            ? 'سيتم تطبيق اللغة على جميع أجزاء التطبيق'
+            : 'The language will be applied across the entire application'
+          }
+        </p>
       </div>
     </div>
   )

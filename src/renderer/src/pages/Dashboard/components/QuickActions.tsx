@@ -3,7 +3,7 @@
  * Role-based quick action shortcuts
  */
 
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart,
   ClipboardList,
@@ -14,12 +14,17 @@ import {
   Settings,
   Plus
 } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
+import { useToast } from '../../../contexts/ToastContext'
 
 interface Props {
   userRole: string
 }
 
 export default function QuickActions({ userRole }: Props) {
+  const { user } = useAuth()
+  const { warning } = useToast()
+  const navigate = useNavigate()
   const allActions = [
     {
       label: 'New Sale',
@@ -105,16 +110,22 @@ export default function QuickActions({ userRole }: Props) {
           const colors = colorClasses[action.color]
           
           return (
-            <Link
+            <button
               key={index}
-              to={action.href}
-              className={`flex flex-col items-center justify-center p-3 rounded-lg ${colors.bg} ${colors.hover} transition-colors group`}
+              onClick={() => {
+                if (!user) {
+                  warning('Please log in to access this feature', 4000)
+                } else {
+                  navigate(action.href)
+                }
+              }}
+              className={`flex flex-col items-center justify-center p-3 rounded-lg ${colors.bg} ${colors.hover} transition-colors group cursor-pointer border-0`}
             >
               <Icon className={`w-6 h-6 ${colors.icon} mb-1 group-hover:scale-110 transition-transform`} />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-center">
                 {action.label}
               </span>
-            </Link>
+            </button>
           )
         })}
       </div>

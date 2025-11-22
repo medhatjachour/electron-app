@@ -58,12 +58,6 @@ export default function FinancialHealthDashboard() {
     return null
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
   const getScoreBgColor = (score: number) => {
     if (score >= 80) return 'from-green-500 to-emerald-600'
     if (score >= 60) return 'from-yellow-500 to-amber-600'
@@ -184,12 +178,12 @@ export default function FinancialHealthDashboard() {
       {/* Key Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Profit Margin */}
-        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <DollarSign size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Profit Margin</h4>
-              <Tooltip text="Measures profitability. Higher is better. Good: >20%, Fair: 10-20%, Poor: <10%">
+              <Tooltip text="Net profit as % of revenue after all costs (COGS + expenses). Industry benchmark: 20%+ is excellent, 10-20% is good, <10% needs improvement. This shows how efficiently you convert sales into profit.">
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -207,22 +201,34 @@ export default function FinancialHealthDashboard() {
             <span className="text-3xl font-bold text-slate-900 dark:text-white">
               {health.indicators.profitMargin.value.toFixed(1)}%
             </span>
+            <span className="text-sm text-slate-500 mb-1">
+              {health.indicators.profitMargin.value >= 20 ? 'Excellent' : 
+               health.indicators.profitMargin.value >= 10 ? 'Target: 20%' : 
+               'Target: 10%+'}
+            </span>
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
             <div
-              className={`h-2 rounded-full ${getStatusColor(health.indicators.profitMargin.status)}`}
-              style={{ width: `${Math.min(100, health.indicators.profitMargin.value)}%` }}
+              className={`h-2.5 rounded-full ${getStatusColor(health.indicators.profitMargin.status)} transition-all duration-500`}
+              style={{ width: `${Math.min(100, Math.max(5, health.indicators.profitMargin.value * 2))}%` }}
             ></div>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {health.indicators.profitMargin.value < 0 ? '❌ Operating at loss' :
+             health.indicators.profitMargin.value < 5 ? '⚠️ Very tight margins' :
+             health.indicators.profitMargin.value < 10 ? '📊 Below industry average' :
+             health.indicators.profitMargin.value < 20 ? '✅ Decent profitability' :
+             '🎯 Above industry average'}
+          </p>
         </div>
 
         {/* Inventory Turnover */}
-        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Inventory Turnover</h4>
-              <Tooltip text="How quickly inventory sells and is replaced. Higher is better. Good: >5x, Fair: 3-5x, Poor: <3x">
+              <Tooltip text="How many times inventory is sold and replaced annually. Retail average: 6-8x. Higher = faster-moving inventory = less cash tied up. Lower = slow sales or overstocking. Formula: (Units Sold / Avg Inventory) × 12.">
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -240,22 +246,32 @@ export default function FinancialHealthDashboard() {
             <span className="text-3xl font-bold text-slate-900 dark:text-white">
               {health.indicators.inventoryTurnover.value.toFixed(1)}x
             </span>
+            <span className="text-sm text-slate-500 mb-1">
+              per year
+            </span>
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
             <div
-              className={`h-2 rounded-full ${getStatusColor(health.indicators.inventoryTurnover.status)}`}
+              className={`h-2 rounded-full ${getStatusColor(health.indicators.inventoryTurnover.status)} transition-all duration-500`}
               style={{ width: `${Math.min(100, (health.indicators.inventoryTurnover.value / 10) * 100)}%` }}
             ></div>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {health.indicators.inventoryTurnover.value < 2 ? '🐌 Very slow - inventory sits too long' :
+             health.indicators.inventoryTurnover.value < 3 ? '⚠️ Below average - consider promotions' :
+             health.indicators.inventoryTurnover.value < 6 ? '📊 Moderate pace - room to improve' :
+             health.indicators.inventoryTurnover.value < 10 ? '✅ Good velocity - well managed' :
+             '🚀 Excellent turnover - very efficient'}
+          </p>
         </div>
 
         {/* Growth Rate */}
-        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <TrendingUp size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Growth Rate</h4>
-              <Tooltip text="Revenue growth compared to previous period. Good: >10%, Fair: 0-10%, Poor: negative">
+              <Tooltip text="Revenue growth trend based on historical data and forecasting. Small business target: 15%+ is strong growth, 5-15% is steady, <5% is stagnant. Negative means declining revenue.">
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -274,22 +290,33 @@ export default function FinancialHealthDashboard() {
               {health.indicators.growthRate.value >= 0 ? '+' : ''}
               {health.indicators.growthRate.value.toFixed(1)}%
             </span>
+            <span className="text-sm text-slate-500 mb-1">
+              {health.indicators.growthRate.value >= 0 ? 'growing' : 'declining'}
+            </span>
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
             <div
-              className={`h-2 rounded-full ${getStatusColor(health.indicators.growthRate.status)}`}
-              style={{ width: `${Math.min(100, Math.abs(health.indicators.growthRate.value))}%` }}
+              className={`h-2.5 rounded-full ${getStatusColor(health.indicators.growthRate.status)} transition-all duration-500`}
+              style={{ width: `${Math.min(100, Math.max(5, (Math.abs(health.indicators.growthRate.value) / 20) * 100))}%` }}
             ></div>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {health.indicators.growthRate.value < -10 ? '📉 Significant decline - immediate action needed' :
+             health.indicators.growthRate.value < 0 ? '⚠️ Revenue declining - investigate causes' :
+             health.indicators.growthRate.value < 5 ? '📊 Slow growth - need more customers' :
+             health.indicators.growthRate.value < 15 ? '✅ Steady growth - on the right track' :
+             health.indicators.growthRate.value < 30 ? '🚀 Strong growth - scaling well' :
+             '🔥 Explosive growth - manage capacity'}
+          </p>
         </div>
 
         {/* Cash Position */}
-        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Activity size={18} className="text-slate-600 dark:text-slate-400" />
               <h4 className="font-medium text-slate-900 dark:text-white">Cash Position</h4>
-              <Tooltip text="Available cash balance. Good: sufficient reserves, Fair: moderate, Poor: low reserves">
+              <Tooltip text="Net profit (operating cash) from last 30 days. Best practice: maintain 2-3 months of expenses as buffer. This shows your ability to handle unexpected costs or slow periods.">
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -307,49 +334,106 @@ export default function FinancialHealthDashboard() {
             <span className="text-3xl font-bold text-slate-900 dark:text-white">
               ${health.indicators.cashPosition.value.toFixed(0)}
             </span>
+            <span className="text-sm text-slate-500 mb-1">
+              available
+            </span>
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
             <div
-              className={`h-2 rounded-full ${getStatusColor(health.indicators.cashPosition.status)}`}
-              style={{ width: `${Math.min(100, (health.indicators.cashPosition.value / 20000) * 100)}%` }}
+              className={`h-2.5 rounded-full ${getStatusColor(health.indicators.cashPosition.status)} transition-all duration-500`}
+              style={{ width: `${Math.min(100, Math.max(5, (health.indicators.cashPosition.value / 20000) * 100))}%` }}
             ></div>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {health.indicators.cashPosition.value < 0 ? '🚨 Negative cash - urgent action needed' :
+             health.indicators.cashPosition.value < 1000 ? '⚠️ Very low reserves - risky position' :
+             health.indicators.cashPosition.value < 5000 ? '📊 Minimal buffer - build reserves' :
+             health.indicators.cashPosition.value < 10000 ? '✅ Adequate cash - 1-2 month buffer' :
+             '💰 Strong position - 2+ month reserves'}
+          </p>
         </div>
       </div>
 
-      {/* Alerts */}
-      {health.alerts.length > 0 && (
-        <div className="mb-6">
-          <h4 className="font-medium text-slate-900 dark:text-white mb-3">⚠️ Alerts</h4>
-          <div className="space-y-2">
-            {health.alerts.map((alert, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
-              >
-                <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-amber-900 dark:text-amber-200">{alert}</p>
+      {/* Alerts & Recommendations Combined */}
+      {(health.alerts.length > 0 || health.recommendations.length > 0) && (
+        <div className="space-y-4">
+          {/* Critical Alerts */}
+          {health.alerts.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle size={20} className="text-red-600" />
+                <h4 className="font-semibold text-slate-900 dark:text-white">
+                  Action Required ({health.alerts.length})
+                </h4>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div className="space-y-2">
+                {health.alerts.map((alert, index) => {
+                  const isCritical = alert.includes('🚨')
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-start gap-3 p-4 rounded-lg border ${
+                        isCritical
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800'
+                          : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                      }`}
+                    >
+                      <span className="text-lg mt-0.5 flex-shrink-0">
+                        {isCritical ? '🚨' : '⚠️'}
+                      </span>
+                      <div className="flex-1">
+                        <p className={`font-medium ${
+                          isCritical
+                            ? 'text-red-900 dark:text-red-200'
+                            : 'text-amber-900 dark:text-amber-200'
+                        }`}>
+                          {alert.replace('🚨', '').replace('⚠️', '').trim()}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* Recommendations */}
-      {health.recommendations.length > 0 && (
-        <div>
-          <h4 className="font-medium text-slate-900 dark:text-white mb-3">💡 Recommendations</h4>
-          <div className="space-y-2">
-            {health.recommendations.map((rec, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-              >
-                <CheckCircle size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-blue-900 dark:text-blue-200">{rec}</p>
+          {/* Actionable Recommendations */}
+          {health.recommendations.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle size={20} className="text-blue-600" />
+                <h4 className="font-semibold text-slate-900 dark:text-white">
+                  Recommendations ({health.recommendations.length})
+                </h4>
               </div>
-            ))}
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {health.recommendations.map((rec, index) => {
+                  const isPositive = rec.includes('Excellent') || rec.includes('Strong') || rec.includes('Good progress')
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-start gap-3 p-3 rounded-lg border transition-all hover:shadow-md ${
+                        isPositive
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                      }`}
+                    >
+                      <span className="text-base mt-0.5 flex-shrink-0">
+                        {isPositive ? '✅' : '💡'}
+                      </span>
+                      <p className={`text-sm ${
+                        isPositive
+                          ? 'text-green-900 dark:text-green-200'
+                          : 'text-blue-900 dark:text-blue-200'
+                      }`}>
+                        {rec}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

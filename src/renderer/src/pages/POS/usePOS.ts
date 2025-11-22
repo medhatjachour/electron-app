@@ -14,9 +14,12 @@ export function usePOS() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerQuery, setCustomerQuery] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [showSuccess, setShowSuccess] = useState(false)
   const { settings } = useDisplaySettings()
+  
+  // Get tax rate from settings (default 10%)
+  const taxRate = parseFloat(localStorage.getItem('taxRate') || '10') / 100
 
   // Load initial data
   useEffect(() => {
@@ -66,7 +69,7 @@ export function usePOS() {
     cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   , [cart])
 
-  const tax = subtotal * 0.1
+  const tax = subtotal * taxRate
   const total = subtotal + tax
 
   const totalItems = useMemo(() => 

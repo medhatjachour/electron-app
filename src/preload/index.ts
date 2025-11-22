@@ -85,7 +85,13 @@ const api = {
     }) => ipcRenderer.invoke('finance:addTransaction', data),
     getTransactions: (data: { startDate: Date; endDate: Date }) =>
       ipcRenderer.invoke('finance:getTransactions', data),
-    getStats: () => ipcRenderer.invoke('finance:getStats')
+    getStats: () => ipcRenderer.invoke('finance:getStats'),
+    updateTransaction: (id: string, data: {
+      type?: 'income' | 'expense'
+      amount?: number
+      description?: string
+    }) => ipcRenderer.invoke('finance:updateTransaction', { id, data }),
+    deleteTransaction: (id: string) => ipcRenderer.invoke('finance:deleteTransaction', id)
   },
   products: {
     getAll: (options?: { 

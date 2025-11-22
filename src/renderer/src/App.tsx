@@ -26,6 +26,7 @@ import Products from './pages/Products/index'
 import Settings from './pages/Settings/index'
 import POS from './pages/POS/index'
 import Inventory from './pages/Inventory/index'
+import Expenses from './pages/Expenses/index'
 
 // Lazy load pages for optimal performance (code splitting)
 const Sales = lazy(() => import('./pages/Sales'))
@@ -157,6 +158,16 @@ function AppContent() {
               }
             />
             <Route
+              path="/expenses"
+              element={
+                <RequireAuth>
+                  <RootLayoutWrapper>
+                    <Expenses />
+                  </RootLayoutWrapper>
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/settings"
               element={
                 <RequireAuth>
@@ -181,7 +192,7 @@ export default function AppRoutes() {
           <DisplaySettingsProvider>
             <ToastProvider>
               <AuthProvider>
-                <HashRouter>
+                <HashRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
                   <AppContent />
                 </HashRouter>
               </AuthProvider>
