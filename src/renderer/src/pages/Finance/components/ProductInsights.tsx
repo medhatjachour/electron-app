@@ -111,24 +111,52 @@ export default function ProductInsights() {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Lightbulb size={20} className="text-primary" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">Product Insights</h3>
-          <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
-            AI-Powered
-          </span>
-          <Tooltip text="AI analyzes sales velocity, profit margins, and trends to identify opportunities, warnings, and successful products. Velocity score shows how fast items are selling.">
-            <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
-          </Tooltip>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Lightbulb size={20} className="text-primary" />
+            <h3 className="font-semibold text-slate-900 dark:text-white">Product Insights</h3>
+            <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
+              AI-Powered
+            </span>
+            <Tooltip text="AI analyzes sales velocity, profit margins, and trends over 30-day and 60-day periods to identify opportunities, warnings, and successful products. Each insight includes specific, actionable recommendations.">
+              <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
+            </Tooltip>
+          </div>
+          
+          <button
+            onClick={loadInsights}
+            className="text-sm text-primary hover:text-primary/80 transition-colors"
+          >
+            Refresh
+          </button>
         </div>
         
-        <button
-          onClick={loadInsights}
-          className="text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          Refresh
-        </button>
+        {/* Info Box */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Sparkles size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+                <strong>How to use:</strong> Warnings require immediate action, Opportunities show untapped potential, Successes highlight what's working well.
+              </p>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600">⭐</span>
+                  <span className="text-slate-600 dark:text-slate-400">Keep doing what works</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-600">💎</span>
+                  <span className="text-slate-600 dark:text-slate-400">Boost these for more profit</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-600">⚠️</span>
+                  <span className="text-slate-600 dark:text-slate-400">Fix or clear out quickly</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -174,17 +202,18 @@ export default function ProductInsights() {
                   'rgb(245, 158, 11)'
               }}
             >
-              {/* Priority Badge */}
+              {/* Type Badge */}
               <div className="absolute top-4 right-4">
                 <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  insight.metrics.velocityScore >= 70 
+                  insight.type === 'success'
                     ? 'bg-green-500 text-white' 
-                    : insight.metrics.velocityScore >= 40 
-                    ? 'bg-yellow-500 text-white' 
-                    : 'bg-red-500 text-white'
+                    : insight.type === 'opportunity'
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-amber-500 text-white'
                 }`}>
-                  {insight.metrics.velocityScore >= 70 ? 'High Priority' : 
-                   insight.metrics.velocityScore >= 40 ? 'Medium' : 'Low Priority'}
+                  {insight.type === 'success' ? '⭐ Winner' : 
+                   insight.type === 'opportunity' ? '💎 Opportunity' : 
+                   '⚠️ Needs Action'}
                 </div>
               </div>
               {/* Header */}
@@ -216,11 +245,11 @@ export default function ProductInsights() {
               </div>
 
               {/* Metrics */}
-              <div className="grid grid-cols-4 gap-3 mb-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg">
+              <div className="grid grid-cols-5 gap-3 mb-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg">
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Sales</p>
-                    <Tooltip text="Number of units sold during the period">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Units Sold</p>
+                    <Tooltip text="Number of units sold in last 30 days">
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -234,7 +263,7 @@ export default function ProductInsights() {
                 <div>
                   <div className="flex items-center gap-1 mb-1">
                     <p className="text-xs text-slate-600 dark:text-slate-400">Revenue</p>
-                    <Tooltip text="Total sales value generated">
+                    <Tooltip text="Total sales value generated in last 30 days">
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -245,11 +274,11 @@ export default function ProductInsights() {
                 <div>
                   <div className="flex items-center gap-1 mb-1">
                     <p className="text-xs text-slate-600 dark:text-slate-400">Margin</p>
-                    <Tooltip text="Profit margin percentage">
+                    <Tooltip text="Profit margin: High (>30%) = green, Medium (15-30%) = yellow, Low (<15%) = red">
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
-                  <p className={`text-sm font-semibold ${
+                  <p className={`text-sm font-semibold flex items-center gap-1 ${
                     insight.metrics.profitMargin > 30 
                       ? 'text-green-600' 
                       : insight.metrics.profitMargin > 15 
@@ -257,12 +286,39 @@ export default function ProductInsights() {
                       : 'text-red-600'
                   }`}>
                     {insight.metrics.profitMargin.toFixed(1)}%
+                    {insight.metrics.profitMargin > 30 ? ' 🔥' : 
+                     insight.metrics.profitMargin < 15 ? ' ⚠️' : ''}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Trend</p>
-                  <p className="text-sm font-semibold capitalize text-slate-900 dark:text-white">
-                    {insight.metrics.trend}
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Velocity</p>
+                    <Tooltip text="Sales speed: High (70+) = fast seller, Medium (40-70) = moderate, Low (<40) = slow mover">
+                      <HelpCircle size={10} className="text-slate-400 opacity-60" />
+                    </Tooltip>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${getVelocityColor(insight.metrics.velocityScore)}`}></div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {insight.metrics.velocityScore.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Trend</p>
+                    <Tooltip text="Sales trend: Up (>15% growth), Down (<-15% decline), Stable (-15% to +15%)">
+                      <HelpCircle size={10} className="text-slate-400 opacity-60" />
+                    </Tooltip>
+                  </div>
+                  <p className={`text-sm font-semibold capitalize ${
+                    insight.metrics.trend === 'up' ? 'text-green-600' :
+                    insight.metrics.trend === 'down' ? 'text-red-600' :
+                    'text-slate-600'
+                  }`}>
+                    {insight.metrics.trend === 'up' ? '↗️ Up' :
+                     insight.metrics.trend === 'down' ? '↘️ Down' :
+                     '→ Stable'}
                   </p>
                 </div>
               </div>

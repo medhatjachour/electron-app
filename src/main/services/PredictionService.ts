@@ -259,20 +259,34 @@ export class PredictionService {
         }
       })
 
-      // Calculate average daily cost
-      const totalCost = sales.reduce((sum, sale) => {
+      // Get operational expenses from FinancialTransaction table
+      const expenses = await this.prisma.financialTransaction.findMany({
+        where: {
+          type: 'expense',
+          createdAt: {
+            gte: thirtyDaysAgo
+          }
+        }
+      })
+
+      // Calculate average daily cost (COGS + operational expenses)
+      const totalCOGS = sales.reduce((sum, sale) => {
         return sum + (sale.quantity * sale.product.baseCost)
       }, 0)
-      const avgDailyCost = totalCost / 30
+      const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+      const avgDailyCOGS = totalCOGS / 30
+      const avgDailyExpenses = totalExpenses / 30
+      const avgDailyOutflow = avgDailyCOGS + avgDailyExpenses
 
-      // Calculate current cash position from recent revenue minus costs
-      // In a real scenario, this would come from accounting/settings
+      console.log(`[Cash Flow] Avg Daily COGS: $${avgDailyCOGS.toFixed(2)}, Avg Daily Expenses: $${avgDailyExpenses.toFixed(2)}, Total Outflow: $${avgDailyOutflow.toFixed(2)}`)
+
+      // Calculate current cash position from recent revenue minus all costs
       const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0)
-      let cumulativeCash = totalRevenue - totalCost
+      let cumulativeCash = totalRevenue - totalCOGS - totalExpenses
 
       const projections = forecast.predictions.map(pred => {
         const expectedInflow = pred.predictedRevenue
-        const expectedOutflow = avgDailyCost
+        const expectedOutflow = avgDailyOutflow
         const netCashFlow = expectedInflow - expectedOutflow
         cumulativeCash += netCashFlow
 
@@ -327,21 +341,37 @@ export class PredictionService {
       const sixtyDaysAgo = new Date()
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
 
-      // Get sales data
-      const [recentSales, olderSales] = await Promise.all([
-        this.prisma.sale.findMany({
-          where: { createdAt: { gte: thirtyDaysAgo } },
-          include: { product: true }
-        }),
-        this.prisma.sale.findMany({
-          where: {
-            createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+      // Get sales data from SaleTransaction
+      const [recentTransactions, olderTransactions] = await Promise.all([
+        this.prisma.saleTransaction.findMany({
+          where: { 
+            createdAt: { gte: thirtyDaysAgo },
+            status: 'completed'
           },
-          include: { product: true }
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }),
+        this.prisma.saleTransaction.findMany({
+          where: {
+            createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+            status: 'completed'
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
         })
       ])
 
-      // Aggregate by product
+      // Aggregate by product from transaction items
       const productMetrics = new Map<string, {
         productId: string
         productName: string
@@ -353,89 +383,163 @@ export class PredictionService {
         totalProfit: number
       }>()
 
-      recentSales.forEach(sale => {
-        const key = sale.productId
-        if (!productMetrics.has(key)) {
-          productMetrics.set(key, {
-            productId: sale.productId,
-            productName: sale.product.name,
-            recentSales: 0,
-            recentRevenue: 0,
-            olderSales: 0,
-            olderRevenue: 0,
-            totalCost: 0,
-            totalProfit: 0
-          })
-        }
-        const metrics = productMetrics.get(key)!
-        const cost = sale.quantity * sale.product.baseCost
-        const profit = sale.total - cost
-        
-        metrics.recentSales += sale.quantity
-        metrics.recentRevenue += sale.total
-        metrics.totalCost += cost
-        metrics.totalProfit += profit
-      })
-
-      olderSales.forEach(sale => {
-        const key = sale.productId
-        if (productMetrics.has(key)) {
+      // Process recent transactions
+      recentTransactions.forEach(txn => {
+        txn.items.forEach(item => {
+          const key = item.product.id
+          if (!productMetrics.has(key)) {
+            productMetrics.set(key, {
+              productId: item.product.id,
+              productName: item.product.name,
+              recentSales: 0,
+              recentRevenue: 0,
+              olderSales: 0,
+              olderRevenue: 0,
+              totalCost: 0,
+              totalProfit: 0
+            })
+          }
           const metrics = productMetrics.get(key)!
-          metrics.olderSales += sale.quantity
-          metrics.olderRevenue += sale.total
-        }
+          const cost = item.quantity * item.product.baseCost
+          const profit = item.total - cost
+          
+          metrics.recentSales += item.quantity
+          metrics.recentRevenue += item.total
+          metrics.totalCost += cost
+          metrics.totalProfit += profit
+        })
       })
 
-      // Generate insights
+      // Process older transactions
+      olderTransactions.forEach(txn => {
+        txn.items.forEach(item => {
+          const key = item.product.id
+          if (productMetrics.has(key)) {
+            const metrics = productMetrics.get(key)!
+            metrics.olderSales += item.quantity
+            metrics.olderRevenue += item.total
+          }
+        })
+      })
+
+      // Generate comprehensive insights with multi-factor analysis
       const insights: ProductInsight[] = []
 
       productMetrics.forEach((metrics) => {
-        // Calculate profit margin from aggregated totals
+        // Calculate key metrics
         const profitMargin = metrics.recentRevenue > 0 
           ? (metrics.totalProfit / metrics.recentRevenue) * 100 
           : 0
           
         const salesChange = metrics.olderSales > 0 
           ? ((metrics.recentSales - metrics.olderSales) / metrics.olderSales) * 100
-          : 100
+          : metrics.recentSales > 0 ? 100 : 0
 
+        // Enhanced trend detection
         const trend: 'up' | 'down' | 'stable' = 
-          salesChange > 20 ? 'up' : 
-          salesChange < -20 ? 'down' : 
+          salesChange > 15 ? 'up' : 
+          salesChange < -15 ? 'down' : 
           'stable'
 
-        // Velocity score (0-100) based on sales frequency and volume
-        const velocityScore = Math.min(100, (metrics.recentSales / 30) * 10)
+        // Velocity score: how fast product sells (units per day as percentage of ideal)
+        const unitsPerDay = metrics.recentSales / 30
+        const velocityScore = Math.min(100, unitsPerDay * 20) // 5 units/day = 100%
 
         let insight = ''
         let type: 'opportunity' | 'warning' | 'success' = 'success'
         const recommendations: string[] = []
 
-        // Analyze and generate insights
-        if (trend === 'up' && profitMargin > 30) {
-          insight = `🚀 Strong performer with ${salesChange.toFixed(0)}% growth and high margins`
+        // Multi-factor analysis for better insights
+        
+        // Best Performers
+        if (trend === 'up' && profitMargin > 35 && velocityScore > 50) {
+          insight = `🏆 Star product! ${salesChange.toFixed(0)}% growth, ${profitMargin.toFixed(0)}% margin, high demand`
           type = 'success'
-          recommendations.push('Consider increasing inventory levels')
-          recommendations.push('Maintain current pricing strategy')
-        } else if (trend === 'down') {
-          insight = `📉 Sales declining by ${Math.abs(salesChange).toFixed(0)}%. Needs attention.`
-          type = 'warning'
-          recommendations.push('Consider promotional pricing')
-          recommendations.push('Review product positioning')
-          recommendations.push('Analyze competitor offerings')
-        } else if (velocityScore < 10) {
-          insight = `⚠️ Slow-moving product. Low turnover detected.`
-          type = 'warning'
-          recommendations.push('Consider clearance pricing')
-          recommendations.push('Reduce reorder quantities')
-        } else if (profitMargin > 40) {
-          insight = `💰 High margin opportunity with ${profitMargin.toFixed(1)}% profit`
+          recommendations.push(`Stock up: currently selling ${unitsPerDay.toFixed(1)} units/day`)
+          recommendations.push('Feature prominently in store/website')
+          recommendations.push('Consider premium positioning or slight price increase')
+          recommendations.push('Create product bundles to boost related items')
+        }
+        // High Margin Opportunities
+        else if (profitMargin > 40 && velocityScore < 50 && trend !== 'down') {
+          insight = `💎 Hidden gem: ${profitMargin.toFixed(0)}% margins but underperforming sales`
           type = 'opportunity'
-          recommendations.push('Increase marketing focus')
-          recommendations.push('Consider bundling with other products')
+          recommendations.push('Increase visibility with better placement')
+          recommendations.push('Run targeted promotions to boost volume')
+          recommendations.push('Improve product photos/descriptions')
+          recommendations.push(`Current: ${unitsPerDay.toFixed(1)} units/day - target 3-5/day`)
+        }
+        // Rapid Growth
+        else if (trend === 'up' && salesChange > 50) {
+          insight = `🚀 Trending: ${salesChange.toFixed(0)}% growth! Customer demand surging`
+          type = 'success'
+          recommendations.push(`High demand: ${unitsPerDay.toFixed(1)} units/day and growing`)
+          recommendations.push('Ensure adequate stock to avoid stockouts')
+          recommendations.push('Consider raising price by 10-15%')
+          recommendations.push('Analyze what makes this product successful')
+        }
+        // Declining Sales
+        else if (trend === 'down' && salesChange < -30) {
+          insight = `📉 Steep decline: ${Math.abs(salesChange).toFixed(0)}% drop. Urgent action needed`
+          type = 'warning'
+          recommendations.push('Run clearance promotion (20-30% off)')
+          recommendations.push('Review: Has price/quality/competition changed?')
+          recommendations.push('Consider discontinuing if no improvement in 2 weeks')
+          recommendations.push(`Down from ${(unitsPerDay * (1 + Math.abs(salesChange)/100)).toFixed(1)} to ${unitsPerDay.toFixed(1)} units/day`)
+        }
+        // Moderate Decline
+        else if (trend === 'down') {
+          insight = `⚠️ Softening demand: ${Math.abs(salesChange).toFixed(0)}% decline`
+          type = 'warning'
+          recommendations.push('Test promotional pricing (10-15% off)')
+          recommendations.push('Refresh product images and descriptions')
+          recommendations.push('Bundle with popular items')
+          recommendations.push('Reduce reorder quantity by 30%')
+        }
+        // Slow Movers
+        else if (velocityScore < 15 && metrics.recentSales > 0) {
+          insight = `🐌 Slow seller: Only ${unitsPerDay.toFixed(1)} units/day, low turnover`
+          type = 'warning'
+          recommendations.push('Mark down 25-40% to clear inventory')
+          recommendations.push('Stop reordering until stock < 10 units')
+          recommendations.push('Consider: Is this product still relevant?')
+          recommendations.push('Free up cash/space for better-performing items')
+        }
+        // Dead Stock
+        else if (metrics.recentSales === 0 && metrics.olderSales > 0) {
+          insight = `❌ Dead stock: Zero sales this month (had ${metrics.olderSales} last month)`
+          type = 'warning'
+          recommendations.push('Immediate clearance: 40-50% discount')
+          recommendations.push('Consider donating/liquidating if still no sales')
+          recommendations.push('Discontinue and remove from inventory')
+        }
+        // New Products
+        else if (metrics.olderSales === 0 && metrics.recentSales > 5) {
+          insight = `✨ New arrival performing well: ${metrics.recentSales} sales already!`
+          type = 'success'
+          recommendations.push('Monitor closely - early signs are positive')
+          recommendations.push('Gather customer feedback')
+          recommendations.push('Consider expanding similar product line')
+        }
+        // Stable High Performers
+        else if (trend === 'stable' && metrics.recentRevenue > 500 && profitMargin > 25) {
+          insight = `⭐ Steady earner: Consistent $${metrics.recentRevenue.toFixed(0)} revenue, ${profitMargin.toFixed(0)}% margin`
+          type = 'success'
+          recommendations.push('Core product - maintain stock levels')
+          recommendations.push('Test slight price increase (5%)')
+          recommendations.push(`Reliable ${unitsPerDay.toFixed(1)} units/day`)
+        }
+        // Low Margin High Volume
+        else if (profitMargin < 20 && velocityScore > 40) {
+          insight = `⚡ Volume seller but low ${profitMargin.toFixed(0)}% margin - losing money?`
+          type = 'warning'
+          recommendations.push('Increase price by 10-20% to improve margins')
+          recommendations.push('Negotiate better supplier cost')
+          recommendations.push('High volume (${unitsPerDay.toFixed(1)}/day) means price increase won\'t hurt much')
         }
 
-        if (insight) {
+        // Only add insights that have actionable recommendations
+        if (insight && recommendations.length > 0) {
           insights.push({
             productId: metrics.productId,
             productName: metrics.productName,
@@ -453,7 +557,18 @@ export class PredictionService {
         }
       })
 
+      // Sort by priority: warnings first, then opportunities, then successes
+      // Within each type, sort by revenue
+      insights.sort((a, b) => {
+        const typeOrder = { warning: 0, opportunity: 1, success: 2 }
+        if (typeOrder[a.type] !== typeOrder[b.type]) {
+          return typeOrder[a.type] - typeOrder[b.type]
+        }
+        return b.metrics.revenue - a.metrics.revenue
+      })
+
       console.log(`[Product Insights] Generated ${insights.length} insights from ${productMetrics.size} products`)
+      console.log(`[Product Insights] Breakdown: ${insights.filter(i => i.type === 'warning').length} warnings, ${insights.filter(i => i.type === 'opportunity').length} opportunities, ${insights.filter(i => i.type === 'success').length} successes`)
       
       return insights.slice(0, limit)
     } catch (error) {
@@ -470,48 +585,91 @@ export class PredictionService {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const sales = await this.prisma.sale.findMany({
-        where: { createdAt: { gte: thirtyDaysAgo } },
-        include: { product: true }
+      const [transactions, expenses] = await Promise.all([
+        this.prisma.saleTransaction.findMany({
+          where: { 
+            createdAt: { gte: thirtyDaysAgo },
+            status: 'completed'
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }),
+        this.prisma.financialTransaction.findMany({
+          where: { 
+            type: 'expense',
+            createdAt: { gte: thirtyDaysAgo } 
+          }
+        })
+      ])
+
+      // Calculate profit metrics including operational expenses from SaleTransaction
+      const totalRevenue = transactions.reduce((sum, txn) => sum + txn.total, 0)
+      
+      // Calculate COGS from transaction items
+      let totalCOGS = 0
+      let totalUnitsSold = 0
+      transactions.forEach(txn => {
+        txn.items.forEach(item => {
+          const cost = item.quantity * item.product.baseCost
+          totalCOGS += cost
+          totalUnitsSold += item.quantity
+        })
       })
+      
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
+      const grossProfit = totalRevenue - totalCOGS
+      const netProfit = grossProfit - totalExpenses
+      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
-      // Calculate profit margin
-      const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0)
-      const totalCost = sales.reduce((sum, s) => sum + (s.quantity * s.product.baseCost), 0)
-      const profitMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0
+      console.log(`[Financial Health] Revenue: $${totalRevenue}, COGS: $${totalCOGS}, Expenses: $${totalExpenses}, Net Profit: $${netProfit}, Margin: ${profitMargin.toFixed(2)}%`)
 
-      console.log(`[Financial Health] Revenue: $${totalRevenue}, Cost: $${totalCost}, Margin: ${profitMargin.toFixed(2)}%`)
+      // Calculate inventory turnover - using product variants stock
+      const variants = await this.prisma.productVariant.findMany({
+        select: { stock: true }
+      })
+      
+      // Calculate average inventory from all variants
+      const totalStock = variants.reduce((sum, v) => sum + v.stock, 0)
+      const avgInventory = variants.length > 0 ? totalStock / variants.length : 1
+      
+      // Turnover = Units Sold / Average Inventory (annualized)
+      const inventoryTurnover = avgInventory > 0 ? (totalUnitsSold / avgInventory) * (365 / 30) : 0
 
-      // Get inventory turnover (simplified - should use inventory data)
-      const products = await this.prisma.product.count()
-      const inventoryTurnover = products > 0 ? sales.length / products : 0
-
-      // Get growth rate
+      // Get growth rate from revenue forecast
       const forecast = await this.forecastRevenue(30, 90)
       const growthRate = forecast.growthRate
 
-      // Mock cash position (should come from accounting)
-      const cashPosition = totalRevenue - totalCost
+      // Calculate cash position (net profit represents available cash from operations)
+      const cashPosition = netProfit
 
-      console.log(`[Financial Health] Inventory Turnover: ${inventoryTurnover.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%, Cash: $${cashPosition}`)
+      // Calculate additional helpful metrics
+      const expenseRatio = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0
+      const cogsRatio = totalRevenue > 0 ? (totalCOGS / totalRevenue) * 100 : 0
 
-      // Evaluate each indicator
+      console.log(`[Financial Health] Inventory Turnover: ${inventoryTurnover.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%, Cash: $${cashPosition}, Expense Ratio: ${expenseRatio.toFixed(1)}%, COGS Ratio: ${cogsRatio.toFixed(1)}%`)
+
+      // Evaluate each indicator with industry-standard thresholds
       const indicators = {
         profitMargin: {
           value: profitMargin,
-          status: (profitMargin > 30 ? 'good' : profitMargin > 15 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
+          status: (profitMargin >= 20 ? 'good' : profitMargin >= 10 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
         },
         inventoryTurnover: {
           value: inventoryTurnover,
-          status: (inventoryTurnover > 5 ? 'good' : inventoryTurnover > 2 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
+          status: (inventoryTurnover >= 6 ? 'good' : inventoryTurnover >= 3 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
         },
         growthRate: {
           value: growthRate,
-          status: (growthRate > 10 ? 'good' : growthRate > 0 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
+          status: (growthRate >= 15 ? 'good' : growthRate >= 5 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
         },
         cashPosition: {
           value: cashPosition,
-          status: (cashPosition > 10000 ? 'good' : cashPosition > 5000 ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
+          status: (cashPosition >= totalExpenses * 2 ? 'good' : cashPosition >= totalExpenses ? 'fair' : 'poor') as 'good' | 'fair' | 'poor'
         }
       }
 
@@ -525,25 +683,78 @@ export class PredictionService {
          statusScores[indicators.cashPosition.status] * weights.cashPosition) / 100
       )
 
-      // Generate alerts and recommendations
+      // Generate comprehensive alerts and recommendations
       const alerts: string[] = []
       const recommendations: string[] = []
 
+      // Profit Margin Analysis
       if (indicators.profitMargin.status === 'poor') {
-        alerts.push('⚠️ Low profit margins detected')
-        recommendations.push('Review pricing strategy')
-        recommendations.push('Analyze cost reduction opportunities')
+        if (profitMargin < 0) {
+          alerts.push('🚨 Critical: Operating at a loss! Net profit is negative.')
+          recommendations.push('Immediate action required: Review all costs and pricing')
+          recommendations.push('Consider pausing low-margin products')
+          recommendations.push('Negotiate better supplier rates or find alternatives')
+        } else {
+          alerts.push('⚠️ Low profit margins detected (below 10%)')
+          recommendations.push('Increase prices by 5-10% on high-demand products')
+          recommendations.push('Reduce operational expenses where possible')
+          recommendations.push('Focus on selling high-margin items')
+        }
+      } else if (indicators.profitMargin.status === 'fair') {
+        recommendations.push('Good progress! Aim for 20%+ margins by optimizing costs')
       }
 
+      // Inventory Turnover Analysis
       if (indicators.inventoryTurnover.status === 'poor') {
-        alerts.push('⚠️ Slow inventory turnover')
-        recommendations.push('Consider clearance sales for slow-moving items')
+        alerts.push('⚠️ Slow inventory turnover (below 3x annually)')
+        recommendations.push('Run promotions on slow-moving inventory')
+        recommendations.push('Reduce reorder quantities by 30-50%')
+        recommendations.push('Consider seasonal clearance sales')
+      } else if (indicators.inventoryTurnover.status === 'fair') {
+        recommendations.push('Inventory moving steadily. Target 6+ turns per year.')
+      } else {
+        recommendations.push('Excellent inventory velocity! Monitor for stockouts.')
       }
 
+      // Growth Rate Analysis
       if (indicators.growthRate.status === 'poor') {
-        alerts.push('⚠️ Negative or stagnant growth')
-        recommendations.push('Increase marketing efforts')
-        recommendations.push('Explore new customer segments')
+        if (growthRate < 0) {
+          alerts.push('🚨 Revenue declining! Sales are down vs. previous period.')
+          recommendations.push('Launch customer retention campaigns immediately')
+          recommendations.push('Analyze why customers are not returning')
+          recommendations.push('Review competitor pricing and offerings')
+        } else {
+          alerts.push('⚠️ Stagnant growth (below 5%)')
+          recommendations.push('Invest in marketing and customer acquisition')
+          recommendations.push('Introduce new products or services')
+          recommendations.push('Explore new sales channels (online, B2B, etc.)')
+        }
+      } else if (indicators.growthRate.status === 'fair') {
+        recommendations.push('Growing steadily. Push for 15%+ growth with marketing.')
+      }
+
+      // Cash Position Analysis
+      if (indicators.cashPosition.status === 'poor') {
+        alerts.push('⚠️ Low cash reserves (less than 1 month expenses)')
+        recommendations.push('Prioritize collecting outstanding payments')
+        recommendations.push('Consider a line of credit for emergencies')
+        recommendations.push('Reduce non-essential expenses immediately')
+      } else if (indicators.cashPosition.status === 'fair') {
+        recommendations.push('Adequate cash reserves. Build to 2-3 months of expenses.')
+      } else {
+        recommendations.push('Strong cash position! Consider reinvesting in growth.')
+      }
+
+      // Additional context-based recommendations
+      if (expenseRatio > 40) {
+        alerts.push('⚠️ High expense ratio (operating costs over 40% of revenue)')
+        recommendations.push('Audit all expenses and eliminate non-essentials')
+      }
+
+      if (cogsRatio > 60) {
+        alerts.push('⚠️ High cost of goods (COGS over 60% of revenue)')
+        recommendations.push('Negotiate better supplier pricing')
+        recommendations.push('Consider alternative suppliers')
       }
 
       return {

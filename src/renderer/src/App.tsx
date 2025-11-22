@@ -192,7 +192,7 @@ export default function AppRoutes() {
           <DisplaySettingsProvider>
             <ToastProvider>
               <AuthProvider>
-                <HashRouter>
+                <HashRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
                   <AppContent />
                 </HashRouter>
               </AuthProvider>

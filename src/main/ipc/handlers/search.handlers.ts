@@ -476,8 +476,8 @@ export function registerSearchHandlers(prisma: any) {
         }
       }
 
-      // Fetch current period data using SaleTransaction and SaleItem
-      const [currentTransactions, previousTransactions] = await Promise.all([
+      // Fetch current period data using SaleTransaction and SaleItem, plus operational expenses
+      const [currentTransactions, previousTransactions, currentExpenses, previousExpenses] = await Promise.all([
         prisma.saleTransaction.findMany({
           where: { ...currentWhere, status: 'completed' },
           include: {
@@ -498,6 +498,18 @@ export function registerSearchHandlers(prisma: any) {
             id: true,
             total: true,
             createdAt: true
+          }
+        }),
+        prisma.financialTransaction.findMany({
+          where: { ...currentWhere, type: 'expense' },
+          select: {
+            amount: true
+          }
+        }),
+        prisma.financialTransaction.findMany({
+          where: { ...previousWhere, type: 'expense' },
+          select: {
+            amount: true
           }
         })
       ])
@@ -593,9 +605,25 @@ export function registerSearchHandlers(prisma: any) {
         .map(([name, revenue]) => ({ name, revenue }))
         .sort((a, b) => b.revenue - a.revenue)
 
-      // Calculate profit metrics from ALL sales (already calculated above)
-      const totalProfit = totalRevenue - totalCost
+      // Calculate operational expenses for current and previous periods
+      const totalOperationalExpenses = currentExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+      const previousTotalExpenses = previousExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+
+      console.log(`[Finance] Revenue: $${totalRevenue}, COGS: $${totalCost}, Operational Expenses: $${totalOperationalExpenses}`)
+
+      // Calculate profit metrics from ALL sales INCLUDING operational expenses
+      const grossProfit = totalRevenue - totalCost
+      const totalProfit = grossProfit - totalOperationalExpenses
       const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
+
+      // Calculate previous period profit for comparison
+      const previousGrossProfit = previousRevenue - (previousRevenue * (totalCost / totalRevenue || 0))
+      const previousTotalProfit = previousGrossProfit - previousTotalExpenses
+      const profitChange = previousTotalProfit > 0 
+        ? ((totalProfit - previousTotalProfit) / previousTotalProfit) * 100 
+        : 0
+
+      console.log(`[Finance] Gross Profit: $${grossProfit}, Net Profit: $${totalProfit}, Margin: ${profitMargin.toFixed(2)}%`)
 
       return {
         currentMetrics: {
@@ -607,7 +635,10 @@ export function registerSearchHandlers(prisma: any) {
           avgOrderValueChange,
           totalProfit,
           profitMargin,
-          totalCost
+          totalCost,
+          totalExpenses: totalOperationalExpenses,
+          grossProfit,
+          profitChange
         },
         previousMetrics: {
           revenue: previousRevenue,
