@@ -22,6 +22,7 @@ import {
 import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
+import { Download } from 'lucide-react';
 
 interface TodayStats {
   revenue: number;
@@ -1000,7 +1001,7 @@ const EnhancedReports: React.FC = () => {
                 className="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2 font-semibold transition-all transform hover:scale-105"
               >
                 <Printer className="w-5 h-5" />
-                Print / PDF
+                Download PDF
               </button>
               <button
                 onClick={handleExportCSV}
