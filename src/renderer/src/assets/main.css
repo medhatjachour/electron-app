@@ -45,6 +45,20 @@
     @apply bg-neutral-600/70;
   }
 
+  /* Custom scrollbar for cart */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-100 dark:bg-slate-700/30 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 hover:bg-primary/50 rounded-full;
+    transition: background-color 0.2s ease;
+  }
+
   /* Animation utilities */
   .animate-scale-up {
     animation: scaleUp 0.3s ease-out;

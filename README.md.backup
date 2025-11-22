@@ -22,82 +22,69 @@
 
 <div align="center">
 
-
 ### 🏠 Dashboard Overview
-![Dashboard](./samples/dashboard.png)
-*Real-time business metrics with revenue tracking, sales analytics, and quick insights at a glance*
+![Dashboard](./samples/1-dashboard.png)
+*Real-time business metrics, revenue tracking, and comprehensive analytics at a glance*
+
+---
+
+### � Inventory Management
+![Inventory](./samples/2-pos.png)
+*Track stock levels, manage product variants, and monitor inventory in real-time*
 
 ---
 
 ### 💰 Point of Sale (POS)
-![POS Interface](./samples/POS.png)
-*Fast, professional checkout interface with product search, shopping cart, and quick payment options*
+![POS Interface](./samples/3-products.png)
+*Fast, intuitive checkout interface with product search and cart management*
 
 ---
 
-### 🛍️ Product Variants in POS
-![Product Variants](./samples/viewVierntOFProductIn%20Pos.png)
-*Select product variants (colors, sizes) directly in POS with stock visibility and pricing*
+### ✨ Adding Product Features
+![Add Product](./samples/4-sales.png)
+*Create and manage products with variants, images, pricing, and category assignment*
 
 ---
 
-### ✨ Add New Product
-![Add Product](./samples/add_porducts.png)
-*Create products with multiple variants, images, categories, and pricing configurations*
+### �️ Product Management
+![Product Catalog](./samples/5-stores.png)
+*Comprehensive product catalog with filtering, search, and bulk operations*
 
 ---
 
-### 📦 Product Catalog
-![Product Management](./samples/products.png)
-*Comprehensive product catalog with advanced filtering by category, color, size, and store*
+### 🏪 Store Management
+![Store Setup](./samples/6-finance.png)
+*Multi-store configuration with location details and operational hours*
 
 ---
 
-### 💵 Price Calculator
-![Price Calculator](./samples/calcuate%20Price.png)
-*Smart pricing calculator with tax computation and profit margin analysis*
+### � Employee Records
+![Employees](./samples/7-employees.png)
+*Employee management with salary tracking, roles, and performance metrics*
 
 ---
 
-### 📊 Sales History
-![Sales](./samples/sales.png)
-*Complete sales transaction history with payment methods, customer info, and order details*
+### 🤝 Customer Database
+![Customers](./samples/8-customers.png)
+*Customer relationship management with loyalty tiers and purchase history*
 
 ---
 
-### 🏦 Finance Dashboard
-![Finance](./samples/finince.png)
-*Financial analytics with revenue, expenses, profit tracking, and performance charts*
+### 📊 Business Reports
+![Reports](./samples/9-reports.png)
+*Comprehensive analytics and reports with PDF/CSV export capabilities*
 
 ---
 
-### 💸 Expense Management
-![Expenses](./samples/expense%20Page.png)
-*Track business expenses with categories, dates, and detailed descriptions*
-
----
-
-### 📋 Inventory Tracking
-![Inventory](./samples/inventory.png)
-*Real-time inventory monitoring with stock levels, low stock alerts, and product movement*
-
----
-
-### 📈 Report Generation
-![Reports](./samples/reportPage.png)
-*Generate comprehensive business reports: sales, inventory, financial, and customer analytics*
-
----
-
-### 📄 View Generated Reports
-![Report Viewer](./samples/showRport.png)
-*Preview and export reports in PDF or CSV format with customizable date ranges*
+### ⚙️ Settings & Configuration
+![Settings](./samples/10-settings.png)
+*Customize theme, language, store details, and application preferences*
 
 ---
 
 ### 🔐 Secure Login
-![Login](./samples/login.png)
-*Modern login interface with secure authentication and role-based access control*
+![Login](./samples/11-login.png)
+*Role-based authentication with secure password handling and session management*
 
 </div>
 

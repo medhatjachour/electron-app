@@ -40,13 +40,29 @@ export default function POS(): JSX.Element {
   } = usePOS()
 
   const [cartOpen, setCartOpen] = useState(true)
+  const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
+
+  // Quick checkout with cash, no customer
+  const handleQuickCheckout = async () => {
+    if (cart.length === 0) {
+      alert('Cart is empty. Please add items first.')
+      return
+    }
+    setPaymentMethod('cash')
+    setSelectedCustomer(null)
+    setCustomerQuery('')
+    // Small delay to ensure state is updated
+    setTimeout(() => {
+      completeSale()
+    }, 100)
+  }
 
   return (
-    <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+    <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative">
       <SuccessModal show={showSuccess} total={total} paymentMethod={paymentMethod} />
 
-      {/* Main Product Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Product Area - Left Side */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ProductSearch 
           onAddToCart={addToCart}
           cartOpen={cartOpen}
@@ -99,11 +115,11 @@ export default function POS(): JSX.Element {
         </button>
       )}
 
-      {/* Cart Sidebar Panel - Optimized width based on screen size */}
+      {/* Cart Sidebar Panel - Right Side with Fixed Sections */}
       <div 
         className={`
           fixed lg:relative right-0 top-0 h-full z-50
-          w-full sm:w-96 lg:w-80 xl:w-96 2xl:w-[28rem]
+          w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
           bg-white dark:bg-slate-800 
           border-l border-slate-200 dark:border-slate-700
           shadow-2xl lg:shadow-none
@@ -112,80 +128,127 @@ export default function POS(): JSX.Element {
           flex flex-col
         `}
       >
-        {/* Cart Header with Close Button */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-primary/5 to-secondary/5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Compact Header with Close/Minimize Button */}
+        <div className="flex items-center justify-between px-4 py-3 border-b-2 border-primary bg-slate-50 dark:bg-slate-800/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Shopping Cart</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {totalItems} {totalItems === 1 ? 'item' : 'items'}
-              </p>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Current Order</h2>
             </div>
           </div>
           
-          {/* Enhanced Close Button with visual feedback */}
+          {/* Close/Minimize Button - Works on all screen sizes */}
           <button
             onClick={() => setCartOpen(false)}
-            className="group relative p-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all hover:scale-105 active:scale-95 lg:hidden"
-            aria-label="Close cart (or click outside)"
-            title="Close cart"
+            className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group"
+            aria-label="Minimize cart"
+            title="Minimize cart (more space for products)"
           >
-            <svg className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          {/* Desktop: Collapse/Expand Button */}
-          <button
-            onClick={() => setCartOpen(!cartOpen)}
-            className="hidden lg:block group relative p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95"
-            aria-label={cartOpen ? "Minimize cart" : "Expand cart"}
-            title={cartOpen ? "Minimize cart for more space" : "Expand cart"}
-          >
-            <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {cartOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              )}
+            <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7" />
             </svg>
           </button>
         </div>
 
-        {/* Cart Content */}
-        <div className="flex-1 overflow-hidden flex flex-col p-6">
-          <ShoppingCart
-            cart={cart}
-            totalItems={totalItems}
-            onUpdateQuantity={updateQuantity}
-            onRemoveFromCart={removeFromCart}
-            onClearCart={clearCart}
-          />
+        {/* Main Content Area - Scrollable with fixed sections */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Cart Items - Takes full space now */}
+          <div className="flex-1 overflow-auto">
+            <ShoppingCart
+              cart={cart}
+              totalItems={totalItems}
+              onUpdateQuantity={updateQuantity}
+              onRemoveFromCart={removeFromCart}
+              onClearCart={clearCart}
+            />
+          </div>
 
+          {/* Checkout Buttons - Always visible at bottom */}
           {cart.length > 0 && (
-            <>
-              <CustomerSelect
-                customers={customers}
-                selectedCustomer={selectedCustomer}
-                customerQuery={customerQuery}
-                onSelectCustomer={setSelectedCustomer}
-                onQueryChange={setCustomerQuery}
-              />
+            <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+              {showCheckoutOptions ? (
+                // Full Checkout Options (Customer + Payment)
+                <>
+                  {/* Customer Selection - Compact */}
+                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <CustomerSelect
+                      customers={customers}
+                      selectedCustomer={selectedCustomer}
+                      customerQuery={customerQuery}
+                      onSelectCustomer={setSelectedCustomer}
+                      onQueryChange={setCustomerQuery}
+                    />
+                  </div>
 
-              <PaymentSection
-                paymentMethod={paymentMethod}
-                onPaymentMethodChange={setPaymentMethod}
-                subtotal={subtotal}
-                tax={tax}
-                total={total}
-                onCompleteSale={completeSale}
-              />
-            </>
+                  {/* Payment Section */}
+                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <PaymentSection
+                      paymentMethod={paymentMethod}
+                      onPaymentMethodChange={setPaymentMethod}
+                      subtotal={subtotal}
+                      tax={tax}
+                      total={total}
+                      onCompleteSale={completeSale}
+                    />
+                  </div>
+
+                  {/* Back to Simple View */}
+                  <div className="px-4 py-2">
+                    <button
+                      onClick={() => setShowCheckoutOptions(false)}
+                      className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    >
+                      ← Back to Quick Checkout
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // Quick Checkout Buttons
+                <div className="p-4 space-y-2">
+                  {/* Order Summary - Compact */}
+                  <div className="space-y-1 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                      <span>Subtotal:</span>
+                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                      <span>Tax ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
+                      <span className="font-semibold">${tax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-600">
+                      <span className="text-base font-bold text-slate-900 dark:text-white">Total:</span>
+                      <span className="text-2xl font-bold text-primary">${total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Cash Checkout */}
+                  <button
+                    onClick={handleQuickCheckout}
+                    className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-success to-emerald-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Quick Checkout (Cash)
+                  </button>
+
+                  {/* More Options Button */}
+                  <button
+                    onClick={() => setShowCheckoutOptions(true)}
+                    className="w-full py-3 text-sm font-semibold rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    More Options (Customer/Card)
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
