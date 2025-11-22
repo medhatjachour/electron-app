@@ -76,15 +76,16 @@ export class PredictionService {
    */
   async forecastRevenue(days: number = 30, historicalDays: number = 90): Promise<ForecastResult> {
     try {
-      // Get historical sales data
+      // Get historical sales data from SaleTransaction
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - historicalDays)
 
-      const sales = await this.prisma.sale.findMany({
+      const transactions = await this.prisma.saleTransaction.findMany({
         where: {
           createdAt: {
             gte: startDate
-          }
+          },
+          status: 'completed'
         },
         orderBy: {
           createdAt: 'asc'
@@ -92,7 +93,7 @@ export class PredictionService {
       })
 
       // Group by day
-      const dailySales = this.groupSalesByDay(sales)
+      const dailySales = this.groupTransactionsByDay(transactions)
       const dataPoints = Object.entries(dailySales).map(([date, revenue], index) => ({
         x: index,
         y: revenue,
@@ -153,10 +154,47 @@ export class PredictionService {
       // Detect seasonality
       const seasonalityDetected = this.detectSeasonality(dataPoints)
       
-      // Calculate growth rate
-      const recentAvg = this.average(dataPoints.slice(-7).map(p => p.y))
-      const oldAvg = this.average(dataPoints.slice(0, 7).map(p => p.y))
-      const growthRate = oldAvg > 0 ? ((recentAvg - oldAvg) / oldAvg) * 100 : 0
+      // Calculate growth rate with improved logic and safeguards
+      let growthRate = 0
+      const minRevenueThreshold = 100 // Need at least $100 avg revenue for meaningful growth calc
+      
+      if (dataPoints.length >= 14) {
+        // Compare last 7 days to previous 7 days
+        const recentAvg = this.average(dataPoints.slice(-7).map(p => p.y))
+        const oldAvg = this.average(dataPoints.slice(-14, -7).map(p => p.y))
+        
+        // Only calculate if both periods have meaningful revenue
+        if (oldAvg >= minRevenueThreshold && recentAvg >= minRevenueThreshold) {
+          const rawGrowth = ((recentAvg - oldAvg) / oldAvg) * 100
+          growthRate = Math.max(-200, Math.min(200, rawGrowth))
+          if (rawGrowth !== growthRate) {
+            console.log(`[Growth Rate] ⚠️ Raw growth ${rawGrowth.toFixed(1)}% CAPPED at ${growthRate}%`)
+          }
+        }
+        console.log(`[Growth Rate] 14+ days: Recent avg: $${recentAvg.toFixed(2)}, Old avg: $${oldAvg.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
+      } else if (dataPoints.length >= 7) {
+        // Compare last half to first half
+        const midpoint = Math.floor(dataPoints.length / 2)
+        const recentAvg = this.average(dataPoints.slice(midpoint).map(p => p.y))
+        const oldAvg = this.average(dataPoints.slice(0, midpoint).map(p => p.y))
+        
+        // Only calculate if both periods have meaningful revenue
+        if (oldAvg >= minRevenueThreshold && recentAvg >= minRevenueThreshold) {
+          growthRate = ((recentAvg - oldAvg) / oldAvg) * 100
+          // Cap extreme values at ±200%
+          growthRate = Math.max(-200, Math.min(200, growthRate))
+        }
+        console.log(`[Growth Rate] 7-13 days (midpoint=${midpoint}): Recent avg: $${recentAvg.toFixed(2)}, Old avg: $${oldAvg.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
+      } else {
+        // Not enough data - use slope to estimate growth
+        const avgRevenue = this.average(dataPoints.map(p => p.y))
+        if (avgRevenue >= minRevenueThreshold) {
+          growthRate = (slope * 7 / avgRevenue) * 100 // Weekly growth as percentage
+          // Cap extreme values
+          growthRate = Math.max(-200, Math.min(200, growthRate))
+        }
+        console.log(`[Growth Rate] <7 days: Slope: ${slope}, Avg Revenue: $${avgRevenue.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
+      }
 
       // Determine trend
       const trend = slope > 0.5 ? 'up' : slope < -0.5 ? 'down' : 'stable'
@@ -244,18 +282,23 @@ export class PredictionService {
       // Get forecast
       const forecast = await this.forecastRevenue(days)
       
-      // Get historical sales to calculate average daily outflow (cost of goods)
+      // Get historical sales to calculate COGS percentage and expenses
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const sales = await this.prisma.sale.findMany({
+      const transactions = await this.prisma.saleTransaction.findMany({
         where: {
           createdAt: {
             gte: thirtyDaysAgo
-          }
+          },
+          status: 'completed'
         },
         include: {
-          product: true
+          items: {
+            include: {
+              product: true
+            }
+          }
         }
       })
 
@@ -269,24 +312,31 @@ export class PredictionService {
         }
       })
 
-      // Calculate average daily cost (COGS + operational expenses)
-      const totalCOGS = sales.reduce((sum, sale) => {
-        return sum + (sale.quantity * sale.product.baseCost)
-      }, 0)
+      // Calculate COGS as percentage of revenue (more accurate than fixed average)
+      const totalRevenue = transactions.reduce((sum, txn) => sum + txn.total, 0)
+      let totalCOGS = 0
+      transactions.forEach(txn => {
+        txn.items.forEach(item => {
+          totalCOGS += item.quantity * item.product.baseCost
+        })
+      })
+      const cogsPercentage = totalRevenue > 0 ? totalCOGS / totalRevenue : 0.5 // Default to 50% if no data
+      
+      // Calculate average daily operational expenses
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
-      const avgDailyCOGS = totalCOGS / 30
       const avgDailyExpenses = totalExpenses / 30
-      const avgDailyOutflow = avgDailyCOGS + avgDailyExpenses
 
-      console.log(`[Cash Flow] Avg Daily COGS: $${avgDailyCOGS.toFixed(2)}, Avg Daily Expenses: $${avgDailyExpenses.toFixed(2)}, Total Outflow: $${avgDailyOutflow.toFixed(2)}`)
+      console.log(`[Cash Flow] COGS Percentage: ${(cogsPercentage * 100).toFixed(1)}%, Avg Daily Expenses: $${avgDailyExpenses.toFixed(2)}`)
 
       // Calculate current cash position from recent revenue minus all costs
-      const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0)
       let cumulativeCash = totalRevenue - totalCOGS - totalExpenses
 
+      // Project cash flow with variable COGS based on forecasted revenue
       const projections = forecast.predictions.map(pred => {
         const expectedInflow = pred.predictedRevenue
-        const expectedOutflow = avgDailyOutflow
+        // COGS scales with revenue + fixed operational expenses
+        const expectedCOGS = expectedInflow * cogsPercentage
+        const expectedOutflow = expectedCOGS + avgDailyExpenses
         const netCashFlow = expectedInflow - expectedOutflow
         cumulativeCash += netCashFlow
 
@@ -633,15 +683,18 @@ export class PredictionService {
         select: { stock: true }
       })
       
-      // Calculate average inventory from all variants
+      // Calculate total current inventory across all variants
       const totalStock = variants.reduce((sum, v) => sum + v.stock, 0)
-      const avgInventory = variants.length > 0 ? totalStock / variants.length : 1
+      const avgInventory = totalStock > 0 ? totalStock : 1 // Use total stock as "average" inventory level
       
-      // Turnover = Units Sold / Average Inventory (annualized)
+      // Turnover = Units Sold / Total Inventory (annualized from 30 days to yearly)
+      // Formula: (Units Sold in 30 days / Current Inventory) × (365 / 30)
       const inventoryTurnover = avgInventory > 0 ? (totalUnitsSold / avgInventory) * (365 / 30) : 0
+      
+      console.log(`[Financial Health] Units Sold: ${totalUnitsSold}, Total Stock: ${totalStock}, Turnover: ${inventoryTurnover.toFixed(2)}x`)
 
-      // Get growth rate from revenue forecast
-      const forecast = await this.forecastRevenue(30, 90)
+      // Get growth rate from revenue forecast - use same 30 days as other metrics
+      const forecast = await this.forecastRevenue(30, 30)
       const growthRate = forecast.growthRate
 
       // Calculate cash position (net profit represents available cash from operations)
@@ -771,12 +824,12 @@ export class PredictionService {
 
   // ========== HELPER METHODS ==========
 
-  private groupSalesByDay(sales: any[]): Record<string, number> {
+  private groupTransactionsByDay(transactions: any[]): Record<string, number> {
     const grouped: Record<string, number> = {}
     
-    sales.forEach(sale => {
-      const date = sale.createdAt.toISOString().split('T')[0]
-      grouped[date] = (grouped[date] || 0) + sale.total
+    transactions.forEach(txn => {
+      const date = txn.createdAt.toISOString().split('T')[0]
+      grouped[date] = (grouped[date] || 0) + txn.total
     })
 
     return grouped
