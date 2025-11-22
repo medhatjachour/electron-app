@@ -9,7 +9,7 @@
     "dev": "electron-vite dev",
     "build": "npm run prisma:generate && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
