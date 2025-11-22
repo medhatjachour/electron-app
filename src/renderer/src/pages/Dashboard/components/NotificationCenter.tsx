@@ -4,7 +4,10 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
+import { useToast } from '../../../contexts/ToastContext'
 
 type Notification = {
   id: string
@@ -20,6 +23,9 @@ type Notification = {
 }
 
 export default function NotificationCenter() {
+  const { user } = useAuth()
+  const { warning } = useToast()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showAll, setShowAll] = useState(false)
 
@@ -201,13 +207,20 @@ export default function NotificationCenter() {
                       {notification.timestamp.toLocaleTimeString()}
                     </span>
                     {notification.action && (
-                      <a
-                        href={notification.action.link}
-                        onClick={() => markAsRead(notification.id)}
-                        className="text-xs font-medium text-primary hover:underline"
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (!user) {
+                            warning('Please log in to view details', 4000)
+                          } else if (notification.action) {
+                            markAsRead(notification.id)
+                            navigate(notification.action.link)
+                          }
+                        }}
+                        className="text-xs font-medium text-primary hover:underline cursor-pointer bg-transparent border-0"
                       >
                         {notification.action.label} →
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>

@@ -4,10 +4,15 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Package, ArrowRight } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
+import { useToast } from '../../../contexts/ToastContext'
 
 export default function InventoryAlerts() {
+  const { user } = useAuth()
+  const { warning } = useToast()
+  const navigate = useNavigate()
   const [alerts, setAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -35,13 +40,20 @@ export default function InventoryAlerts() {
           <AlertTriangle size={18} className="text-amber-600" />
           Inventory Alerts
         </h3>
-        <Link
-          to="/inventory"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            if (!user) {
+              warning('Please log in to view inventory', 4000)
+            } else {
+              navigate('/inventory')
+            }
+          }}
+          className="text-xs text-primary hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
         >
           View All
           <ArrowRight size={12} />
-        </Link>
+        </button>
       </div>
 
       {loading ? (
