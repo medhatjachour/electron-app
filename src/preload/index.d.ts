@@ -81,6 +81,26 @@ interface API {
     delete: (id: string) => Promise<any>
     updateLastLogin: (id: string) => Promise<any>
   }
+  employees: {
+    getAll: () => Promise<any>
+    getById: (id: string) => Promise<any>
+    create: (employeeData: {
+      name: string
+      role: string
+      email: string
+      phone: string
+      salary: number
+    }) => Promise<any>
+    update: (id: string, employeeData: {
+      name?: string
+      role?: string
+      email?: string
+      phone?: string
+      salary?: number
+      performance?: number
+    }) => Promise<any>
+    delete: (id: string) => Promise<any>
+  }
   reports: {
     getSalesData: (options: { startDate: Date; endDate: Date }) => Promise<any>
     getInventoryData: (options: { startDate: Date; endDate: Date }) => Promise<any>

@@ -30,7 +30,9 @@ import {
   MoreHorizontal,
   X,
   Save,
-  Search
+  Search,
+  Users,
+  TrendingUp
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -83,6 +85,8 @@ export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState<ExpenseCategory | 'all'>('all')
   const [dateRange, setDateRange] = useState<'7days' | '30days' | '90days' | 'all'>('30days')
+  const [totalSalaries, setTotalSalaries] = useState<number>(0)
+  const [employeeCount, setEmployeeCount] = useState<number>(0)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -93,7 +97,22 @@ export default function Expenses() {
 
   useEffect(() => {
     loadExpenses()
+    loadSalaryData()
   }, [dateRange])
+
+  const loadSalaryData = async () => {
+    try {
+      const employees = await window.api.employees.getAll()
+      const activeSalaries = employees
+        .filter((emp: any) => emp.salary && emp.salary > 0)
+        .reduce((sum: number, emp: any) => sum + emp.salary, 0)
+      
+      setTotalSalaries(activeSalaries)
+      setEmployeeCount(employees.length)
+    } catch (err) {
+      console.error('Failed to load salary data:', err)
+    }
+  }
 
   const loadExpenses = async () => {
     try {
@@ -122,8 +141,8 @@ export default function Expenses() {
 
       // @ts-ignore - Call finance API to get transactions
       const data = await window.api.finance.getTransactions({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        startDate: startDate,
+        endDate: endDate
       })
 
       // Filter only expenses
@@ -253,12 +272,24 @@ export default function Expenses() {
 
   // Calculate statistics
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalWithSalaries = totalExpenses + totalSalaries
   const expensesByCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: filteredExpenses
       .filter(e => e.category === cat.id)
       .reduce((sum, e) => sum + e.amount, 0)
   })).filter(cat => cat.total > 0)
+  
+  // Add salaries as a virtual category if there are any
+  const categoriesWithSalaries = totalSalaries > 0 
+    ? [...expensesByCategory, {
+        id: 'salaries' as const,
+        name: 'Employee Salaries',
+        icon: Users,
+        color: 'bg-purple-500',
+        total: totalSalaries
+      }]
+    : expensesByCategory
 
   const getCategoryName = (categoryId: ExpenseCategory) => {
     return EXPENSE_CATEGORIES.find(c => c.id === categoryId)?.name || 'Other'
@@ -311,7 +342,7 @@ export default function Expenses() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Expenses</h3>
@@ -327,26 +358,39 @@ export default function Expenses() {
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg per Expense</h3>
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Receipt size={20} className="text-blue-600 dark:text-blue-400" />
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Employee Salaries</h3>
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Users size={20} className="text-purple-600 dark:text-purple-400" />
             </div>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
-            ${filteredExpenses.length > 0 ? (totalExpenses / filteredExpenses.length).toFixed(2) : '0.00'}
+            ${totalSalaries.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">Per transaction</p>
+          <p className="text-sm text-slate-500 mt-1">{employeeCount} employees</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Total with Salaries</h3>
+            <div className="p-2 bg-orange-500/10 rounded-lg">
+              <TrendingUp size={20} className="text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">
+            ${totalWithSalaries.toFixed(2)}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">Complete overview</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Categories</h3>
-            <div className="p-2 bg-purple-500/10 rounded-lg">
-              <Filter size={20} className="text-purple-600 dark:text-purple-400" />
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Filter size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
-            {expensesByCategory.length}
+            {categoriesWithSalaries.length}
           </p>
           <p className="text-sm text-slate-500 mt-1">Active categories</p>
         </div>
@@ -394,17 +438,17 @@ export default function Expenses() {
       </div>
 
       {/* Charts */}
-      {expensesByCategory.length > 0 && (
+      {categoriesWithSalaries.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Pie Chart */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Expenses by Category</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Expenses by Category (Including Salaries)</h3>
             <div className="h-64">
               <Pie
                 data={{
-                  labels: expensesByCategory.map(c => c.name),
+                  labels: categoriesWithSalaries.map(c => c.name),
                   datasets: [{
-                    data: expensesByCategory.map(c => c.total),
+                    data: categoriesWithSalaries.map(c => c.total),
                     backgroundColor: [
                       'rgba(59, 130, 246, 0.8)',
                       'rgba(234, 179, 8, 0.8)',
@@ -414,7 +458,8 @@ export default function Expenses() {
                       'rgba(251, 146, 60, 0.8)',
                       'rgba(239, 68, 68, 0.8)',
                       'rgba(99, 102, 241, 0.8)',
-                      'rgba(100, 116, 139, 0.8)'
+                      'rgba(100, 116, 139, 0.8)',
+                      'rgba(147, 51, 234, 0.8)'
                     ],
                     borderWidth: 2,
                     borderColor: '#fff'
@@ -429,7 +474,7 @@ export default function Expenses() {
                       callbacks: {
                         label: (context) => {
                           const value = context.parsed
-                          const percentage = ((value / totalExpenses) * 100).toFixed(1)
+                          const percentage = ((value / totalWithSalaries) * 100).toFixed(1)
                           return `${context.label}: $${value.toFixed(2)} (${percentage}%)`
                         }
                       }
@@ -446,12 +491,19 @@ export default function Expenses() {
             <div className="h-64">
               <Bar
                 data={{
-                  labels: expensesByCategory.map(c => c.name),
+                  labels: categoriesWithSalaries.map(c => c.name),
                   datasets: [{
                     label: 'Amount ($)',
-                    data: expensesByCategory.map(c => c.total),
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                    borderColor: 'rgb(239, 68, 68)',
+                    data: categoriesWithSalaries.map(c => c.total),
+                    backgroundColor: categoriesWithSalaries.map(c => {
+                      // Use different colors for salaries
+                      if (c.id === 'salaries') return 'rgba(147, 51, 234, 0.8)'
+                      return 'rgba(239, 68, 68, 0.8)'
+                    }),
+                    borderColor: categoriesWithSalaries.map(c => {
+                      if (c.id === 'salaries') return 'rgb(147, 51, 234)'
+                      return 'rgb(239, 68, 68)'
+                    }),
                     borderWidth: 1
                   }]
                 }}
