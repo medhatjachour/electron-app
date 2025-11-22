@@ -11,8 +11,9 @@ type Goal = {
   name: string
   target: number
   current: number
-  period: 'daily' | 'weekly' | 'monthly'
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly'
   type: 'revenue' | 'sales' | 'customers'
+  goalTypeId: string // Links to GOAL_TYPES
 }
 
 export default function GoalTracking() {
@@ -23,7 +24,8 @@ export default function GoalTracking() {
       target: 50000,
       current: 0,
       period: 'monthly',
-      type: 'revenue'
+      type: 'revenue',
+      goalTypeId: 'revenue'
     },
     {
       id: '2',
@@ -31,7 +33,8 @@ export default function GoalTracking() {
       target: 100,
       current: 0,
       period: 'weekly',
-      type: 'sales'
+      type: 'sales',
+      goalTypeId: 'sales'
     },
     {
       id: '3',
@@ -39,7 +42,8 @@ export default function GoalTracking() {
       target: 50,
       current: 0,
       period: 'monthly',
-      type: 'customers'
+      type: 'customers',
+      goalTypeId: 'new-customers'
     }
   ])
 
@@ -47,10 +51,9 @@ export default function GoalTracking() {
   const [showModal, setShowModal] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [formData, setFormData] = useState({
-    name: '',
+    goalTypeId: '',
     target: 0,
-    period: 'monthly' as 'daily' | 'weekly' | 'monthly',
-    type: 'revenue' as 'revenue' | 'sales' | 'customers'
+    period: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly'
   })
 
   useEffect(() => {
@@ -107,13 +110,124 @@ export default function GoalTracking() {
     return 'text-red-600 dark:text-red-400'
   }
 
+  // Goal type templates (user picks type + period separately)
+  const GOAL_TYPES = [
+    {
+      id: 'revenue',
+      name: 'Revenue',
+      type: 'revenue' as const,
+      description: 'Track total revenue for the period',
+      defaultTargets: {
+        daily: 2000,
+        weekly: 15000,
+        monthly: 50000,
+        yearly: 600000
+      }
+    },
+    {
+      id: 'profit',
+      name: 'Profit',
+      type: 'revenue' as const,
+      description: 'Track net profit (revenue - expenses)',
+      defaultTargets: {
+        daily: 800,
+        weekly: 6000,
+        monthly: 25000,
+        yearly: 300000
+      }
+    },
+    {
+      id: 'sales',
+      name: 'Sales Transactions',
+      type: 'sales' as const,
+      description: 'Track number of completed sales',
+      defaultTargets: {
+        daily: 20,
+        weekly: 100,
+        monthly: 400,
+        yearly: 5000
+      }
+    },
+    {
+      id: 'new-customers',
+      name: 'New Customers',
+      type: 'customers' as const,
+      description: 'Track newly acquired customers',
+      defaultTargets: {
+        daily: 5,
+        weekly: 15,
+        monthly: 50,
+        yearly: 600
+      }
+    },
+    {
+      id: 'total-customers',
+      name: 'Total Active Customers',
+      type: 'customers' as const,
+      description: 'Track total number of active customers',
+      defaultTargets: {
+        daily: 500,
+        weekly: 500,
+        monthly: 500,
+        yearly: 1000
+      }
+    },
+    {
+      id: 'avg-transaction',
+      name: 'Average Transaction Value',
+      type: 'revenue' as const,
+      description: 'Track average sale amount per transaction',
+      defaultTargets: {
+        daily: 100,
+        weekly: 110,
+        monthly: 125,
+        yearly: 130
+      }
+    },
+    {
+      id: 'products-sold',
+      name: 'Products Sold',
+      type: 'sales' as const,
+      description: 'Track total number of products sold',
+      defaultTargets: {
+        daily: 50,
+        weekly: 250,
+        monthly: 1000,
+        yearly: 12000
+      }
+    },
+    {
+      id: 'revenue-growth',
+      name: 'Revenue Growth Rate',
+      type: 'revenue' as const,
+      description: 'Track revenue growth percentage',
+      defaultTargets: {
+        daily: 5,
+        weekly: 8,
+        monthly: 10,
+        yearly: 20
+      }
+    },
+    {
+      id: 'customer-retention',
+      name: 'Customer Retention Rate',
+      type: 'customers' as const,
+      description: 'Track percentage of returning customers',
+      defaultTargets: {
+        daily: 70,
+        weekly: 75,
+        monthly: 80,
+        yearly: 85
+      }
+    }
+  ]
+
   const handleAddGoal = () => {
     setEditingGoal(null)
     setFormData({
-      name: '',
+      goalTypeId: '',
       target: 0,
-      period: 'monthly',
-      type: 'revenue'
+      period: 'monthly'
     })
     setShowModal(true)
   }
@@ -121,36 +235,64 @@ export default function GoalTracking() {
   const handleEditGoal = (goal: Goal) => {
     setEditingGoal(goal)
     setFormData({
-      name: goal.name,
+      goalTypeId: goal.goalTypeId,
       target: goal.target,
-      period: goal.period,
-      type: goal.type
+      period: goal.period
     })
     setShowModal(true)
   }
 
   const handleSaveGoal = () => {
-    if (!formData.name || formData.target <= 0) {
-      alert('Please fill in all fields with valid values')
+    if (formData.target <= 0) {
+      alert('Please enter a valid target value greater than 0')
+      return
+    }
+
+    if (!formData.goalTypeId) {
+      alert('Please select a goal type')
+      return
+    }
+
+    const selectedGoalType = GOAL_TYPES.find(g => g.id === formData.goalTypeId)
+    if (!selectedGoalType) {
+      alert('Invalid goal type')
       return
     }
 
     if (editingGoal) {
-      // Update existing goal
+      // Update existing goal's target and period
       setGoals(prev => prev.map(g => 
         g.id === editingGoal.id 
-          ? { ...g, ...formData, target: Number(formData.target) }
+          ? { 
+              ...g, 
+              target: Number(formData.target),
+              period: formData.period,
+              name: `${getPeriodLabel(formData.period)} ${selectedGoalType.name}`
+            }
           : g
       ))
     } else {
-      // Add new goal
+      // Add new goal with selected type and period
+      const goalId = `${formData.goalTypeId}-${formData.period}-${Date.now()}`
+      
+      // Check if this exact goal already exists
+      const exists = goals.some(g => 
+        g.goalTypeId === formData.goalTypeId && 
+        g.period === formData.period
+      )
+      if (exists) {
+        alert(`A ${formData.period} ${selectedGoalType.name} goal already exists. You can edit it instead.`)
+        return
+      }
+
       const newGoal: Goal = {
-        id: Date.now().toString(),
-        name: formData.name,
+        id: goalId,
+        name: `${getPeriodLabel(formData.period)} ${selectedGoalType.name}`,
         target: Number(formData.target),
         current: 0,
         period: formData.period,
-        type: formData.type
+        type: selectedGoalType.type,
+        goalTypeId: formData.goalTypeId
       }
       setGoals(prev => [...prev, newGoal])
     }
@@ -160,6 +302,16 @@ export default function GoalTracking() {
     
     // Reload progress after saving
     setTimeout(() => loadGoalProgress(), 500)
+  }
+
+  const getPeriodLabel = (period: string) => {
+    const labels: Record<string, string> = {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    }
+    return labels[period] || period
   }
 
   return (
@@ -181,65 +333,80 @@ export default function GoalTracking() {
             </div>
 
             <div className="space-y-4">
-              {/* Goal Name */}
+              {/* Goal Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Goal Name
+                  Goal Type
                 </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                <select
+                  value={formData.goalTypeId}
+                  onChange={(e) => {
+                    const selected = GOAL_TYPES.find(g => g.id === e.target.value)
+                    setFormData({ 
+                      ...formData, 
+                      goalTypeId: e.target.value,
+                      target: selected?.defaultTargets[formData.period] || 0
+                    })
+                  }}
+                  disabled={!!editingGoal}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">-- Choose a goal type --</option>
+                  {GOAL_TYPES.map(goalType => (
+                    <option key={goalType.id} value={goalType.id}>
+                      {goalType.name}
+                    </option>
+                  ))}
+                </select>
+                {formData.goalTypeId && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {GOAL_TYPES.find(g => g.id === formData.goalTypeId)?.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Time Period Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Time Period
+                </label>
+                <select
+                  value={formData.period}
+                  onChange={(e) => {
+                    const period = e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly'
+                    const selectedGoalType = GOAL_TYPES.find(g => g.id === formData.goalTypeId)
+                    setFormData({ 
+                      ...formData, 
+                      period,
+                      target: selectedGoalType?.defaultTargets[period] || formData.target
+                    })
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="e.g., Monthly Revenue"
-                />
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
               </div>
 
               {/* Target Value */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Target Value
+                  {formData.goalTypeId && GOAL_TYPES.find(g => g.id === formData.goalTypeId)?.type === 'revenue' && ' ($)'}
+                  {formData.goalTypeId && GOAL_TYPES.find(g => g.id === formData.goalTypeId)?.type === 'sales' && ' (transactions/products)'}
+                  {formData.goalTypeId && GOAL_TYPES.find(g => g.id === formData.goalTypeId)?.type === 'customers' && ' (customers/%)'}
                 </label>
                 <input
                   type="number"
                   value={formData.target || ''}
                   onChange={(e) => setFormData({ ...formData, target: Number(e.target.value) })}
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="e.g., 50000"
+                  placeholder="Enter target value"
                   min="0"
+                  step={formData.goalTypeId && GOAL_TYPES.find(g => g.id === formData.goalTypeId)?.type === 'revenue' ? '100' : '1'}
                 />
-              </div>
-
-              {/* Period */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Period
-                </label>
-                <select
-                  value={formData.period}
-                  onChange={(e) => setFormData({ ...formData, period: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-
-              {/* Type */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Type
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="revenue">Revenue</option>
-                  <option value="sales">Sales (Transactions)</option>
-                  <option value="customers">Customers</option>
-                </select>
               </div>
             </div>
 
@@ -342,7 +509,7 @@ export default function GoalTracking() {
             )
           })}
         </div>
-        )}
+      )}
       </div>
     </>
   )

@@ -195,7 +195,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
               BF
             </div>
             {sidebarOpen && (
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="text-xl font-bold ">
                 BizFlow
               </span>
             )}
