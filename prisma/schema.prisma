@@ -22,6 +22,7 @@ model User {
   sales                 Sale[]                 // Old sales (backward compatibility)
   saleTransactions      SaleTransaction[]      // New transaction-based sales
   financialTransactions FinancialTransaction[] // Financial records
+  stockMovements        StockMovement[]        // Inventory changes made by this user
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   
@@ -90,16 +91,19 @@ model ProductImage {
 }
 
 model ProductVariant {
-  id        String   @id @default(uuid())
-  productId String
-  color     String?
-  size      String?
-  sku       String   @unique
-  price     Float
-  stock     Int      @default(0)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String          @id @default(uuid())
+  productId      String
+  color          String?
+  size           String?
+  sku            String          @unique
+  price          Float
+  stock          Int             @default(0)
+  reorderPoint   Int             @default(10) // Alert when stock reaches this level
+  lastRestocked  DateTime?       // Track last restock date
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[] // Track all stock changes
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   
   // Single-column indexes
   @@index([productId])
@@ -112,6 +116,29 @@ model ProductVariant {
   @@index([productId, price])
   @@index([stock, price])
   @@index([color, size, stock])
+}
+
+// Stock Movement History - Track every inventory change
+model StockMovement {
+  id            String         @id @default(uuid())
+  variantId     String
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  type          String         // 'RESTOCK', 'SALE', 'ADJUSTMENT', 'SHRINKAGE', 'RETURN'
+  quantity      Int            // Positive for additions, negative for reductions
+  previousStock Int            // Stock level before this movement
+  newStock      Int            // Stock level after this movement
+  reason        String?        // Optional: reason for adjustment/shrinkage
+  referenceId   String?        // Optional: related sale ID, PO number, etc.
+  userId        String?        // Who made the change
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notes         String?        // Additional notes
+  createdAt     DateTime       @default(now())
+  
+  @@index([variantId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([variantId, createdAt])
+  @@index([variantId, type])
 }
 
 // Sales Transaction - One record per checkout/sale operation

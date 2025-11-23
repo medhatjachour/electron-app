@@ -13,16 +13,19 @@
  */
 
 import { useState, useMemo } from 'react'
-import { Search, Filter, Download, Plus, RefreshCw, Package, AlertTriangle } from 'lucide-react'
+import { Search, Filter, Download, Plus, RefreshCw, Package, AlertTriangle, TrendingUp, History } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
 import { useDebounce } from '../../hooks/useDebounce'
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts'
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate'
 import { useToast } from '../../hooks/useToast'
+import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
 import ToastContainer from '../../components/ui/ToastContainer'
+import ProductAnalytics from './components/ProductAnalytics'
+import StockHistory from './components/StockHistory'
 import * as XLSX from 'xlsx'
 
 import type { InventoryFilters as Filters, InventorySortOptions } from './types'
@@ -34,12 +37,18 @@ import logger from '../../../../shared/utils/logger'
 
 const ITEMS_PER_PAGE = 50
 
+type TabType = 'products' | 'analytics' | 'history'
+
 export default function InventoryPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('products')
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
   const [isExporting, setIsExporting] = useState(false)
+  
+  // Get display settings for image loading
+  const { settings: displaySettings } = useDisplaySettings()
   
   // Load filter metadata (categories, colors, sizes)
   const { metadata: filterMetadata } = useFilterMetadata()
@@ -95,7 +104,7 @@ export default function InventoryPage() {
     options: {
       debounceMs: 300,
       limit: ITEMS_PER_PAGE,
-      includeImages: false,
+      includeImages: displaySettings.showImagesInInventory,  // Controlled by display settings
       includeMetrics: true  // Get metrics for dashboard
     }
   })
@@ -270,129 +279,188 @@ export default function InventoryPage() {
               <Package className="text-primary" size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inventory Overview</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inventory Management</h1>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Manage your product inventory and stock levels • Showing {ITEMS_PER_PAGE} items per page
+                Manage products, analyze sales, and track stock movements
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2" role="toolbar" aria-label="Inventory actions">
-            <button
-              onClick={refetch}
-              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-              disabled={loading}
-              aria-label={loading ? 'Refreshing inventory' : 'Refresh inventory'}
-              aria-busy={loading}
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
-              Refresh
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={isExporting || items.length === 0}
-              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={isExporting ? 'Exporting inventory' : `Export ${items.length} items to Excel`}
-              aria-busy={isExporting}
-              aria-disabled={items.length === 0}
-            >
-              {isExporting ? (
-                <>
-                  <RefreshCw size={18} className="animate-spin" aria-hidden="true" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Download size={18} aria-hidden="true" />
-                  Export ({items.length})
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleAddItem}
-              className="btn-primary flex items-center gap-2"
-              aria-label="Add new inventory item"
-            >
-              <Plus size={18} aria-hidden="true" />
-              Add Item
-            </button>
+            {activeTab === 'products' && (
+              <>
+                <button
+                  onClick={refetch}
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  disabled={loading}
+                  aria-label={loading ? 'Refreshing inventory' : 'Refresh inventory'}
+                  aria-busy={loading}
+                >
+                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+                  Refresh
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting || items.length === 0}
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={isExporting ? 'Exporting inventory' : `Export ${items.length} items to Excel`}
+                  aria-busy={isExporting}
+                  aria-disabled={items.length === 0}
+                >
+                  {isExporting ? (
+                    <>
+                      <RefreshCw size={18} className="animate-spin" aria-hidden="true" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} aria-hidden="true" />
+                      Export ({items.length})
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleAddItem}
+                  className="btn-primary flex items-center gap-2"
+                  aria-label="Add new inventory item"
+                >
+                  <Plus size={18} aria-hidden="true" />
+                  Add Item
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
-            <input
-              type="search"
-              placeholder="Search by name, SKU, category..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-              aria-label="Search inventory items by name, SKU, or category"
-              role="searchbox"
-            />
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4">
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2.5 rounded-lg border transition-all flex items-center gap-2 ${
-              showFilters
-                ? 'bg-primary text-white border-primary'
-                : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+            onClick={() => setActiveTab('products')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'products'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
-            aria-label={showFilters ? 'Hide filters' : 'Show filters'}
-            aria-expanded={showFilters}
-            aria-controls="inventory-filters"
           >
-            <Filter size={18} aria-hidden="true" />
-            Filters
+            <Package size={18} />
+            Products
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'analytics'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <TrendingUp size={18} />
+            Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'history'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <History size={18} />
+            Stock History
           </button>
         </div>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <section id="inventory-filters" aria-label="Inventory filters">
-            <InventoryFilters
-              categories={categories}
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-            />
-          </section>
+        {/* Search and Filters - Only show for products tab */}
+        {activeTab === 'products' && (
+          <>
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder="Search by name, SKU, category..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  aria-label="Search inventory items by name, SKU, or category"
+                  role="searchbox"
+                />
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2.5 rounded-lg border transition-all flex items-center gap-2 ${
+                  showFilters
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+                aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                aria-expanded={showFilters}
+                aria-controls="inventory-filters"
+              >
+                <Filter size={18} aria-hidden="true" />
+                Filters
+              </button>
+            </div>
+
+            {/* Filters Panel */}
+            {showFilters && (
+              <section id="inventory-filters" aria-label="Inventory filters">
+                <InventoryFilters
+                  categories={categories}
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                />
+              </section>
+            )}
+          </>
         )}
       </header>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 flex overflow-hidden">
-          {/* Inventory Table */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-hidden">
-              <InventoryTable
-                items={items}
-                loading={loading}
-                sortOptions={sortOptions}
-                onSortChange={handleSortChange}
-                onItemClick={setSelectedItem}
-              />
+        {activeTab === 'products' && (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Inventory Table */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-hidden">
+                <InventoryTable
+                  items={items}
+                  loading={loading}
+                  sortOptions={sortOptions}
+                  onSortChange={handleSortChange}
+                  onItemClick={setSelectedItem}
+                />
+              </div>
+              
+              {/* Pagination */}
+              {!loading && items.length > 0 && (
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalItems={totalCount}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={pagination.setPage}
+                />
+              )}
             </div>
-            
-            {/* Pagination */}
-            {!loading && items.length > 0 && (
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={totalCount}
-                itemsPerPage={ITEMS_PER_PAGE}
-                onPageChange={pagination.setPage}
-              />
-            )}
-          </div>
 
-          {/* Metrics Sidebar */}
-          <div className="w-80 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
-            <InventoryMetrics metrics={metrics} loading={loading} items={items} />
+            {/* Metrics Sidebar */}
+            <div className="w-80 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
+              <InventoryMetrics metrics={metrics} loading={loading} items={items} />
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
+            <ProductAnalytics />
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
+            <StockHistory />
+          </div>
+        )}
       </div>
 
       {/* Item Detail Drawer */}

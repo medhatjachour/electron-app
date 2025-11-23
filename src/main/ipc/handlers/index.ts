@@ -20,6 +20,7 @@ import { registerCustomersHandlers } from './customers.handlers'
 import { registerSearchHandlers } from './search.handlers'
 import { registerUserHandlers } from './user.handlers'
 import { registerReportsHandlers } from './reports.handlers'
+import { registerAnalyticsHandlers } from './analytics.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
@@ -137,6 +138,9 @@ export function registerAllHandlers() {
   
   registerReportsHandlers(prisma)
   console.log('  ✓ Reports handlers registered')
+  
+  // Register analytics handlers (self-contained with own Prisma instance)
+  registerAnalyticsHandlers()
   
   console.log('✅ All IPC handlers registered successfully')
 }

@@ -58,14 +58,39 @@ export function registerSaleTransactionHandlers(prisma: any) {
           )
         )
 
-        // 3. Update stock for each item
+        // 3. Update stock and record stock movements for each item
         await Promise.all(
-          items.map((item: any) => {
+          items.map(async (item: any) => {
             if (item.variantId) {
-              return tx.productVariant.update({
-                where: { id: item.variantId },
-                data: { stock: { decrement: item.quantity } }
+              // Get current stock before update
+              const variant = await tx.productVariant.findUnique({
+                where: { id: item.variantId }
               })
+              
+              if (variant) {
+                const previousStock = variant.stock
+                const newStock = previousStock - item.quantity
+                
+                // Update stock
+                await tx.productVariant.update({
+                  where: { id: item.variantId },
+                  data: { stock: newStock }
+                })
+                
+                // Record stock movement
+                await tx.stockMovement.create({
+                  data: {
+                    variantId: item.variantId,
+                    type: 'SALE',
+                    quantity: -item.quantity, // Negative for sales
+                    previousStock,
+                    newStock,
+                    referenceId: saleTransaction.id,
+                    userId: transactionData.userId,
+                    notes: `Sale transaction ${saleTransaction.id}`
+                  }
+                })
+              }
             }
             return Promise.resolve()
           })

@@ -76,7 +76,8 @@ export function useSettings() {
   // Display Settings
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({
     showImagesInProductCards: localStorage.getItem('showImagesInProductCards') !== 'false',
-    showImagesInPOSCards: localStorage.getItem('showImagesInPOSCards') !== 'false'
+    showImagesInPOSCards: localStorage.getItem('showImagesInPOSCards') !== 'false',
+    showImagesInInventory: localStorage.getItem('showImagesInInventory') !== 'false'
   }))
 
   // Save all settings to localStorage
@@ -115,6 +116,7 @@ export function useSettings() {
     // Display settings
     localStorage.setItem('showImagesInProductCards', String(displaySettings.showImagesInProductCards))
     localStorage.setItem('showImagesInPOSCards', String(displaySettings.showImagesInPOSCards))
+    localStorage.setItem('showImagesInInventory', String(displaySettings.showImagesInInventory))
 
     return true
   }, [storeSettings, taxReceiptSettings, notificationSettings, paymentMethods, userProfile, backupSettings, displaySettings])
