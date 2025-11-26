@@ -490,31 +490,50 @@ export function registerProductsHandlers(prisma: any) {
   })
 
   /**
-   * Search products - optimized for autocomplete
+   * Search products - optimized for POS QuickSale
+   * Fast search with stock calculation and proper typing
+   * Note: SQLite is case-insensitive by default for ASCII, no mode needed
    */
-  ipcMain.handle('products:search', async (_, searchTerm: string) => {
+  ipcMain.handle('products:search', async (_, options: { query?: string; limit?: number } = {}) => {
     try {
-      if (!prisma || !searchTerm) return []
+      if (!prisma) return []
+      
+      const { query = '', limit = 50 } = options
+      
+      if (!query || query.trim() === '') return []
 
       const products = await prisma.product.findMany({
         where: {
           OR: [
-            { name: { contains: searchTerm } },
-            { baseSKU: { contains: searchTerm } }
+            { name: { contains: query } },
+            { baseSKU: { contains: query } },
+            { description: { contains: query } }
           ]
         },
-        select: {
-          id: true,
-          name: true,
-          baseSKU: true,
-          category: true,
-          basePrice: true
+        include: {
+          variants: {
+            select: {
+              stock: true
+            }
+          }
         },
-        take: 20, // Limit for autocomplete
-        orderBy: { createdAt: 'desc' }
+        take: limit,
+        orderBy: [
+          // Prioritize exact matches first
+          { name: 'asc' }
+        ]
       })
 
-      return products
+      // Calculate total stock for each product
+      return products.map(product => ({
+        id: product.id,
+        name: product.name,
+        baseSKU: product.baseSKU,
+        category: product.category,
+        basePrice: product.basePrice,
+        totalStock: product.variants.reduce((sum, v) => sum + v.stock, 0),
+        imageUrl: null // Can be enhanced later
+      }))
     } catch (error) {
       console.error('Error searching products:', error)
       throw error
