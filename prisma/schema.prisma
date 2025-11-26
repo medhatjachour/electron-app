@@ -81,7 +81,7 @@ model Product {
 model ProductImage {
   id        String   @id @default(uuid())
   productId String
-  imageData String   // Base64 encoded image
+  filename  String   // Filename in images/ directory (e.g., "abc123.jpg")
   order     Int      @default(0)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

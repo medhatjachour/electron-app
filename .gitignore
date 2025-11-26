@@ -15,4 +15,5 @@ out
 *.db-wal
 *.db-shm
 prisma/*.db
+prisma/*.db-*
 prisma/*.db-journal

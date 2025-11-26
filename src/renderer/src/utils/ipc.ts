@@ -126,13 +126,56 @@ const mockIPC = {
     }
   },
   customers: {
-    getAll: async () => JSON.parse(localStorage.getItem('customers') || '[]'),
+    getAll: async (options?: { limit?: number; offset?: number; searchTerm?: string }) => {
+      const allCustomers = JSON.parse(localStorage.getItem('customers') || '[]')
+      const { limit = 100, offset = 0, searchTerm = '' } = options || {}
+      
+      let filtered = allCustomers
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase()
+        filtered = allCustomers.filter((c: any) => 
+          c.name?.toLowerCase().includes(term) ||
+          c.email?.toLowerCase().includes(term) ||
+          c.phone?.includes(term)
+        )
+      }
+      
+      const customers = filtered.slice(offset, offset + limit)
+      return {
+        customers,
+        totalCount: filtered.length,
+        hasMore: offset + limit < filtered.length
+      }
+    },
     create: async (data: any) => {
       const customers = JSON.parse(localStorage.getItem('customers') || '[]')
-      const newCustomer = { id: Date.now().toString(), ...data }
+      const newCustomer = { id: Date.now().toString(), ...data, totalSpent: 0, purchaseCount: 0 }
       customers.push(newCustomer)
       localStorage.setItem('customers', JSON.stringify(customers))
       return { success: true, customer: newCustomer }
+    },
+    update: async (id: string, customerData: any) => {
+      const customers = JSON.parse(localStorage.getItem('customers') || '[]')
+      const index = customers.findIndex((c: any) => c.id === id)
+      if (index !== -1) {
+        customers[index] = { ...customers[index], ...customerData, updatedAt: new Date().toISOString() }
+        localStorage.setItem('customers', JSON.stringify(customers))
+        return { success: true, customer: customers[index] }
+      }
+      return { success: false, message: 'Customer not found' }
+    },
+    delete: async (id: string) => {
+      const customers = JSON.parse(localStorage.getItem('customers') || '[]')
+      const filtered = customers.filter((c: any) => c.id !== id)
+      localStorage.setItem('customers', JSON.stringify(filtered))
+      return { success: true }
+    },
+    getPurchaseHistory: async (customerId: string) => {
+      const sales = JSON.parse(localStorage.getItem('sales') || '[]')
+      return sales.filter((s: any) => s.customerId === customerId)
+    },
+    recalculateTotalSpent: async (_customerId: string) => {
+      return { success: true }
     }
   },
   sales: {
@@ -232,7 +275,7 @@ export const ipc = isElectron ? {
   
   // Customer operations
   customers: {
-    getAll: () => window.electron.ipcRenderer.invoke('customers:getAll'),
+    getAll: (options?: { limit?: number; offset?: number; searchTerm?: string }) => window.electron.ipcRenderer.invoke('customers:getAll', options),
     create: (data: any) => window.electron.ipcRenderer.invoke('customers:create', data),
     update: (id: string, customerData: any) => window.electron.ipcRenderer.invoke('customers:update', { id, customerData }),
     delete: (id: string) => window.electron.ipcRenderer.invoke('customers:delete', id),

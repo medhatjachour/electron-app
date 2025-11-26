@@ -34,23 +34,45 @@ export function registerCustomersHandlers(prisma: any) {
     }
   }
 
-  ipcMain.handle('customers:getAll', async () => {
+  ipcMain.handle('customers:getAll', async (_, options = {}) => {
     try {
       if (prisma) {
-        // Get all customers with their real calculated stats
-        const customers = await prisma.customer.findMany({ 
-          orderBy: { createdAt: 'desc' },
-          include: {
-            saleTransactions: {
-              where: { status: 'completed' },
-              select: {
-                id: true,
-                total: true,
-                createdAt: true
+        const {
+          limit = 100,
+          offset = 0,
+          searchTerm = ''
+        } = options
+
+        // Build where clause for search
+        const where: any = {}
+        if (searchTerm) {
+          where.OR = [
+            { name: { contains: searchTerm } },
+            { email: { contains: searchTerm } },
+            { phone: { contains: searchTerm } }
+          ]
+        }
+
+        // Get customers with pagination
+        const [customers, totalCount] = await Promise.all([
+          prisma.customer.findMany({ 
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+            include: {
+              saleTransactions: {
+                where: { status: 'completed' },
+                select: {
+                  id: true,
+                  total: true,
+                  createdAt: true
+                }
               }
             }
-          }
-        })
+          }),
+          prisma.customer.count({ where })
+        ])
         
         // Recalculate totalSpent for each customer from transactions
         const customersWithRealStats = customers.map((customer: any) => {
@@ -68,9 +90,13 @@ export function registerCustomersHandlers(prisma: any) {
           }
         })
         
-        return customersWithRealStats
+        return {
+          customers: customersWithRealStats,
+          totalCount,
+          hasMore: offset + limit < totalCount
+        }
       }
-      return []
+      return { customers: [], totalCount: 0, hasMore: false }
     } catch (error) {
       console.error('Error fetching customers:', error)
       throw error

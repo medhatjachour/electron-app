@@ -8,6 +8,7 @@
  * - Category filtering with database joins
  * - Stock status calculation at database level
  * - Debounce handling on frontend
+ * - Filesystem-based image loading for fast queries
  * 
  * Design Pattern: Repository + Factory
  * - Repository: Abstracts database queries
@@ -17,6 +18,7 @@
 import { ipcMain } from 'electron'
 import { InventoryService } from '../../services/InventoryService'
 import { PredictionService } from '../../services/PredictionService'
+import { getImageService } from '../../services/ImageService'
 
 interface SearchFilters {
   query?: string
@@ -117,6 +119,27 @@ export function registerSearchHandlers(prisma: any) {
         prisma.product.count({ where })
       ])
 
+      // Load image data from filesystem if requested
+      if (includeImages) {
+        const imageService = getImageService()
+        console.log(`[search:products] Loading images for ${products.length} products`)
+        let loadedCount = 0
+        for (const product of products) {
+          if (product.images && product.images.length > 0) {
+            for (const image of product.images) {
+              if (image.filename) {
+                const dataUrl = await imageService.getImageDataUrl(image.filename)
+                ;(image as any).imageData = dataUrl
+                loadedCount++
+              }
+            }
+          }
+        }
+        console.log(`[search:products] Loaded ${loadedCount} images from filesystem`)
+      } else {
+        console.log(`[search:products] Images not requested (includeImages: false)`)
+      }
+
       // Enrich products with calculated fields
       const items = enrichData
         ? products.map(p => enrichProduct(p))
@@ -213,6 +236,21 @@ export function registerSearchHandlers(prisma: any) {
         prisma.product.count({ where }),
         includeMetrics ? inventoryService.getInventoryMetrics() : Promise.resolve(null)
       ])
+
+      // Load image data from filesystem if requested
+      if (includeImages) {
+        const imageService = getImageService()
+        for (const product of products) {
+          if (product.images && product.images.length > 0) {
+            for (const image of product.images) {
+              if (image.filename) {
+                const dataUrl = await imageService.getImageDataUrl(image.filename)
+                ;(image as any).imageData = dataUrl
+              }
+            }
+          }
+        }
+      }
 
       // Enrich items using InventoryService pattern
       const items = products.map(product => {
