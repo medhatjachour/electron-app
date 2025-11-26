@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import { Package, TrendingUp, AlertTriangle, DollarSign, TrendingDown } from 'lucide-react'
 import { InventoryItem, InventoryMetrics as Metrics } from '@/shared/types'
 import { MetricCardSkeleton } from '../../../components/ui/SkeletonVariants'
+import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 
 interface Props {
   metrics: Metrics | null
@@ -60,11 +61,17 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
             </div>
             <div className="flex-1">
               <p className="text-xs text-slate-600 dark:text-slate-400">Total SKUs</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.totalSKUs}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <span className="cursor-help" title={metrics.totalSKUs.toLocaleString()}>
+                  {formatLargeNumber(metrics.totalSKUs)}
+                </span>
+              </p>
             </div>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {metrics.totalVariants} total variants
+            <span className="cursor-help" title={metrics.totalVariants.toLocaleString()}>
+              {formatLargeNumber(metrics.totalVariants)}
+            </span> total variants
           </p>
         </div>
 
@@ -77,7 +84,9 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
             <div className="flex-1">
               <p className="text-xs text-slate-600 dark:text-slate-400">Stock Value</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                ${metrics.totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="cursor-help" title={`$${metrics.totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                  {formatCurrency(metrics.totalStockValue)}
+                </span>
               </p>
             </div>
           </div>
@@ -95,12 +104,16 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
             <div className="flex-1">
               <p className="text-xs text-slate-600 dark:text-slate-400">Retail Value</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                ${metrics.totalRetailValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="cursor-help" title={`$${metrics.totalRetailValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                  {formatCurrency(metrics.totalRetailValue)}
+                </span>
               </p>
             </div>
           </div>
           <p className="text-xs text-success">
-            +${metrics.potentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} potential profit
+            <span className="cursor-help" title={`$${metrics.potentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+              +{formatCurrency(metrics.potentialProfit)}
+            </span> potential profit
           </p>
         </div>
 

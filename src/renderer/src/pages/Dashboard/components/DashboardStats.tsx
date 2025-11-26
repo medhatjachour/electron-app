@@ -6,6 +6,7 @@
 
 import { memo } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart, Users } from 'lucide-react'
+import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 
 interface Props {
   stats: {
@@ -24,7 +25,8 @@ function DashboardStats({ stats, loading }: Props) {
   const metrics = [
     {
       label: 'Today\'s Revenue',
-      value: `$${stats.todayRevenue.toFixed(2)}`,
+      value: formatCurrency(stats.todayRevenue),
+      rawValue: `$${stats.todayRevenue.toFixed(2)}`,
       change: stats.revenueChange,
       icon: DollarSign,
       color: 'emerald',
@@ -33,7 +35,8 @@ function DashboardStats({ stats, loading }: Props) {
     },
     {
       label: 'Today\'s Orders',
-      value: stats.todayOrders,
+      value: formatLargeNumber(stats.todayOrders),
+      rawValue: stats.todayOrders.toLocaleString(),
       change: stats.ordersChange,
       icon: ShoppingCart,
       color: 'blue',
@@ -42,7 +45,8 @@ function DashboardStats({ stats, loading }: Props) {
     },
     {
       label: 'Total Products',
-      value: stats.totalProducts,
+      value: formatLargeNumber(stats.totalProducts),
+      rawValue: stats.totalProducts.toLocaleString(),
       change: 0,
       icon: Package,
       color: 'purple',
@@ -51,7 +55,8 @@ function DashboardStats({ stats, loading }: Props) {
     },
     {
       label: 'Total Customers',
-      value: stats.totalCustomers,
+      value: formatLargeNumber(stats.totalCustomers),
+      rawValue: stats.totalCustomers.toLocaleString(),
       change: 0,
       icon: Users,
       color: 'amber',
@@ -99,7 +104,7 @@ function DashboardStats({ stats, loading }: Props) {
             
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white" title={metric.rawValue}>
                   {metric.value}
                 </p>
                 {hasChange && (

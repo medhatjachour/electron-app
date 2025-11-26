@@ -3,6 +3,7 @@ import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
+import { formatCurrency } from '@renderer/utils/formatNumber'
 
 type Customer = {
   id: string
@@ -283,8 +284,8 @@ export default function Customers(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                ${totalRevenue.toFixed(2)}
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${totalRevenue.toFixed(2)}`}>
+                {formatCurrency(totalRevenue)}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -297,8 +298,8 @@ export default function Customers(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Average Spent</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                ${averageSpent.toFixed(2)}
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${averageSpent.toFixed(2)}`}>
+                {formatCurrency(averageSpent)}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -436,7 +437,9 @@ export default function Customers(): JSX.Element {
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400">Total Spent</p>
-                      <p className="text-2xl font-bold text-primary">${customer.totalSpent.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary" title={`$${customer.totalSpent.toFixed(2)}`}>
+                        {formatCurrency(customer.totalSpent)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400">Purchases</p>
@@ -713,8 +716,8 @@ export default function Customers(): JSX.Element {
           <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Purchases</p>
-              <p className="text-2xl font-bold text-primary">
-                ${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}
+              <p className="text-2xl font-bold text-primary" title={`$${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}`}>
+                {selectedCustomer ? formatCurrency(selectedCustomer.totalSpent) : '$0.00'}
               </p>
             </div>
             <button

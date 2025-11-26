@@ -18,6 +18,7 @@ import {
   Legend,
   Filler
 } from 'chart.js'
+import { formatLargeNumber, formatCurrency } from '@renderer/utils/formatNumber'
 
 ChartJS.register(
   CategoryScale,
@@ -225,8 +226,8 @@ export default function ProductAnalytics() {
                   <Package size={24} className="text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                {topProducts.reduce((sum, p) => sum + p.unitsSold, 0).toLocaleString()}
+              <div className="text-2xl font-bold text-slate-900 dark:text-white" title={topProducts.reduce((sum, p) => sum + p.unitsSold, 0).toLocaleString()}>
+                {formatLargeNumber(topProducts.reduce((sum, p) => sum + p.unitsSold, 0))}
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-400">Units Sold</div>
             </div>
@@ -237,8 +238,8 @@ export default function ProductAnalytics() {
               <DollarSign size={24} className="text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">
-            ${topProducts.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}
+          <div className="text-2xl font-bold text-slate-900 dark:text-white" title={`$${topProducts.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}`}>
+            {formatCurrency(topProducts.reduce((sum, p) => sum + p.revenue, 0))}
           </div>
           <div className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</div>
         </div>
@@ -249,8 +250,8 @@ export default function ProductAnalytics() {
               <ShoppingCart size={24} className="text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">
-            {topProducts.reduce((sum, p) => sum + p.transactions, 0).toLocaleString()}
+          <div className="text-2xl font-bold text-slate-900 dark:text-white" title={topProducts.reduce((sum, p) => sum + p.transactions, 0).toLocaleString()}>
+            {formatLargeNumber(topProducts.reduce((sum, p) => sum + p.transactions, 0))}
           </div>
           <div className="text-sm text-slate-600 dark:text-slate-400">Transactions</div>
         </div>
@@ -375,17 +376,19 @@ export default function ProductAnalytics() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-lg font-semibold text-slate-900 dark:text-white">
-                        {product.unitsSold.toLocaleString()}
+                      <span className="text-lg font-semibold text-slate-900 dark:text-white" title={product.unitsSold.toLocaleString()}>
+                        {formatLargeNumber(product.unitsSold)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-lg font-semibold text-green-600 dark:text-green-400">
-                        ${product.revenue.toLocaleString()}
+                      <span className="text-lg font-semibold text-green-600 dark:text-green-400" title={`$${product.revenue.toLocaleString()}`}>
+                        {formatCurrency(product.revenue)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center text-slate-900 dark:text-white">
-                      {product.transactions.toLocaleString()}
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-slate-900 dark:text-white" title={product.transactions.toLocaleString()}>
+                        {formatLargeNumber(product.transactions)}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-400">
                       {product.avgUnitsPerTransaction.toFixed(1)}
