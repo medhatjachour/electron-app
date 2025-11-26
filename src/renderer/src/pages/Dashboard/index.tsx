@@ -182,13 +182,13 @@ export default function Dashboard() {
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-4">
             {/* Sales Chart */}
-            <SalesChart key={`sales-${stats.todayRevenue}`} />
+            <SalesChart />
 
             {/* Top Products */}
-            <TopProducts key={`products-${stats.todayOrders}`} />
+            <TopProducts />
 
             {/* Recent Activity */}
-            <RecentActivity key={`activity-${stats.todayOrders}`} />
+            <RecentActivity />
           </div>
 
           {/* Right Column - 1/3 width */}
@@ -197,13 +197,13 @@ export default function Dashboard() {
             <QuickActions userRole={user?.role || 'sales'} />
 
             {/* Goal Tracking */}
-            <GoalTracking key={`goals-${stats.todayRevenue}`} />
+            <GoalTracking />
 
             {/* Notification Center */}
-            <NotificationCenter key={`notifs-${stats.todayOrders}`} />
+            <NotificationCenter />
 
             {/* Inventory Alerts */}
-            <InventoryAlerts key={`alerts-${stats.lowStockItems}`} />
+            <InventoryAlerts />
 
             {/* Quick Stats Card */}
             <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
