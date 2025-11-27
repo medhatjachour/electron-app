@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ShoppingCart, Trash2, X, User, DollarSign, Percent } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, X, User, DollarSign } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -85,8 +85,7 @@ export default function QuickSale() {
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
-  const totalDiscount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity * item.discount / 100), 0)
-  const total = subtotal - totalDiscount
+  const total = subtotal
 
   // Load customers and refresh cart stock info
   useEffect(() => {
@@ -395,19 +394,6 @@ export default function QuickSale() {
         return { ...item, quantity, subtotal: item.price * quantity }
       }
       return item
-    }))
-  }
-
-  // Update cart item discount
-  const updateDiscount = (productId: string, discount: number, variantId?: string) => {
-    const validDiscount = Math.max(0, Math.min(100, discount))
-    setCartItems(prev => prev.map(item => {
-      // Match by both productId and variantId (if variant exists)
-      const isMatch = variantId 
-        ? (item.productId === productId && item.variantId === variantId)
-        : (item.productId === productId && !item.variantId)
-      
-      return isMatch ? { ...item, discount: validDiscount } : item
     }))
   }
 
@@ -756,7 +742,6 @@ export default function QuickSale() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Product</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Qty</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Price</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Disc%</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-16"></th>
                 </tr>
@@ -832,37 +817,10 @@ export default function QuickSale() {
                         ${item.price.toFixed(2)}
                       </span>
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="relative inline-flex items-center">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={item.discount}
-                          onChange={(e) => updateDiscount(item.productId, parseFloat(e.target.value) || 0, item.variantId)}
-                          className={`w-16 px-2 py-1.5 text-sm text-center border-2 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                            item.discount > 0
-                              ? 'border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                              : 'border-slate-300 dark:border-slate-600 hover:border-primary/50'
-                          }`}
-                        />
-                        <Percent size={12} className={`absolute right-2 pointer-events-none ${
-                          item.discount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
-                        }`} />
-                      </div>
-                    </td>
                     <td className="px-3 py-3 text-right">
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-bold text-slate-900 dark:text-white">
-                          ${(item.subtotal - (item.price * item.quantity * item.discount / 100)).toFixed(2)}
-                        </span>
-                        {item.discount > 0 && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 line-through">
-                            ${item.subtotal.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        ${item.subtotal.toFixed(2)}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-center">
                       <button
@@ -919,12 +877,6 @@ export default function QuickSale() {
               <span>Subtotal:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
-            {totalDiscount > 0 && (
-              <div className="flex justify-between text-sm text-amber-600 dark:text-amber-400">
-                <span>Discount:</span>
-                <span>-${totalDiscount.toFixed(2)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white pt-1">
               <span>Total:</span>
               <span>${total.toFixed(2)}</span>

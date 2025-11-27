@@ -44,7 +44,7 @@ export default function POS(): JSX.Element {
     setPaymentMethod,
   } = usePOS()
 
-  const [cartOpen, setCartOpen] = useState(true)
+  const [cartOpen, setCartOpen] = useState(false)
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
