@@ -239,12 +239,7 @@ export default function RevenueForecasting() {
               yMin = Math.max(0, dataMin - padding)
               yMax = dataMax + padding
             }
-            
-            console.log('[Chart] Y-axis:', { 
-              data: { min: dataMin, max: dataMax, range: dataRange },
-              axis: { min: yMin, max: yMax, span: yMax - yMin }
-            })
-            
+           
             return (
               <Line
                 data={{

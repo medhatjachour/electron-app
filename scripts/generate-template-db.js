@@ -18,8 +18,8 @@ env.DATABASE_URL = `file:${templatePath}`
 console.log('Pushing Prisma schema to template DB...')
 execSync('npx prisma db push --schema=prisma/schema.prisma', { stdio: 'inherit', cwd: repoRoot, env })
 
-// Run a small node script to seed the admin user into template.db
-console.log('Seeding admin user into template DB...')
-execSync('node prisma/seed-template.js', { stdio: 'inherit', cwd: repoRoot, env })
+// Run production seed to create setup account in template.db
+console.log('Seeding setup account into template DB (production seed)...')
+execSync('npx ts-node prisma/seed-production.ts', { stdio: 'inherit', cwd: repoRoot, env })
 
 console.log('Template DB created successfully:', templatePath)

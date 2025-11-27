@@ -63,6 +63,7 @@ export interface BackupSettings {
 export interface DisplaySettings {
   showImagesInProductCards: boolean
   showImagesInPOSCards: boolean
+  showImagesInInventory: boolean
 }
 
 export interface Category {

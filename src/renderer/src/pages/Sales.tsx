@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
+import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 
 type SaleItem = {
   id: string
@@ -56,7 +57,16 @@ export default function Sales(): JSX.Element {
   const loadTransactions = async () => {
     try {
       setLoading(true)
-      const data = await ipc.saleTransactions.getAll()
+      // Load only recent transactions (last 30 days) with limit for faster loading
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 30) // Last 30 days only
+      
+      const data = await ipc.saleTransactions.getByDateRange({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        limit: 100 // Limit to recent 100 transactions
+      })
       setTransactions(data)
     } catch (error) {
       console.error('Failed to load transactions:', error)
@@ -324,8 +334,8 @@ export default function Sales(): JSX.Element {
               <DollarSign size={20} className="text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-            ${stats.totalRevenue.toFixed(2)}
+          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={`$${stats.totalRevenue.toLocaleString()}`}>
+            {formatCurrency(stats.totalRevenue)}
           </div>
           {stats.hasData ? (
             <div className={`flex items-center text-sm ${stats.weeklyRevenueChange >= 0 ? 'text-success' : 'text-error'}`}>
@@ -344,8 +354,8 @@ export default function Sales(): JSX.Element {
               <ShoppingBag size={20} className="text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-            {stats.totalSales}
+          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={stats.totalSales.toLocaleString()}>
+            {formatLargeNumber(stats.totalSales)}
           </div>
           {stats.hasData ? (
             <div className="text-sm text-slate-600 dark:text-slate-400">
@@ -382,8 +392,8 @@ export default function Sales(): JSX.Element {
               <DollarSign size={20} className="text-white" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-            ${stats.avgSale.toFixed(2)}
+          <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={`$${stats.avgSale.toLocaleString()}`}>
+            {formatCurrency(stats.avgSale)}
           </div>
           {stats.hasData ? (
             <div className="text-sm text-slate-600 dark:text-slate-400">

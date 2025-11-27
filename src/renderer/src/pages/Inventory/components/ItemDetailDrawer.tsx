@@ -35,11 +35,44 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
   const loadStockHistory = async () => {
     try {
       setLoadingHistory(true)
-      // @ts-ignore
-      const history = await (globalThis as any).api?.inventory?.getStockHistory(item.id)
-      setStockHistory(history || [])
+      
+      // Get stock movements for all variants of this product
+      const allMovements: any[] = []
+      
+      if (item.variants && item.variants.length > 0) {
+        for (const variant of item.variants) {
+          try {
+            // @ts-ignore
+            const movements = await window.api?.analytics?.getStockMovementHistory(variant.id, {
+              limit: 50
+            })
+            
+            if (movements && movements.length > 0) {
+              // Add variant info to each movement
+              allMovements.push(...movements.map((m: any) => ({
+                ...m,
+                variantInfo: {
+                  color: variant.color,
+                  size: variant.size,
+                  sku: variant.sku
+                }
+              })))
+            }
+          } catch (err) {
+            logger.warn(`Failed to load movements for variant ${variant.id}:`, err)
+          }
+        }
+      }
+      
+      // Sort by date (newest first)
+      allMovements.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      
+      setStockHistory(allMovements)
     } catch (error) {
       logger.error('Error loading stock history:', error)
+      setStockHistory([])
     } finally {
       setLoadingHistory(false)
     }
@@ -359,48 +392,198 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
             )}
           </div>
 
-          {/* Stock Movement History */}
+          {/* Stock Movement History - Enhanced */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <History size={18} className="text-slate-600 dark:text-slate-400" />
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Stock Movement History</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <History size={18} className="text-slate-600 dark:text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Stock Movement History
+                </h3>
+                {stockHistory.length > 0 && (
+                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
+                    {stockHistory.length}
+                  </span>
+                )}
+              </div>
+              {stockHistory.length > 0 && (
+                <button
+                  onClick={loadStockHistory}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  Refresh
+                </button>
+              )}
             </div>
+
             {loadingHistory ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent mx-auto mb-3"></div>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Loading movement history...</p>
               </div>
             ) : stockHistory.length > 0 ? (
-              <div className="space-y-2">
-                {stockHistory.map((movement) => (
-                  <div key={movement.id} className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white capitalize">
-                          {movement.type}
-                        </p>
-                        {movement.notes && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{movement.notes}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Calendar size={12} className="text-slate-400" />
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(movement.timestamp).toLocaleString()}
-                          </p>
-                        </div>
+              <div className="space-y-3">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                  {[
+                    { type: 'RESTOCK', label: 'Restocks', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
+                    { type: 'SALE', label: 'Sales', color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
+                    { type: 'ADJUSTMENT', label: 'Adjustments', color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800' },
+                    { type: 'SHRINKAGE', label: 'Shrinkage', color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' },
+                    { type: 'RETURN', label: 'Returns', color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' }
+                  ].map(stat => {
+                    const count = stockHistory.filter((m: any) => m.type === stat.type).length
+                    const total = stockHistory
+                      .filter((m: any) => m.type === stat.type)
+                      .reduce((sum: number, m: any) => sum + Math.abs(m.quantity), 0)
+                    
+                    return (
+                      <div key={stat.type} className={`rounded-lg p-2 border ${stat.color}`}>
+                        <p className="text-xs font-medium mb-0.5">{stat.label}</p>
+                        <p className="text-lg font-bold">{count}</p>
+                        <p className="text-xs opacity-75">{total} units</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        movement.quantity < 0 ? 'bg-red-100 dark:bg-red-900/20 text-error' : 'bg-green-100 dark:bg-green-900/20 text-success'
-                      }`}>
-                        {movement.quantity > 0 ? '+' : ''}{movement.quantity}
-                      </span>
-                    </div>
+                    )
+                  })}
+                </div>
+
+                {/* Movement Timeline */}
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-700 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
+                    {stockHistory.map((movement: any, index: number) => {
+                      const isIncrease = movement.quantity > 0
+                      const typeColors = {
+                        RESTOCK: 'bg-green-500',
+                        SALE: 'bg-blue-500',
+                        ADJUSTMENT: 'bg-purple-500',
+                        SHRINKAGE: 'bg-red-500',
+                        RETURN: 'bg-amber-500'
+                      }
+                      const typeColor = typeColors[movement.type as keyof typeof typeColors] || 'bg-slate-500'
+
+                      return (
+                        <div key={movement.id} className="relative pl-8 pb-3 last:pb-0">
+                          {/* Timeline line */}
+                          {index !== stockHistory.length - 1 && (
+                            <div className="absolute left-3 top-6 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-700"></div>
+                          )}
+                          
+                          {/* Timeline dot */}
+                          <div className={`absolute left-0 top-1 w-6 h-6 rounded-full ${typeColor} flex items-center justify-center shadow-md`}>
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+
+                          {/* Movement Card */}
+                          <div className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
+                                    movement.type === 'RESTOCK' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                    movement.type === 'SALE' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                    movement.type === 'ADJUSTMENT' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                                    movement.type === 'SHRINKAGE' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                    'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                  }`}>
+                                    {movement.type}
+                                  </span>
+                                  
+                                  {/* Variant Badge */}
+                                  {movement.variantInfo && (
+                                    <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">
+                                      {[movement.variantInfo.color, movement.variantInfo.size].filter(Boolean).join(' • ')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Stock Change */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-slate-500 dark:text-slate-400 text-xs">Stock:</span>
+                                  <span className="text-xs font-mono text-slate-700 dark:text-slate-300">
+                                    {movement.previousStock}
+                                  </span>
+                                  <span className="text-slate-400">→</span>
+                                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                                    {movement.newStock}
+                                  </span>
+                                  <span className={`text-xs font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                                    ({isIncrease ? '+' : ''}{movement.quantity})
+                                  </span>
+                                </div>
+
+                                {/* Notes/Reason */}
+                                {(movement.notes || movement.reason) && (
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 italic">
+                                    "{movement.notes || movement.reason}"
+                                  </p>
+                                )}
+
+                                {/* User & Date */}
+                                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-500">
+                                  {movement.user && (
+                                    <span className="flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                                      {movement.user.fullName || movement.user.username}
+                                    </span>
+                                  )}
+                                  <span className="flex items-center gap-1">
+                                    <Calendar size={12} />
+                                    {new Date(movement.createdAt).toLocaleString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+
+                                {/* Reference ID (if available) */}
+                                {movement.referenceId && (
+                                  <div className="mt-2 text-xs text-slate-400 dark:text-slate-600 font-mono">
+                                    Ref: {movement.referenceId.substring(0, 8)}...
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Quantity Badge */}
+                              <div className={`ml-3 px-3 py-2 rounded-lg font-bold text-sm ${
+                                isIncrease 
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                              }`}>
+                                {isIncrease ? '+' : ''}{movement.quantity}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                ))}
+                </div>
               </div>
             ) : (
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-6 text-center">
-                <History className="mx-auto mb-2 text-slate-400" size={24} />
-                <p className="text-sm text-slate-500 dark:text-slate-400">No movement history available</p>
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-xl p-12 text-center border-2 border-dashed border-slate-300 dark:border-slate-700">
+                <History className="mx-auto mb-4 text-slate-400" size={48} />
+                <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  No Movement History Yet
+                </h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  Stock movements will appear here when you:
+                </p>
+                <div className="inline-flex flex-col items-start gap-2 text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <span>Make sales transactions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span>Restock inventory</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span>Make stock adjustments</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

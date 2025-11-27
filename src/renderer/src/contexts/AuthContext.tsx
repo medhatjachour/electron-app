@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await (window as any).api.auth.login(username, password)
         
         if (res.success && res.user) {
-          console.log('✅ Login successful via IPC:', res.user.username, 'ID:', res.user.id)
           setUser(res.user)
           // Persist to localStorage
           localStorage.setItem('user', JSON.stringify(res.user))

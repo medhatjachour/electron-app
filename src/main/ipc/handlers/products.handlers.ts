@@ -9,10 +9,12 @@
  * - Selective field loading
  * - Non-blocking async operations
  * - Caching for stats queries
+ * - Filesystem-based image storage for fast queries
  */
 
 import { ipcMain } from 'electron'
 import { cacheService, CacheKeys } from '../../services/CacheService'
+import { getImageService } from '../../services/ImageService'
 
 export function registerProductsHandlers(prisma: any) {
   /**
@@ -78,6 +80,21 @@ export function registerProductsHandlers(prisma: any) {
         skip: offset
       })
 
+      // Load image data from filesystem if requested
+      if (includeImages) {
+        const imageService = getImageService()
+        for (const product of products) {
+          if (product.images && product.images.length > 0) {
+            for (const image of product.images) {
+              if (image.filename) {
+                const dataUrl = await imageService.getImageDataUrl(image.filename)
+                ;(image as any).imageData = dataUrl
+              }
+            }
+          }
+        }
+      }
+
       // Calculate total count for pagination
       const totalCount = await prisma.product.count({ where })
 
@@ -108,6 +125,21 @@ export function registerProductsHandlers(prisma: any) {
           store: true
         }
       })
+
+      if (!product) return null
+
+      // Load image data from filesystem
+      const imageService = getImageService()
+      if (product.images && product.images.length > 0) {
+        for (const image of product.images) {
+          if (image.filename) {
+            // Load Base64 data URL from file
+            const dataUrl = await imageService.getImageDataUrl(image.filename)
+            // Add imageData property for frontend compatibility
+            ;(image as any).imageData = dataUrl
+          }
+        }
+      }
 
       return product
     } catch (error) {
@@ -148,16 +180,32 @@ export function registerProductsHandlers(prisma: any) {
         }
       }
       
+      // Save images to filesystem first
+      const imageService = getImageService()
+      const imageFilenames: Array<{ filename: string, order: number }> = []
+      
+      if (images?.length) {
+        for (let idx = 0; idx < images.length; idx++) {
+          const base64Data = images[idx]
+          try {
+            const filename = await imageService.saveImage(base64Data)
+            imageFilenames.push({ filename, order: idx })
+          } catch (error) {
+            console.error(`Failed to save image ${idx}:`, error)
+          }
+        }
+      }
+
       // Use transaction for atomic operation
       const newProduct = await prisma.$transaction(async (tx: any) => {
         return await tx.product.create({
           data: {
             ...product,
             categoryId, // Use the resolved categoryId
-            images: images?.length ? {
-              create: images.map((img: string, idx: number) => ({
-                imageData: img,
-                order: idx
+            images: imageFilenames.length ? {
+              create: imageFilenames.map(({ filename, order }) => ({
+                filename,
+                order
               }))
             } : undefined,
             variants: variants?.length ? {
@@ -187,6 +235,16 @@ export function registerProductsHandlers(prisma: any) {
           }
         })
       })
+      
+      // Load image data for response
+      if (newProduct.images && newProduct.images.length > 0) {
+        for (const image of newProduct.images) {
+          if (image.filename) {
+            const dataUrl = await imageService.getImageDataUrl(image.filename)
+            ;(image as any).imageData = dataUrl
+          }
+        }
+      }
       
       // Invalidate product-related caches
       cacheService.invalidatePattern('products:*')
@@ -231,9 +289,31 @@ export function registerProductsHandlers(prisma: any) {
         }
       }
       
+      // Get existing images to delete from filesystem
+      const imageService = getImageService()
+      const existingProduct = await prisma.product.findUnique({
+        where: { id },
+        include: { images: true }
+      })
+
+      // Save new images to filesystem first
+      const imageFilenames: Array<{ filename: string, order: number }> = []
+      
+      if (images?.length) {
+        for (let idx = 0; idx < images.length; idx++) {
+          const base64Data = images[idx]
+          try {
+            const filename = await imageService.saveImage(base64Data)
+            imageFilenames.push({ filename, order: idx })
+          } catch (error) {
+            console.error(`Failed to save image ${idx}:`, error)
+          }
+        }
+      }
+
       // Use transaction for atomic operation
       const updated = await prisma.$transaction(async (tx: any) => {
-        // Delete existing images and variants
+        // Delete existing images and variants from database
         await tx.productImage.deleteMany({ where: { productId: id } })
         await tx.productVariant.deleteMany({ where: { productId: id } })
         
@@ -243,10 +323,10 @@ export function registerProductsHandlers(prisma: any) {
           data: {
             ...product,
             categoryId, // Use the resolved categoryId
-            images: images?.length ? {
-              create: images.map((img: string, idx: number) => ({
-                imageData: img,
-                order: idx
+            images: imageFilenames.length ? {
+              create: imageFilenames.map(({ filename, order }) => ({
+                filename,
+                order
               }))
             } : undefined,
             variants: variants?.length ? {
@@ -276,6 +356,29 @@ export function registerProductsHandlers(prisma: any) {
           }
         })
       })
+
+      // Delete old image files from filesystem (after successful transaction)
+      if (existingProduct?.images) {
+        for (const image of existingProduct.images) {
+          if (image.filename) {
+            try {
+              await imageService.deleteImage(image.filename)
+            } catch (error) {
+              console.error(`Failed to delete old image ${image.filename}:`, error)
+            }
+          }
+        }
+      }
+
+      // Load image data for response
+      if (updated.images && updated.images.length > 0) {
+        for (const image of updated.images) {
+          if (image.filename) {
+            const dataUrl = await imageService.getImageDataUrl(image.filename)
+            ;(image as any).imageData = dataUrl
+          }
+        }
+      }
       
       // Invalidate caches
       cacheService.invalidatePattern('products:*')
@@ -311,8 +414,28 @@ export function registerProductsHandlers(prisma: any) {
         }
       }
 
+      // Get product images before deletion
+      const imageService = getImageService()
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: { images: true }
+      })
+
       // Prisma will cascade delete images and variants automatically
       await prisma.product.delete({ where: { id } })
+
+      // Delete image files from filesystem
+      if (product?.images) {
+        for (const image of product.images) {
+          if (image.filename) {
+            try {
+              await imageService.deleteImage(image.filename)
+            } catch (error) {
+              console.error(`Failed to delete image file ${image.filename}:`, error)
+            }
+          }
+        }
+      }
       
       // Invalidate caches
       cacheService.invalidatePattern('products:*')
@@ -367,31 +490,50 @@ export function registerProductsHandlers(prisma: any) {
   })
 
   /**
-   * Search products - optimized for autocomplete
+   * Search products - optimized for POS QuickSale
+   * Fast search with stock calculation and proper typing
+   * Note: SQLite is case-insensitive by default for ASCII, no mode needed
    */
-  ipcMain.handle('products:search', async (_, searchTerm: string) => {
+  ipcMain.handle('products:search', async (_, options: { query?: string; limit?: number } = {}) => {
     try {
-      if (!prisma || !searchTerm) return []
+      if (!prisma) return []
+      
+      const { query = '', limit = 50 } = options
+      
+      if (!query || query.trim() === '') return []
 
       const products = await prisma.product.findMany({
         where: {
           OR: [
-            { name: { contains: searchTerm } },
-            { baseSKU: { contains: searchTerm } }
+            { name: { contains: query } },
+            { baseSKU: { contains: query } },
+            { description: { contains: query } }
           ]
         },
-        select: {
-          id: true,
-          name: true,
-          baseSKU: true,
-          category: true,
-          basePrice: true
+        include: {
+          variants: {
+            select: {
+              stock: true
+            }
+          }
         },
-        take: 20, // Limit for autocomplete
-        orderBy: { createdAt: 'desc' }
+        take: limit,
+        orderBy: [
+          // Prioritize exact matches first
+          { name: 'asc' }
+        ]
       })
 
-      return products
+      // Calculate total stock for each product
+      return products.map(product => ({
+        id: product.id,
+        name: product.name,
+        baseSKU: product.baseSKU,
+        category: product.category,
+        basePrice: product.basePrice,
+        totalStock: product.variants.reduce((sum, v) => sum + v.stock, 0),
+        imageUrl: null // Can be enhanced later
+      }))
     } catch (error) {
       console.error('Error searching products:', error)
       throw error

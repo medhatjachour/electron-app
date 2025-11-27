@@ -3,6 +3,7 @@ import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
+import { formatCurrency } from '@renderer/utils/formatNumber'
 
 type Customer = {
   id: string
@@ -23,6 +24,11 @@ export default function Customers(): JSX.Element {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(100)
+  const [totalCount, setTotalCount] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const toast = useToast()
 
   const [formData, setFormData] = useState({
@@ -36,27 +42,47 @@ export default function Customers(): JSX.Element {
   const [selectedCustomerHistory, setSelectedCustomerHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setPage(0) // Reset to first page on search
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
   useEffect(() => {
     loadCustomers()
-  }, [])
+  }, [page, pageSize, debouncedSearch])
 
   const loadCustomers = async () => {
     try {
       setLoading(true)
-      const data = await ipc.customers.getAll()
-      setCustomers(data)
+      const data = await ipc.customers.getAll({
+        limit: pageSize,
+        offset: page * pageSize,
+        searchTerm: debouncedSearch
+      })
       
-      if (data.length === 0) {
+      setCustomers(data.customers)
+      setTotalCount(data.totalCount)
+      setHasMore(data.hasMore)
+      
+      if (data.customers.length === 0 && page === 0 && !debouncedSearch) {
         const localCustomers = localStorage.getItem('customers')
         if (localCustomers) {
-          setCustomers(JSON.parse(localCustomers))
+          const parsed = JSON.parse(localCustomers)
+          setCustomers(parsed)
+          setTotalCount(parsed.length)
         }
       }
     } catch (error) {
       console.error('Failed to load customers:', error)
       const localCustomers = localStorage.getItem('customers')
       if (localCustomers) {
-        setCustomers(JSON.parse(localCustomers))
+        const parsed = JSON.parse(localCustomers)
+        setCustomers(parsed)
+        setTotalCount(parsed.length)
         toast.warning('Using local backup data')
       }
     } finally {
@@ -104,6 +130,8 @@ export default function Customers(): JSX.Element {
         const newCustomer = {
           id: Date.now().toString(),
           ...customerData,
+          totalSpent: 0,
+          purchaseCount: 0,
           createdAt: new Date().toISOString()
         }
         const updatedCustomers = [...customers, newCustomer]
@@ -212,15 +240,13 @@ export default function Customers(): JSX.Element {
     }
   }
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone.includes(searchQuery)
-  )
-
-  const totalCustomers = customers.length
+  // Stats calculations
   const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0)
-  const averageSpent = totalCustomers > 0 ? totalRevenue / totalCustomers : 0
+  const averageSpent = totalCount > 0 ? totalRevenue / totalCount : 0
+  
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const startIndex = page * pageSize + 1
+  const endIndex = Math.min((page + 1) * pageSize, totalCount)
 
   return (
     <div className="p-6 space-y-6">
@@ -246,7 +272,7 @@ export default function Customers(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Customers</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{totalCustomers}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{totalCount}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <Heart size={24} className="text-primary" />
@@ -258,8 +284,8 @@ export default function Customers(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                ${totalRevenue.toFixed(2)}
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${totalRevenue.toFixed(2)}`}>
+                {formatCurrency(totalRevenue)}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -272,8 +298,8 @@ export default function Customers(): JSX.Element {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Average Spent</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                ${averageSpent.toFixed(2)}
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${averageSpent.toFixed(2)}`}>
+                {formatCurrency(averageSpent)}
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -283,9 +309,9 @@ export default function Customers(): JSX.Element {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar & Controls */}
       <div className="glass-card p-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
             <input
@@ -296,7 +322,65 @@ export default function Customers(): JSX.Element {
               className="input-field w-full pl-10"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Per page:</label>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setPage(0)
+              }}
+              className="input-field w-24"
+            >
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+              <option value={500}>500</option>
+            </select>
+          </div>
         </div>
+        
+        {/* Pagination Info */}
+        {totalCount > 0 && (
+          <div className="mt-3 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+            <span>
+              Showing {startIndex} to {endIndex} of {totalCount} customers
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(0)}
+                disabled={page === 0}
+                className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-medium">
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={!hasMore}
+                className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setPage(totalPages - 1)}
+                disabled={!hasMore}
+                className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Customers Grid */}
@@ -305,16 +389,16 @@ export default function Customers(): JSX.Element {
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
           <p className="mt-4 text-slate-600 dark:text-slate-400">Loading customers...</p>
         </div>
-      ) : filteredCustomers.length === 0 ? (
+      ) : customers.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Heart size={48} className="mx-auto text-slate-400 mb-4" />
           <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            {searchQuery ? 'No customers found' : 'No customers yet'}
+            {debouncedSearch ? 'No customers found' : 'No customers yet'}
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {searchQuery ? 'Try a different search term' : 'Get started by adding your first customer'}
+            {debouncedSearch ? 'Try a different search term' : 'Get started by adding your first customer'}
           </p>
-          {!searchQuery && (
+          {!debouncedSearch && (
             <button onClick={() => setShowAddModal(true)} className="btn-primary">
               <Plus size={20} className="inline mr-2" />
               Add Customer
@@ -323,7 +407,7 @@ export default function Customers(): JSX.Element {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCustomers.map((customer) => (
+          {customers.map((customer) => (
             <div key={customer.id} className="glass-card p-6 relative overflow-hidden hover:shadow-2xl transition-all duration-300">
               <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${getTierColor(customer.loyaltyTier)} opacity-10 rounded-bl-full`}></div>
               
@@ -353,7 +437,9 @@ export default function Customers(): JSX.Element {
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400">Total Spent</p>
-                      <p className="text-2xl font-bold text-primary">${customer.totalSpent.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary" title={`$${customer.totalSpent.toFixed(2)}`}>
+                        {formatCurrency(customer.totalSpent)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400">Purchases</p>
@@ -630,8 +716,8 @@ export default function Customers(): JSX.Element {
           <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Purchases</p>
-              <p className="text-2xl font-bold text-primary">
-                ${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}
+              <p className="text-2xl font-bold text-primary" title={`$${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}`}>
+                {selectedCustomer ? formatCurrency(selectedCustomer.totalSpent) : '$0.00'}
               </p>
             </div>
             <button

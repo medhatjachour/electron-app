@@ -1,7 +1,8 @@
 /**
  * Point of Sale (POS) Main Component
  * Modular architecture with separated concerns:
- * - ProductSearch: Product browsing and selection
+ * - ProductSearch: Product browsing and selection (Grid View)
+ * - QuickSale: Fast table-based sale interface (Quick Sale View)
  * - ShoppingCart: Cart display and management
  * - CustomerSelect: Customer search and selection
  * - PaymentSection: Payment method and checkout
@@ -10,12 +11,16 @@
  */
 
 import { useState } from 'react'
+import { Grid, Zap } from 'lucide-react'
 import ProductSearch from './ProductSearch'
+import QuickSale from './QuickSale'
 import ShoppingCart from './ShoppingCart'
 import CustomerSelect from './CustomerSelect'
 import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import { usePOS } from './usePOS'
+
+type ViewMode = 'grid' | 'quick'
 
 export default function POS(): JSX.Element {
   const {
@@ -39,8 +44,9 @@ export default function POS(): JSX.Element {
     setPaymentMethod,
   } = usePOS()
 
-  const [cartOpen, setCartOpen] = useState(true)
+  const [cartOpen, setCartOpen] = useState(false)
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   // Quick checkout with cash, no customer
   const handleQuickCheckout = async () => {
@@ -61,16 +67,49 @@ export default function POS(): JSX.Element {
     <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative">
       <SuccessModal show={showSuccess} total={total} paymentMethod={paymentMethod} />
 
-      {/* Main Product Area - Left Side */}
+      {/* Main Content Area - Left Side */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <ProductSearch 
-          onAddToCart={addToCart}
-          cartOpen={cartOpen}
-        />
+        {/* View Mode Tabs */}
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 pt-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-primary font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+              }`}
+            >
+              <Grid size={18} />
+              Grid View
+            </button>
+            <button
+              onClick={() => setViewMode('quick')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-colors ${
+                viewMode === 'quick'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-primary font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+              }`}
+            >
+              <Zap size={18} />
+              Quick Sale
+            </button>
+          </div>
+        </div>
+
+        {/* Content based on view mode */}
+        {viewMode === 'grid' ? (
+          <ProductSearch 
+            onAddToCart={addToCart}
+            cartOpen={cartOpen}
+          />
+        ) : (
+          <QuickSale />
+        )}
       </div>
 
-      {/* Backdrop Overlay (visible when cart is open) */}
-      {cartOpen && (
+      {/* Backdrop Overlay (visible when cart is open) - Only in Grid View */}
+      {cartOpen && viewMode === 'grid' && (
         <div 
           role="button"
           tabIndex={0}
@@ -81,8 +120,8 @@ export default function POS(): JSX.Element {
         />
       )}
 
-      {/* Floating Cart Toggle Button (when closed) */}
-      {!cartOpen && (
+      {/* Floating Cart Toggle Button (when closed) - Only in Grid View */}
+      {!cartOpen && viewMode === 'grid' && (
         <button
           onClick={() => setCartOpen(true)}
           className="fixed bottom-6 right-6 z-50 group"
@@ -115,19 +154,20 @@ export default function POS(): JSX.Element {
         </button>
       )}
 
-      {/* Cart Sidebar Panel - Right Side with Fixed Sections */}
-      <div 
-        className={`
-          fixed lg:relative right-0 top-0 h-full z-50
-          w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
-          bg-white dark:bg-slate-800 
-          border-l border-slate-200 dark:border-slate-700
-          shadow-2xl lg:shadow-none
-          transform transition-all duration-300 ease-out
-          ${cartOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'}
-          flex flex-col
-        `}
-      >
+      {/* Cart Sidebar Panel - Right Side with Fixed Sections - Only in Grid View */}
+      {viewMode === 'grid' && (
+        <div 
+          className={`
+            fixed lg:relative right-0 top-0 h-full z-50
+            w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
+            bg-white dark:bg-slate-800 
+            border-l border-slate-200 dark:border-slate-700
+            shadow-2xl lg:shadow-none
+            transform transition-all duration-300 ease-out
+            ${cartOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'}
+            flex flex-col
+          `}
+        >
         {/* Compact Header with Close/Minimize Button */}
         <div className="flex items-center justify-between px-4 py-3 border-b-2 border-primary bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2">
@@ -252,6 +292,7 @@ export default function POS(): JSX.Element {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@
  * Comprehensive overview with real-time metrics, analytics, and quick actions
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import {
@@ -17,11 +17,13 @@ import RecentActivity from './components/RecentActivity'
 import logger from '../../../../shared/utils/logger'
 
 import QuickActions from './components/QuickActions'
-import SalesChart from './components/SalesChart'
-import TopProducts from './components/TopProducts'
-import InventoryAlerts from './components/InventoryAlerts'
-import GoalTracking from './components/GoalTracking'
-import NotificationCenter from './components/NotificationCenter'
+
+// Lazy load heavy dashboard components for faster initial load
+const SalesChart = lazy(() => import('./components/SalesChart'))
+const TopProducts = lazy(() => import('./components/TopProducts'))
+const InventoryAlerts = lazy(() => import('./components/InventoryAlerts'))
+const GoalTracking = lazy(() => import('./components/GoalTracking'))
+const NotificationCenter = lazy(() => import('./components/NotificationCenter'))
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -182,13 +184,25 @@ export default function Dashboard() {
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-4">
             {/* Sales Chart */}
-            <SalesChart key={`sales-${stats.todayRevenue}`} />
+            <Suspense fallback={
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 h-96 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            }>
+              <SalesChart />
+            </Suspense>
 
             {/* Top Products */}
-            <TopProducts key={`products-${stats.todayOrders}`} />
+            <Suspense fallback={
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 h-64 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            }>
+              <TopProducts />
+            </Suspense>
 
             {/* Recent Activity */}
-            <RecentActivity key={`activity-${stats.todayOrders}`} />
+            <RecentActivity />
           </div>
 
           {/* Right Column - 1/3 width */}
@@ -197,13 +211,31 @@ export default function Dashboard() {
             <QuickActions userRole={user?.role || 'sales'} />
 
             {/* Goal Tracking */}
-            <GoalTracking key={`goals-${stats.todayRevenue}`} />
+            <Suspense fallback={
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 h-48 flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            }>
+              <GoalTracking />
+            </Suspense>
 
             {/* Notification Center */}
-            <NotificationCenter key={`notifs-${stats.todayOrders}`} />
+            <Suspense fallback={
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 h-48 flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            }>
+              <NotificationCenter />
+            </Suspense>
 
             {/* Inventory Alerts */}
-            <InventoryAlerts key={`alerts-${stats.lowStockItems}`} />
+            <Suspense fallback={
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 h-48 flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            }>
+              <InventoryAlerts />
+            </Suspense>
 
             {/* Quick Stats Card */}
             <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">

@@ -9,8 +9,9 @@ interface DisplaySettingsProps {
   settings: {
     showImagesInProductCards: boolean
     showImagesInPOSCards: boolean
+    showImagesInInventory: boolean
   }
-  onChange: (settings: { showImagesInProductCards: boolean; showImagesInPOSCards: boolean }) => void
+  onChange: (settings: { showImagesInProductCards: boolean; showImagesInPOSCards: boolean; showImagesInInventory: boolean }) => void
 }
 
 export default function DisplaySettings({ settings, onChange }: Readonly<DisplaySettingsProps>) {
@@ -87,6 +88,36 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
           <span
             className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
               settings.showImagesInPOSCards ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Inventory Table Setting */}
+      <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+        <div className="flex items-start gap-3 flex-1">
+          <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
+              Show Images in Inventory Table
+            </h4>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Display product thumbnails in the Inventory page table.
+              Disabling can speed up loading when browsing large inventories.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => handleToggle('showImagesInInventory')}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ml-4 ${
+            settings.showImagesInInventory ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              settings.showImagesInInventory ? 'translate-x-5' : 'translate-x-0'
             }`}
           />
         </button>

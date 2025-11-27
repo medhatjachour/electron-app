@@ -100,7 +100,6 @@ export class PredictionService {
         date
       }))
 
-      console.log(`[Revenue Forecast] Historical data points: ${dataPoints.length}`)
       if (dataPoints.length > 0) {
         console.log(`[Revenue Forecast] Sample data:`, dataPoints.slice(0, 3))
         console.log(`[Revenue Forecast] Revenue range: $${Math.min(...dataPoints.map(p => p.y))} - $${Math.max(...dataPoints.map(p => p.y))}`)
@@ -255,12 +254,6 @@ export class PredictionService {
         })
       }
 
-      console.log(`[Revenue Forecast] Generated ${forecastPredictions.length} predictions`)
-      if (forecastPredictions.length > 0) {
-        console.log(`[Revenue Forecast] First prediction: $${forecastPredictions[0].predictedRevenue.toFixed(2)} (${forecastPredictions[0].confidence}%)`)
-        console.log(`[Revenue Forecast] Last prediction: $${forecastPredictions[forecastPredictions.length-1].predictedRevenue.toFixed(2)} (${forecastPredictions[forecastPredictions.length-1].confidence}%)`)
-      }
-
       return {
         predictions: forecastPredictions,
         trend,
@@ -326,7 +319,6 @@ export class PredictionService {
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
       const avgDailyExpenses = totalExpenses / 30
 
-      console.log(`[Cash Flow] COGS Percentage: ${(cogsPercentage * 100).toFixed(1)}%, Avg Daily Expenses: $${avgDailyExpenses.toFixed(2)}`)
 
       // Calculate current cash position from recent revenue minus all costs
       let cumulativeCash = totalRevenue - totalCOGS - totalExpenses
@@ -617,9 +609,6 @@ export class PredictionService {
         return b.metrics.revenue - a.metrics.revenue
       })
 
-      console.log(`[Product Insights] Generated ${insights.length} insights from ${productMetrics.size} products`)
-      console.log(`[Product Insights] Breakdown: ${insights.filter(i => i.type === 'warning').length} warnings, ${insights.filter(i => i.type === 'opportunity').length} opportunities, ${insights.filter(i => i.type === 'success').length} successes`)
-      
       return insights.slice(0, limit)
     } catch (error) {
       logger.error('Error generating product insights:', error)
@@ -676,7 +665,6 @@ export class PredictionService {
       const netProfit = grossProfit - totalExpenses
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
-      console.log(`[Financial Health] Revenue: $${totalRevenue}, COGS: $${totalCOGS}, Expenses: $${totalExpenses}, Net Profit: $${netProfit}, Margin: ${profitMargin.toFixed(2)}%`)
 
       // Calculate inventory turnover - using product variants stock
       const variants = await this.prisma.productVariant.findMany({
@@ -691,7 +679,6 @@ export class PredictionService {
       // Formula: (Units Sold in 30 days / Current Inventory) × (365 / 30)
       const inventoryTurnover = avgInventory > 0 ? (totalUnitsSold / avgInventory) * (365 / 30) : 0
       
-      console.log(`[Financial Health] Units Sold: ${totalUnitsSold}, Total Stock: ${totalStock}, Turnover: ${inventoryTurnover.toFixed(2)}x`)
 
       // Get growth rate from revenue forecast - use same 30 days as other metrics
       const forecast = await this.forecastRevenue(30, 30)
@@ -704,7 +691,6 @@ export class PredictionService {
       const expenseRatio = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0
       const cogsRatio = totalRevenue > 0 ? (totalCOGS / totalRevenue) * 100 : 0
 
-      console.log(`[Financial Health] Inventory Turnover: ${inventoryTurnover.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%, Cash: $${cashPosition}, Expense Ratio: ${expenseRatio.toFixed(1)}%, COGS Ratio: ${cogsRatio.toFixed(1)}%`)
 
       // Evaluate each indicator with industry-standard thresholds
       const indicators = {

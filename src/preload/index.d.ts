@@ -121,6 +121,47 @@ interface API {
     getCustomerData: (options: { startDate: Date; endDate: Date }) => Promise<any>
     getQuickInsights: () => Promise<any>
   }
+  analytics: {
+    recordStockMovement: (data: {
+      variantId: string
+      type: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      quantity: number
+      reason?: string
+      referenceId?: string
+      userId?: string
+      notes?: string
+    }) => Promise<any>
+    getStockMovementHistory: (variantId: string, options?: {
+      limit?: number
+      type?: string
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getStockoutHistory: (variantId: string) => Promise<any>
+    getRestockHistory: (variantId: string, limit?: number) => Promise<any>
+    getProductSalesStats: (productId: string, options?: {
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getProductSalesTrend: (productId: string, options?: {
+      period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getTopSellingProducts: (options?: {
+      limit?: number
+      startDate?: string
+      endDate?: string
+      categoryId?: string
+    }) => Promise<any>
+    getAllStockMovements: (options?: {
+      limit?: number
+      type?: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      startDate?: string
+      endDate?: string
+      search?: string
+    }) => Promise<any>
+  }
 }
 
 declare global {

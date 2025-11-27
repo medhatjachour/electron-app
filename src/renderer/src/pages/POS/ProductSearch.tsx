@@ -392,7 +392,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
             <div key={product.id} className="glass-card p-4">
               {/* Product Image */}
               <div className="w-full aspect-square bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg mb-3 overflow-hidden">
-                {product.images[0] ? (
+                {product.images?.[0] ? (
                   <img
                     src={product.images[0].imageData}
                     alt={product.name}

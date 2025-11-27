@@ -190,7 +190,55 @@ const api = {
   'insights:products': (options: { limit?: number }) => 
     ipcRenderer.invoke('insights:products', options),
   'health:financial': () => 
-    ipcRenderer.invoke('health:financial')
+    ipcRenderer.invoke('health:financial'),
+  // Stock Movement & Product Analytics
+  analytics: {
+    recordStockMovement: (data: {
+      variantId: string
+      type: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      quantity: number
+      reason?: string
+      referenceId?: string
+      userId?: string
+      notes?: string
+    }) => ipcRenderer.invoke('analytics:recordStockMovement', data),
+    getStockMovementHistory: (variantId: string, options?: {
+      limit?: number
+      type?: string
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getStockMovementHistory', variantId, options),
+    getStockoutHistory: (variantId: string) => 
+      ipcRenderer.invoke('analytics:getStockoutHistory', variantId),
+    getRestockHistory: (variantId: string, limit?: number) => 
+      ipcRenderer.invoke('analytics:getRestockHistory', variantId, limit),
+    getProductSalesStats: (productId: string, options?: {
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getProductSalesStats', productId, options),
+    getProductSalesTrend: (productId: string, options?: {
+      period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getProductSalesTrend', productId, options),
+    getTopSellingProducts: (options?: {
+      limit?: number
+      startDate?: string
+      endDate?: string
+      categoryId?: string
+    }) => ipcRenderer.invoke('analytics:getTopSellingProducts', options),
+    getOverallStats: (options?: {
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getOverallStats', options),
+    getAllStockMovements: (options?: {
+      limit?: number
+      type?: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      startDate?: string
+      endDate?: string
+      search?: string
+    }) => ipcRenderer.invoke('analytics:getAllStockMovements', options)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

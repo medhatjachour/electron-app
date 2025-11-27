@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useDisplaySettings as useDisplaySettingsContext } from '../../contexts/DisplaySettingsContext'
 import { useSettings } from './useSettings'
 import GeneralSettings from './GeneralSettings'
 import DisplaySettings from './DisplaySettings'
@@ -33,6 +34,7 @@ import type { SettingsTab } from './types'
 export default function Settings() {
   const { theme, setTheme, actualTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
+  const { updateSettings: updateDisplaySettingsContext } = useDisplaySettingsContext()
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [saveSuccess, setSaveSuccess] = useState(false)
 
@@ -51,6 +53,12 @@ export default function Settings() {
     setDisplaySettings,
     saveSettings
   } = useSettings()
+  
+  // Sync display settings with DisplaySettingsContext
+  const handleDisplaySettingsChange = (newSettings: typeof displaySettings) => {
+    setDisplaySettings(newSettings)
+    updateDisplaySettingsContext(newSettings)
+  }
 
   const tabs = [
     { id: 'general' as SettingsTab, name: 'General', icon: SettingsIcon },
@@ -144,7 +152,7 @@ export default function Settings() {
           {activeTab === 'display' && (
             <DisplaySettings
               settings={displaySettings}
-              onChange={setDisplaySettings}
+              onChange={handleDisplaySettingsChange}
             />
           )}
 

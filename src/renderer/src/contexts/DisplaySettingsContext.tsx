@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface DisplaySettings {
   showImagesInProductCards: boolean
   showImagesInPOSCards: boolean
+  showImagesInInventory: boolean
 }
 
 interface DisplaySettingsContextType {
@@ -14,13 +15,23 @@ const DisplaySettingsContext = createContext<DisplaySettingsContextType | undefi
 
 const DEFAULT_SETTINGS: DisplaySettings = {
   showImagesInProductCards: true,
-  showImagesInPOSCards: true
+  showImagesInPOSCards: true,
+  showImagesInInventory: true
 }
 
 export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<DisplaySettings>(() => {
-    const stored = localStorage.getItem('displaySettings')
-    return stored ? JSON.parse(stored) : DEFAULT_SETTINGS
+    try {
+      const stored = localStorage.getItem('displaySettings')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // Merge with defaults to ensure all properties exist
+        return { ...DEFAULT_SETTINGS, ...parsed }
+      }
+    } catch (error) {
+      console.error('Failed to parse displaySettings from localStorage:', error)
+    }
+    return DEFAULT_SETTINGS
   })
 
   const updateSettings = (newSettings: Partial<DisplaySettings>) => {
