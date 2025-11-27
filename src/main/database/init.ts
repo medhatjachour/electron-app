@@ -64,7 +64,7 @@ export async function initializeDatabase(): Promise<void> {
       await createDatabaseWithSchema(dbPath)
     }
     
-    console.log('[DB Init] ℹ️ Default admin user: username="0000", password="0000"')
+    console.log('[DB Init] ℹ️ Default setup user: username="setup", password="setup123"')
     
   } catch (error) {
     console.error('[DB Init] ❌ Error initializing database:', error)
@@ -93,8 +93,8 @@ async function createDatabaseWithSchema(dbPath: string): Promise<void> {
     // Create empty database file
     fs.writeFileSync(dbPath, '')
     
-    // Import Prisma dynamically
-    const { PrismaClient } = await import(path.join(__dirname, '..', '..', 'generated', 'prisma'))
+    // Import Prisma using require (works better in Electron production)
+    const { PrismaClient } = require('../../generated/prisma')
     
     const prisma = new PrismaClient({
       datasources: {
@@ -202,25 +202,27 @@ async function createDefaultAdminUser(prisma: any): Promise<void> {
     
     const userCount = await prisma.user.count()
     if (userCount === 0) {
-      console.log('[DB Init] Creating default admin user...')
-      const passwordHash = await bcrypt.hash('0000', 10)
+      console.log('[DB Init] Creating default setup user...')
+      const passwordHash = await bcrypt.hash('setup123', 10)
       
       await prisma.user.create({
         data: {
           id: '00000000-0000-0000-0000-000000000000',
-          username: '0000',
+          username: 'setup',
           passwordHash,
           role: 'admin',
-          fullName: 'Administrator',
+          fullName: 'Setup Administrator',
+          email: 'setup@bizflow.local',
           isActive: true
         }
       })
       
-      console.log('[DB Init] ✅ Default admin user created')
-      console.log('[DB Init] 📝 Login: username="0000", password="0000"')
+      console.log('[DB Init] ✅ Default setup user created')
+      console.log('[DB Init] 📝 Login: username="setup", password="setup123"')
+      console.log('[DB Init] ⚠️  SECURITY: Change this password after first login!')
     }
   } catch (error) {
-    console.error('[DB Init] ⚠️ Failed to create admin user:', error)
+    console.error('[DB Init] ⚠️ Failed to create setup user:', error)
   }
 }
 
@@ -297,6 +299,7 @@ async function initializeDevelopmentDatabase(dbPath: string): Promise<void> {
         const passwordHash = await bcrypt.hash('setup123', 10)
         await setupPrisma.user.create({
           data: {
+            id: '00000000-0000-0000-0000-000000000000',
             username: 'setup',
             passwordHash: passwordHash,
             role: 'admin',
@@ -310,7 +313,7 @@ async function initializeDevelopmentDatabase(dbPath: string): Promise<void> {
         console.log('[DB Init] 📝 Login credentials:')
         console.log('[DB Init]    Username: setup')
         console.log('[DB Init]    Password: setup123')
-        console.log('[DB Init] ⚠️  IMPORTANT: Use this account ONLY to create your permanent admin, then delete it!')
+        console.log('[DB Init] ⚠️  SECURITY: Change this password after first login!')
       }
     } finally {
       await setupPrisma.$disconnect()

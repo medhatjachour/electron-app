@@ -31,11 +31,12 @@ async function main() {
   console.log('👤 Creating setup user...')
   const setupUser = await prisma.user.create({
     data: {
+      id: '00000000-0000-0000-0000-000000000000',
       username: 'setup',
       passwordHash: await bcrypt.hash('setup123', 10),
       role: 'admin',
       fullName: 'Setup Administrator',
-      email: 'setup@bizflow.com',
+      email: 'setup@bizflow.local',
       isActive: true,
     },
   })
@@ -45,8 +46,10 @@ async function main() {
   console.log('📊 Summary:')
   console.log('   • 1 setup user (admin)')
   console.log('\n🔐 Login Credentials:')
-  console.log('   Setup: setup / setup123')
-  console.log('\n💡 Ready for production configuration!')
+  console.log('   Username: setup')
+  console.log('   Password: setup123')
+  console.log('\n⚠️  SECURITY: Change this password after first login!')
+  console.log('💡 Ready for production configuration!')
 }
 
 main()
