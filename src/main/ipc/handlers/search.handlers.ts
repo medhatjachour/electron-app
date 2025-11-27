@@ -122,7 +122,6 @@ export function registerSearchHandlers(prisma: any) {
       // Load image data from filesystem if requested
       if (includeImages) {
         const imageService = getImageService()
-        console.log(`[search:products] Loading images for ${products.length} products`)
         let loadedCount = 0
         for (const product of products) {
           if (product.images && product.images.length > 0) {
@@ -135,10 +134,7 @@ export function registerSearchHandlers(prisma: any) {
             }
           }
         }
-        console.log(`[search:products] Loaded ${loadedCount} images from filesystem`)
-      } else {
-        console.log(`[search:products] Images not requested (includeImages: false)`)
-      }
+      } 
 
       // Enrich products with calculated fields
       const items = enrichData
@@ -647,7 +643,6 @@ export function registerSearchHandlers(prisma: any) {
       const totalOperationalExpenses = currentExpenses.reduce((sum, exp) => sum + exp.amount, 0)
       const previousTotalExpenses = previousExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
-      console.log(`[Finance] Revenue: $${totalRevenue}, COGS: $${totalCost}, Operational Expenses: $${totalOperationalExpenses}`)
 
       // Calculate profit metrics from ALL sales INCLUDING operational expenses
       const grossProfit = totalRevenue - totalCost
@@ -661,7 +656,6 @@ export function registerSearchHandlers(prisma: any) {
         ? ((totalProfit - previousTotalProfit) / previousTotalProfit) * 100 
         : 0
 
-      console.log(`[Finance] Gross Profit: $${grossProfit}, Net Profit: $${totalProfit}, Margin: ${profitMargin.toFixed(2)}%`)
 
       return {
         currentMetrics: {

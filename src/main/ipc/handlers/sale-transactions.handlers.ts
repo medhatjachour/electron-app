@@ -118,7 +118,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
             data: { totalSpent: customerTotal._sum.total || 0 }
           })
           
-          console.log(`[Customer] Updated totalSpent for customer ${transactionData.customerId}`)
         } catch (error) {
           console.error('Error updating customer totalSpent:', error)
           // Don't fail the transaction if this update fails
@@ -275,7 +274,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
             data: { totalSpent: customerTotal._sum.total || 0 }
           })
           
-          console.log(`[Customer] Updated totalSpent after refund for customer ${result.customerId}`)
         } catch (error) {
           console.error('Error updating customer totalSpent after refund:', error)
         }

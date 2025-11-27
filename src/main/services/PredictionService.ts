@@ -100,18 +100,13 @@ export class PredictionService {
         date
       }))
 
-      if (dataPoints.length > 0) {
-        console.log(`[Revenue Forecast] Sample data:`, dataPoints.slice(0, 3))
-        console.log(`[Revenue Forecast] Revenue range: $${Math.min(...dataPoints.map(p => p.y))} - $${Math.max(...dataPoints.map(p => p.y))}`)
-      }
+   
 
       if (dataPoints.length < 3) {
         // Not enough data - return simple prediction based on any available data
         const avgRevenue = dataPoints.length > 0 
           ? this.average(dataPoints.map(p => p.y))
           : 1000 // Default baseline
-        
-        console.log(`[Revenue Forecast] Insufficient data, using average: $${avgRevenue}`)
         
         const simplePredictions: Array<{
           date: string
@@ -167,10 +162,8 @@ export class PredictionService {
           const rawGrowth = ((recentAvg - oldAvg) / oldAvg) * 100
           growthRate = Math.max(-200, Math.min(200, rawGrowth))
           if (rawGrowth !== growthRate) {
-            console.log(`[Growth Rate] ⚠️ Raw growth ${rawGrowth.toFixed(1)}% CAPPED at ${growthRate}%`)
           }
         }
-        console.log(`[Growth Rate] 14+ days: Recent avg: $${recentAvg.toFixed(2)}, Old avg: $${oldAvg.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
       } else if (dataPoints.length >= 7) {
         // Compare last half to first half
         const midpoint = Math.floor(dataPoints.length / 2)
@@ -183,7 +176,6 @@ export class PredictionService {
           // Cap extreme values at ±200%
           growthRate = Math.max(-200, Math.min(200, growthRate))
         }
-        console.log(`[Growth Rate] 7-13 days (midpoint=${midpoint}): Recent avg: $${recentAvg.toFixed(2)}, Old avg: $${oldAvg.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
       } else {
         // Not enough data - use slope to estimate growth
         const avgRevenue = this.average(dataPoints.map(p => p.y))
@@ -192,7 +184,6 @@ export class PredictionService {
           // Cap extreme values
           growthRate = Math.max(-200, Math.min(200, growthRate))
         }
-        console.log(`[Growth Rate] <7 days: Slope: ${slope}, Avg Revenue: $${avgRevenue.toFixed(2)}, Growth: ${growthRate.toFixed(2)}%`)
       }
 
       // Determine trend
@@ -220,8 +211,6 @@ export class PredictionService {
       const avgRevenue = this.average(dataPoints.slice(-Math.min(7, dataPoints.length)).map(p => p.y))
       const isVeryFlatTrend = Math.abs(slope) < 0.5
       
-      console.log(`[Revenue Forecast] Slope: ${slope}, Intercept: ${intercept}, Avg Revenue: $${avgRevenue}`)
-      console.log(`[Revenue Forecast] Trend: ${trend}, Strength: ${trendStrength}%, Flat: ${isVeryFlatTrend}`)
       
       for (let i = 1; i <= days; i++) {
         const x = lastX + i

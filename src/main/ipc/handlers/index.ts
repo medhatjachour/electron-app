@@ -45,7 +45,6 @@ try {
     // Use centralized database path function
     const dbPath = getDatabasePath()
     
-    console.log('[Database] Database path:', dbPath)
     
     prisma = new PrismaClient({
       datasources: {
@@ -64,7 +63,6 @@ try {
       }
     })
     
-    console.log('[Database] ✅ Prisma client initialized successfully')
     
     // Auto-seed on first connection (production only)
     const isProd = process.env.NODE_ENV !== 'development'

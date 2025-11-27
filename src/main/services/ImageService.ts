@@ -66,7 +66,6 @@ export class ImageService {
 
       // Check if file already exists (deduplication)
       if (fs.existsSync(filePath)) {
-        console.log(`[ImageService] Image already exists: ${filename}`)
         return filename
       }
 
@@ -74,7 +73,6 @@ export class ImageService {
       const buffer = Buffer.from(base64Content, 'base64')
       fs.writeFileSync(filePath, buffer)
 
-      console.log(`[ImageService] Saved image: ${filename} (${(buffer.length / 1024).toFixed(2)} KB)`)
       return filename
     } catch (error) {
       console.error('[ImageService] Failed to save image:', error)
@@ -130,7 +128,6 @@ export class ImageService {
       const filePath = path.join(this.imagesDir, filename)
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath)
-        console.log(`[ImageService] Deleted image: ${filename}`)
       }
     } catch (error) {
       console.error(`[ImageService] Failed to delete image ${filename}:`, error)
@@ -157,7 +154,6 @@ export class ImageService {
         }
       }
 
-      console.log(`[ImageService] Cleaned up ${deletedCount} orphaned images`)
       return deletedCount
     } catch (error) {
       console.error('[ImageService] Cleanup failed:', error)

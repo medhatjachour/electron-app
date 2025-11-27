@@ -121,7 +121,6 @@ export function registerUserHandlers(prisma: any) {
         }
       })
 
-      console.log('[Users] Created new user:', user.username)
       return { success: true, data: user }
     } catch (error) {
       console.error('[Users] Failed to create user:', error)
@@ -183,7 +182,6 @@ export function registerUserHandlers(prisma: any) {
         }
       })
 
-      console.log('[Users] Updated user:', user.username)
       return { success: true, data: user }
     } catch (error) {
       console.error('[Users] Failed to update user:', error)
@@ -212,7 +210,6 @@ export function registerUserHandlers(prisma: any) {
         data: { passwordHash }
       })
 
-      console.log('[Users] Changed password for user:', existingUser.username)
       return { success: true }
     } catch (error) {
       console.error('[Users] Failed to change password:', error)
@@ -266,7 +263,6 @@ export function registerUserHandlers(prisma: any) {
         })
       })
 
-      console.log('[Users] Deleted user and related records:', existingUser.username)
       return { success: true }
     } catch (error) {
       console.error('[Users] Failed to delete user:', error)

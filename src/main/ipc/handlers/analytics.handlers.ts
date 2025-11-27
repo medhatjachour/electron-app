@@ -121,7 +121,6 @@ ipcMain.handle('analytics:recordStockMovement', async (_, data: {
       }
     })
 
-    console.log(`✅ Stock movement: ${data.type} ${data.quantity} units for ${variant.product.name}`)
     return movement
   } catch (error) {
     console.error('❌ Error recording stock movement:', error)
@@ -643,5 +642,4 @@ ipcMain.handle('analytics:getAllStockMovements', async (_, options?: {
   }
 })
 
-  console.log('✅ Analytics handlers registered')
 }
