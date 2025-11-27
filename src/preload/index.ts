@@ -227,6 +227,10 @@ const api = {
       endDate?: string
       categoryId?: string
     }) => ipcRenderer.invoke('analytics:getTopSellingProducts', options),
+    getOverallStats: (options?: {
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getOverallStats', options),
     getAllStockMovements: (options?: {
       limit?: number
       type?: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'

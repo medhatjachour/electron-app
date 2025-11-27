@@ -33,7 +33,6 @@ try {
   
   if (isDev) {
     const prismaPath = path.resolve(process.cwd(), 'src', 'generated', 'prisma')
-    console.log('[Database] [DEV] Loading Prisma from:', prismaPath)
     PrismaClient = require(prismaPath).PrismaClient
   } else {
     // In production, use the unpacked src/generated/prisma
@@ -95,49 +94,34 @@ if (!prisma) {
  * Call this function once during Electron app initialization
  */
 export function registerAllHandlers() {
-  console.log('🔧 Starting IPC handler registration...')
   
   registerAuthHandlers(prisma)
-  console.log('  ✓ Auth handlers registered')
   
   registerDashboardHandlers(prisma)
-  console.log('  ✓ Dashboard handlers registered')
   
   registerSalesHandlers(prisma)
-  console.log('  ✓ Sales handlers registered')
   
   registerSaleTransactionHandlers(prisma)
-  console.log('  ✓ Sale Transaction handlers registered')
   
   registerInventoryHandlers(prisma)
-  console.log('  ✓ Inventory handlers registered')
   
   registerFinanceHandlers(prisma)
-  console.log('  ✓ Finance handlers registered')
   
   registerProductsHandlers(prisma)
-  console.log('  ✓ Products handlers registered')
   
   registerCategoriesHandlers(prisma)
-  console.log('  ✓ Categories handlers registered')
   
   registerStoresHandlers(prisma)
-  console.log('  ✓ Stores handlers registered')
   
   registerEmployeesHandlers(prisma)
-  console.log('  ✓ Employees handlers registered')
   
   registerCustomersHandlers(prisma)
-  console.log('  ✓ Customers handlers registered')
   
   registerSearchHandlers(prisma)
-  console.log('  ✓ Search handlers registered')
   
   registerUserHandlers(prisma)
-  console.log('  ✓ User management handlers registered')
   
   registerReportsHandlers(prisma)
-  console.log('  ✓ Reports handlers registered')
   
   // Register analytics handlers (self-contained with own Prisma instance)
   registerAnalyticsHandlers()

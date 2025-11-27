@@ -117,9 +117,7 @@ export default function Employees(): JSX.Element {
         hireDate: new Date().toISOString()
       }
 
-      console.log('Creating employee with data:', employeeData)
       const result = await ipc.employees.create(employeeData)
-      console.log('Employee creation result:', result)
       
       if (result && result.success) {
         await loadEmployees()

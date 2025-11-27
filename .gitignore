@@ -17,3 +17,6 @@ out
 prisma/*.db
 prisma/*.db-*
 prisma/*.db-journal
+
+# Prisma images (product images)
+prisma/images/

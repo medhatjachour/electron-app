@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { TrendingUp, TrendingDown, Calendar, DollarSign, ShoppingBag, Percent } from 'lucide-react'
+import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 
 export default function SalesChart() {
   const [chartData, setChartData] = useState<any[]>([])
@@ -151,8 +152,8 @@ export default function SalesChart() {
               </div>
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Revenue</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              ${metrics.totalRevenue.toFixed(2)}
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={`$${metrics.totalRevenue.toLocaleString()}`}>
+              {formatCurrency(metrics.totalRevenue)}
             </div>
             <div className={`flex items-center gap-1 text-xs font-medium ${metrics.revenueChange >= 0 ? 'text-success' : 'text-error'}`}>
               {metrics.revenueChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -168,8 +169,8 @@ export default function SalesChart() {
               </div>
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Sales</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              {metrics.totalSales}
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={metrics.totalSales.toLocaleString()}>
+              {formatLargeNumber(metrics.totalSales)}
             </div>
             <div className={`flex items-center gap-1 text-xs font-medium ${metrics.salesChange >= 0 ? 'text-success' : 'text-error'}`}>
               {metrics.salesChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -185,8 +186,8 @@ export default function SalesChart() {
               </div>
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Avg. Sale Value</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              ${metrics.avgSale.toFixed(2)}
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={`$${metrics.avgSale.toLocaleString()}`}>
+              {formatCurrency(metrics.avgSale)}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400">
               Per transaction
@@ -220,8 +221,8 @@ export default function SalesChart() {
                       <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 pointer-events-none">
                         <div className="bg-slate-900 dark:bg-slate-700 text-white px-3 py-2 rounded-lg shadow-xl text-xs whitespace-nowrap">
                           <div className="font-semibold mb-1">{data.date}</div>
-                          <div className="text-success font-bold">${data.total.toFixed(2)}</div>
-                          <div className="text-slate-300">{data.count} sale{data.count !== 1 ? 's' : ''}</div>
+                          <div className="text-success font-bold" title={`$${data.total.toLocaleString()}`}>{formatCurrency(data.total)}</div>
+                          <div className="text-slate-300" title={`${data.count} sales`}>{formatLargeNumber(data.count)} sale{data.count !== 1 ? 's' : ''}</div>
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
                             <div className="border-4 border-transparent border-t-slate-900 dark:border-t-slate-700"></div>
                           </div>
@@ -261,8 +262,8 @@ export default function SalesChart() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 dark:text-slate-400">Peak:</span>
-              <span className="text-sm font-bold text-primary">
-                ${Math.max(...chartData.map(d => d.total)).toFixed(2)}
+              <span className="text-sm font-bold text-primary" title={`$${Math.max(...chartData.map(d => d.total)).toLocaleString()}`}>
+                {formatCurrency(Math.max(...chartData.map(d => d.total)))}
               </span>
             </div>
           </div>

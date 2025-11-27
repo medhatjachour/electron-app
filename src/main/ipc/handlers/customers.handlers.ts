@@ -28,7 +28,6 @@ export function registerCustomersHandlers(prisma: any) {
         data: { totalSpent }
       })
       
-      console.log(`[Customer] Recalculated totalSpent for customer ${customerId}: $${totalSpent}`)
     } catch (error) {
       console.error('Error recalculating customer totalSpent:', error)
     }

@@ -174,7 +174,6 @@ export function useRenderTime(componentName: string, enabled: boolean = process.
     if (enabled) {
       const endTime = performance.now()
       const duration = endTime - startTime.current
-      console.log(`[${componentName}] Render #${renderCount.current}: ${duration.toFixed(2)}ms`)
     }
   })
 }

@@ -35,28 +35,42 @@ const MOVEMENT_TYPES = {
 
 export default function StockHistory() {
   const [movements, setMovements] = useState<StockMovement[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
+  // Debounce search term
   useEffect(() => {
-    loadMovements()
-  }, [filter, searchTerm])
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Load on mount only
+  useEffect(() => {
+    if (isInitialLoad) {
+      setIsInitialLoad(false)
+      loadMovements()
+    }
+  }, [isInitialLoad])
 
   const loadMovements = async () => {
     try {
       setLoading(true)
       
       const options: any = {
-        limit: 100
+        limit: 50 // Reduced from 100 for faster loading
       }
       
       if (filter !== 'all') {
         options.type = filter
       }
       
-      if (searchTerm) {
-        options.search = searchTerm
+      if (debouncedSearch) {
+        options.search = debouncedSearch
       }
       
       // @ts-ignore
@@ -70,14 +84,8 @@ export default function StockHistory() {
     }
   }
 
-  const filteredMovements = movements.filter(m => {
-    const matchesType = filter === 'all' || m.type === filter
-    const matchesSearch = searchTerm === '' || 
-      m.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    return matchesType && matchesSearch
-  })
+  // No client-side filtering - all done server-side now
+  const filteredMovements = movements
 
   const getMovementIcon = (type: string) => {
     const config = MOVEMENT_TYPES[type as keyof typeof MOVEMENT_TYPES] || MOVEMENT_TYPES.ADJUSTMENT
@@ -133,6 +141,15 @@ export default function StockHistory() {
               <option key={key} value={key}>{config.label}</option>
             ))}
           </select>
+
+          {/* Apply Filter Button */}
+          <button
+            onClick={loadMovements}
+            disabled={loading}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {loading ? 'Loading...' : 'Apply Filter'}
+          </button>
         </div>
       </div>
 

@@ -12,7 +12,7 @@
  * - Toast notifications
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, lazy, Suspense } from 'react'
 import { Search, Filter, Download, Plus, RefreshCw, Package, AlertTriangle, TrendingUp, History } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
@@ -24,9 +24,11 @@ import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
 import ToastContainer from '../../components/ui/ToastContainer'
-import ProductAnalytics from './components/ProductAnalytics'
-import StockHistory from './components/StockHistory'
 import * as XLSX from 'xlsx'
+
+// Lazy load heavy components - only load when tabs are clicked
+const ProductAnalytics = lazy(() => import('./components/ProductAnalytics'))
+const StockHistory = lazy(() => import('./components/StockHistory'))
 
 import type { InventoryFilters as Filters, InventorySortOptions } from './types'
 import InventoryFilters from './components/InventoryFilters'
@@ -452,13 +454,31 @@ export default function InventoryPage() {
 
         {activeTab === 'analytics' && (
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
-            <ProductAnalytics />
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-slate-600 dark:text-slate-400">Loading Analytics...</p>
+                </div>
+              </div>
+            }>
+              <ProductAnalytics />
+            </Suspense>
           </div>
         )}
 
         {activeTab === 'history' && (
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
-            <StockHistory />
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-slate-600 dark:text-slate-400">Loading Stock History...</p>
+                </div>
+              </div>
+            }>
+              <StockHistory />
+            </Suspense>
           </div>
         )}
       </div>

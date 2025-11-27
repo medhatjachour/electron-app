@@ -20,8 +20,8 @@ const THREE_YEARS_AGO = new Date(NOW.getTime() - 3 * 365 * 24 * 60 * 60 * 1000)
 // Configuration - Optimized for speed
 const CONFIG = {
   TOTAL_PRODUCTS: 50000,
-  TOTAL_SALES: 1000000,
-  CUSTOMER_COUNT: 10000,
+  TOTAL_SALES: 100000,
+  CUSTOMER_COUNT: 1000,
   // Use larger batches with transactions for much better performance
   PRODUCT_BATCH_SIZE: 500, // Products per transaction
   VARIANT_BATCH_SIZE: 1000, // Variants per transaction
