@@ -65,7 +65,9 @@ jobs:
           }
           
           # Set DATABASE_URL to create template in prisma folder
-          $env:DATABASE_URL = "file:./prisma/template.db"
+          # Use absolute path to avoid double prisma folder issue
+          $dbPath = Join-Path $PWD "prisma" "template.db"
+          $env:DATABASE_URL = "file:$dbPath"
           
           Write-Host "Running Prisma migrations..."
           npx prisma migrate deploy
