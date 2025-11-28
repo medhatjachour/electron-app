@@ -30,6 +30,36 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
       
+      - name: Prepare template database
+        run: |
+          Write-Host "Creating template database..."
+          
+          # Remove old template if exists
+          if (Test-Path "prisma/template.db") {
+            Remove-Item "prisma/template.db" -Force
+          }
+          
+          # Set DATABASE_URL to create in prisma folder
+          $env:DATABASE_URL = "file:./prisma/template.db"
+          
+          # Apply migrations
+          Write-Host "Running migrations..."
+          npx prisma migrate deploy
+          
+          # Seed with setup user
+          Write-Host "Seeding database..."
+          npx prisma db seed
+          
+          # Verify it was created
+          if (Test-Path "prisma/template.db") {
+            $size = (Get-Item "prisma/template.db").Length / 1KB
+            Write-Host "✓ Template database created: $([math]::Round($size, 2)) KB"
+          } else {
+            Write-Error "❌ Failed to create template database!"
+            exit 1
+          }
+        shell: pwsh
+      
       - name: Build application
         run: npm run build:win
       

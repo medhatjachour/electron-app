@@ -94,7 +94,7 @@ async function createDatabaseWithSchema(dbPath: string): Promise<void> {
     fs.writeFileSync(dbPath, '')
     
     // Import Prisma using require (works better in Electron production)
-    const { PrismaClient } = require('../../generated/prisma')
+    const { PrismaClient } = require('@prisma/client')
     
     const prisma = new PrismaClient({
       datasources: {
