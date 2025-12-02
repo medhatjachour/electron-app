@@ -18,7 +18,9 @@ import ShoppingCart from './ShoppingCart'
 import CustomerSelect from './CustomerSelect'
 import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
+import AddCustomerModal from './AddCustomerModal'
 import { usePOS } from './usePOS'
+import type { Customer } from './types'
 
 type ViewMode = 'grid' | 'quick'
 
@@ -42,11 +44,19 @@ export default function POS(): JSX.Element {
     setSelectedCustomer,
     setCustomerQuery,
     setPaymentMethod,
+    refreshCustomers,
   } = usePOS()
 
   const [cartOpen, setCartOpen] = useState(false)
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+
+  const handleCustomerAdded = (newCustomer: Customer) => {
+    refreshCustomers()
+    setSelectedCustomer(newCustomer)
+    setCustomerQuery('')
+  }
 
   // Quick checkout with cash, no customer
   const handleQuickCheckout = async () => {
@@ -66,6 +76,11 @@ export default function POS(): JSX.Element {
   return (
     <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative">
       <SuccessModal show={showSuccess} total={total} paymentMethod={paymentMethod} />
+      <AddCustomerModal 
+        show={showAddCustomerModal} 
+        onClose={() => setShowAddCustomerModal(false)}
+        onCustomerAdded={handleCustomerAdded}
+      />
 
       {/* Main Content Area - Left Side */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -221,6 +236,7 @@ export default function POS(): JSX.Element {
                       customerQuery={customerQuery}
                       onSelectCustomer={setSelectedCustomer}
                       onQueryChange={setCustomerQuery}
+                      onAddNewCustomer={() => setShowAddCustomerModal(true)}
                     />
                   </div>
 

@@ -149,7 +149,7 @@ const mockIPC = {
     },
     create: async (data: any) => {
       const customers = JSON.parse(localStorage.getItem('customers') || '[]')
-      const newCustomer = { id: Date.now().toString(), ...data, totalSpent: 0, purchaseCount: 0 }
+      const newCustomer = { id: Date.now().toString(), ...data, totalSpent: 0 }
       customers.push(newCustomer)
       localStorage.setItem('customers', JSON.stringify(customers))
       return { success: true, customer: newCustomer }

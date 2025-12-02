@@ -5,9 +5,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ShoppingCart, Trash2, X, User, DollarSign } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, X, User, DollarSign, UserPlus } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
+import AddCustomerModal from './AddCustomerModal'
 
 type ProductVariant = {
   id: string
@@ -82,6 +83,7 @@ export default function QuickSale() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
@@ -109,6 +111,12 @@ export default function QuickSale() {
       console.error('Error loading customers:', error)
       setCustomers([])
     }
+  }
+
+  const handleCustomerAdded = (newCustomer: Customer) => {
+    loadCustomers()
+    setSelectedCustomer(newCustomer)
+    setShowAddCustomerModal(false)
   }
 
   // Refresh stock information for items in cart
@@ -841,6 +849,20 @@ export default function QuickSale() {
         {/* Cart Footer - Compact */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-700 space-y-2.5">
           {/* Customer Selection - Modern Design */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Customer
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAddCustomerModal(true)}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                <UserPlus size={14} />
+                Add New
+              </button>
+            </div>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
               <User size={18} className={selectedCustomer ? 'text-primary' : 'text-slate-400'} />
@@ -869,6 +891,7 @@ export default function QuickSale() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
+          </div>
           </div>
 
           {/* Totals - Compact */}
@@ -993,6 +1016,13 @@ export default function QuickSale() {
           </div>
         </div>
       )}
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal 
+        show={showAddCustomerModal}
+        onClose={() => setShowAddCustomerModal(false)}
+        onCustomerAdded={handleCustomerAdded}
+      />
     </div>
   )
 }

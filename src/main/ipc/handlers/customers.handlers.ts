@@ -105,12 +105,34 @@ export function registerCustomersHandlers(prisma: any) {
   ipcMain.handle('customers:create', async (_, customerData) => {
     try {
       if (prisma) {
-        const customer = await prisma.customer.create({ data: customerData })
+        // Normalize empty email to null to avoid unique constraint issues
+        const normalizedData = {
+          ...customerData,
+          email: customerData.email?.trim() || null
+        }
+        
+        // Check if phone already exists
+        const existingCustomer = await prisma.customer.findUnique({
+          where: { phone: normalizedData.phone }
+        })
+        
+        if (existingCustomer) {
+          return { 
+            success: false, 
+            message: 'A customer with this phone number already exists',
+            existingCustomer 
+          }
+        }
+        
+        const customer = await prisma.customer.create({ data: normalizedData })
         return { success: true, customer }
       }
       return { success: false, message: 'Database not available' }
     } catch (error: any) {
       console.error('Error creating customer:', error)
+      if (error.code === 'P2002') {
+        return { success: false, message: 'A customer with this phone number already exists' }
+      }
       return { success: false, message: error.message }
     }
   })
@@ -118,12 +140,36 @@ export function registerCustomersHandlers(prisma: any) {
   ipcMain.handle('customers:update', async (_, { id, customerData }) => {
     try {
       if (prisma) {
-        const customer = await prisma.customer.update({ where: { id }, data: customerData })
+        // Normalize empty email to null to avoid unique constraint issues
+        const normalizedData = {
+          ...customerData,
+          email: customerData.email?.trim() || null
+        }
+        
+        // Check if phone already exists (excluding current customer)
+        if (normalizedData.phone) {
+          const existingCustomer = await prisma.customer.findUnique({
+            where: { phone: normalizedData.phone }
+          })
+          
+          if (existingCustomer && existingCustomer.id !== id) {
+            return { 
+              success: false, 
+              message: 'A customer with this phone number already exists',
+              existingCustomer 
+            }
+          }
+        }
+        
+        const customer = await prisma.customer.update({ where: { id }, data: normalizedData })
         return { success: true, customer }
       }
       return { success: false, message: 'Database not available' }
     } catch (error: any) {
       console.error('Error updating customer:', error)
+      if (error.code === 'P2002') {
+        return { success: false, message: 'A customer with this phone number already exists' }
+      }
       return { success: false, message: error.message }
     }
   })

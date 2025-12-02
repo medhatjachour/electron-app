@@ -95,8 +95,8 @@ export default function Customers(): JSX.Element {
       toast.error('Name is required')
       return false
     }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      toast.error('Valid email is required')
+    if (formData.email.trim() && !formData.email.includes('@')) {
+      toast.error('Please enter a valid email address')
       return false
     }
     if (!formData.phone.trim()) {
@@ -126,25 +126,14 @@ export default function Customers(): JSX.Element {
         resetForm()
         toast.success('Customer added successfully!')
       } else {
-        // Fallback to localStorage
-        const newCustomer = {
-          id: Date.now().toString(),
-          ...customerData,
-          totalSpent: 0,
-          purchaseCount: 0,
-          createdAt: new Date().toISOString()
+        toast.error(result.message || 'Failed to add customer')
+        if (result.existingCustomer) {
+          toast.info(`Existing customer: ${result.existingCustomer.name}`)
         }
-        const updatedCustomers = [...customers, newCustomer]
-        setCustomers(updatedCustomers)
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers))
-        
-        setShowAddModal(false)
-        resetForm()
-        toast.warning('Customer saved locally - database unavailable')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding customer:', error)
-      toast.error('Failed to add customer')
+      toast.error(error?.message || 'Failed to add customer')
     }
   }
 
@@ -161,11 +150,14 @@ export default function Customers(): JSX.Element {
         setSelectedCustomer(null)
         toast.success('Customer updated successfully!')
       } else {
-        toast.error('Failed to update customer')
+        toast.error(result.message || 'Failed to update customer')
+        if (result.existingCustomer) {
+          toast.info(`Phone already used by: ${result.existingCustomer.name}`)
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating customer:', error)
-      toast.error('Failed to update customer')
+      toast.error(error?.message || 'Failed to update customer')
     }
   }
 
@@ -504,7 +496,7 @@ export default function Customers(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email *
+                Email <span className="text-slate-400 text-xs">(optional)</span>
               </label>
               <input
                 type="email"
@@ -590,7 +582,7 @@ export default function Customers(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email *
+                Email <span className="text-slate-400 text-xs">(optional)</span>
               </label>
               <input
                 type="email"
