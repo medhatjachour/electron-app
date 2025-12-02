@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, UserPlus } from 'lucide-react'
 import type { Customer } from './types'
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
   customerQuery: string
   onSelectCustomer: (customer: Customer | null) => void
   onQueryChange: (query: string) => void
+  onAddNewCustomer?: () => void
 }
 
 export default function CustomerSelect({
@@ -19,7 +20,8 @@ export default function CustomerSelect({
   selectedCustomer,
   customerQuery,
   onSelectCustomer,
-  onQueryChange
+  onQueryChange,
+  onAddNewCustomer
 }: Props) {
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -35,7 +37,19 @@ export default function CustomerSelect({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Customer (Optional)</label>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Customer (Optional)</label>
+        {onAddNewCustomer && (
+          <button
+            type="button"
+            onClick={onAddNewCustomer}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            <UserPlus size={14} />
+            Add New
+          </button>
+        )}
+      </div>
       <div className="relative">
         <input
           type="text"

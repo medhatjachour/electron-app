@@ -260,6 +260,11 @@ export function usePOS() {
     }
   }
 
+  // Refresh customers list (for after adding new customer)
+  const refreshCustomers = useCallback(() => {
+    loadCustomers()
+  }, [])
+
   return {
     // State
     products,
@@ -284,5 +289,6 @@ export function usePOS() {
     setSelectedCustomer,
     setCustomerQuery,
     setPaymentMethod,
+    refreshCustomers,
   }
 }

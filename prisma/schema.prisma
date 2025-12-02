@@ -256,8 +256,8 @@ model Employee {
 model Customer {
   id               String            @id @default(uuid())
   name             String
-  email            String            @unique
-  phone            String
+  email            String?           @unique
+  phone            String            @unique
   loyaltyTier      String            @default("Bronze")
   totalSpent       Float             @default(0) // Cached value, recalculated from transactions
   saleTransactions SaleTransaction[] // Sales linked to this customer
