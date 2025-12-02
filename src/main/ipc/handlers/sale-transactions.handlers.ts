@@ -242,14 +242,40 @@ export function registerSaleTransactionHandlers(prisma: any) {
           data: { status: 'refunded' }
         })
 
-        // Restore stock for each item
+        // Restore stock for each item and record stock movements
         await Promise.all(
-          transaction.items.map((item: any) => {
+          transaction.items.map(async (item: any) => {
             if (item.variantId) {
-              return tx.productVariant.update({
-                where: { id: item.variantId },
-                data: { stock: { increment: item.quantity } }
+              // Get current stock before update
+              const variant = await tx.productVariant.findUnique({
+                where: { id: item.variantId }
               })
+              
+              if (variant) {
+                const previousStock = variant.stock
+                const newStock = previousStock + item.quantity
+                
+                // Update stock
+                await tx.productVariant.update({
+                  where: { id: item.variantId },
+                  data: { stock: newStock }
+                })
+                
+                // Record stock movement as RETURN
+                await tx.stockMovement.create({
+                  data: {
+                    variantId: item.variantId,
+                    type: 'RETURN',
+                    quantity: item.quantity, // Positive for returns
+                    previousStock,
+                    newStock,
+                    referenceId: transaction.id,
+                    userId: transaction.userId,
+                    reason: 'Refund/Return',
+                    notes: `Refund of transaction ${transaction.id}`
+                  }
+                })
+              }
             }
             return Promise.resolve()
           })
