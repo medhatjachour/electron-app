@@ -181,12 +181,38 @@ export function registerSalesHandlers(prisma: any) {
           }
         })
 
-        // Restore stock
+        // Restore stock and record stock movement
         if (sale.variantId) {
-          await prisma.productVariant.update({
-            where: { id: sale.variantId },
-            data: { stock: { increment: sale.quantity } }
+          // Get current stock before update
+          const variant = await prisma.productVariant.findUnique({
+            where: { id: sale.variantId }
           })
+          
+          if (variant) {
+            const previousStock = variant.stock
+            const newStock = previousStock + sale.quantity
+            
+            // Update stock
+            await prisma.productVariant.update({
+              where: { id: sale.variantId },
+              data: { stock: newStock }
+            })
+            
+            // Record stock movement as RETURN
+            await prisma.stockMovement.create({
+              data: {
+                variantId: sale.variantId,
+                type: 'RETURN',
+                quantity: sale.quantity, // Positive for returns
+                previousStock,
+                newStock,
+                referenceId: saleId,
+                userId: sale.userId,
+                reason: 'Refund/Return',
+                notes: `Refund of sale ${saleId}`
+              }
+            })
+          }
         }
 
         return { success: true, sale }
