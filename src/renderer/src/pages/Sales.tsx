@@ -4,7 +4,7 @@ import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
-import { calculateRefundedAmount } from '@shared/utils/refundCalculations'
+import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 
 type SaleItem = {
   id: string

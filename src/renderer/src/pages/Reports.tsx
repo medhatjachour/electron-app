@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { calculateRefundedAmount } from '@shared/utils/refundCalculations';
+import { calculateRefundedAmount } from '@/shared/utils/refundCalculations';
 import { 
   FileText, 
   TrendingUp, 
