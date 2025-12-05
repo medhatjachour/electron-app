@@ -241,6 +241,15 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       return
     }
 
+    const skuExists = formData.variants.some(
+      v => v.sku === newVariant.sku
+    )
+
+    if (skuExists) {
+      toast.error('A variant with this SKU already exists')
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       variants: [

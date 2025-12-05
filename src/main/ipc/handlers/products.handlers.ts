@@ -160,6 +160,31 @@ export function registerProductsHandlers(prisma: any) {
 
       const { images, variants, baseStock, category, ...product } = productData
       
+      // Validate SKU uniqueness
+      // For single variant mode, check baseSKU
+      if (product.hasVariants === false && product.baseSKU) {
+        const existingVariant = await prisma.productVariant.findUnique({
+          where: { sku: product.baseSKU }
+        })
+        if (existingVariant) {
+          return { success: false, message: `SKU "${product.baseSKU}" already exists. Please use a unique SKU.` }
+        }
+      }
+      
+      // For variants mode, check all variant SKUs
+      if (variants?.length) {
+        for (const variant of variants) {
+          if (variant.sku) {
+            const existingVariant = await prisma.productVariant.findUnique({
+              where: { sku: variant.sku }
+            })
+            if (existingVariant) {
+              return { success: false, message: `SKU "${variant.sku}" already exists. Please use a unique SKU.` }
+            }
+          }
+        }
+      }
+      
       // If category is provided as a string (old format), we need to find or create the category
       let categoryId = product.categoryId
       
@@ -268,6 +293,37 @@ export function registerProductsHandlers(prisma: any) {
       }
 
       const { images, variants, baseStock, category, ...product } = productData
+      
+      // Validate SKU uniqueness (excluding current product's variants)
+      // For single variant mode, check baseSKU
+      if (product.hasVariants === false && product.baseSKU) {
+        const existingVariant = await prisma.productVariant.findFirst({
+          where: { 
+            sku: product.baseSKU,
+            productId: { not: id }
+          }
+        })
+        if (existingVariant) {
+          return { success: false, message: `SKU "${product.baseSKU}" already exists in another product. Please use a unique SKU.` }
+        }
+      }
+      
+      // For variants mode, check all variant SKUs
+      if (variants?.length) {
+        for (const variant of variants) {
+          if (variant.sku) {
+            const existingVariant = await prisma.productVariant.findFirst({
+              where: { 
+                sku: variant.sku,
+                productId: { not: id }
+              }
+            })
+            if (existingVariant) {
+              return { success: false, message: `SKU "${variant.sku}" already exists in another product. Please use a unique SKU.` }
+            }
+          }
+        }
+      }
       
       // If category is provided as a string (old format), we need to find or create the category
       let categoryId = product.categoryId

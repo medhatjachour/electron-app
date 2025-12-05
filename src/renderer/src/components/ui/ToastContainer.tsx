@@ -17,7 +17,8 @@ export default function ToastContainer({ toasts, onClose }: ToastContainerProps)
 
   return (
     <div
-      className="fixed top-4 right-4 z-[9999] pointer-events-none"
+      className="fixed top-4 right-4 pointer-events-none"
+      style={{ zIndex: 100000 }}
       aria-live="polite"
       aria-atomic="false"
     >

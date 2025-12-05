@@ -23,7 +23,6 @@ import { useSettings } from './useSettings'
 import GeneralSettings from './GeneralSettings'
 import DisplaySettings from './DisplaySettings'
 import CategorySettings from './CategorySettings'
-import UserProfileSettings from './UserProfileSettings'
 import UserManagementSettings from './UserManagementSettings'
 import PaymentMethodsSettings from './PaymentMethodsSettings'
 import TaxReceiptSettings from './TaxReceiptSettings'
@@ -45,8 +44,6 @@ export default function Settings() {
     setNotificationSettings,
     paymentMethods,
     setPaymentMethods,
-    userProfile,
-    setUserProfile,
     backupSettings,
     setBackupSettings,
     displaySettings,
@@ -64,7 +61,6 @@ export default function Settings() {
     { id: 'general' as SettingsTab, name: 'General', icon: SettingsIcon },
     { id: 'display' as SettingsTab, name: 'Display', icon: Monitor },
     { id: 'categories' as SettingsTab, name: 'Categories', icon: Tag },
-    { id: 'user' as SettingsTab, name: 'User Profile', icon: User },
     { id: 'users' as SettingsTab, name: 'User Management', icon: Users },
     { id: 'payments' as SettingsTab, name: 'Payments', icon: CreditCard },
     { id: 'tax' as SettingsTab, name: 'Tax & Receipt', icon: Receipt },
@@ -160,12 +156,7 @@ export default function Settings() {
             <CategorySettings />
           )}
 
-          {activeTab === 'user' && (
-            <UserProfileSettings
-              settings={userProfile}
-              onChange={setUserProfile}
-            />
-          )}
+       
 
           {activeTab === 'users' && (
             <UserManagementSettings />
