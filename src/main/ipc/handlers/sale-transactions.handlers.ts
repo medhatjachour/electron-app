@@ -432,7 +432,8 @@ export function registerSaleTransactionHandlers(prisma: any) {
       // Recalculate customer totalSpent if customerId exists
       if (result.customerId) {
         try {
-          const customerTotal = await prisma.saleTransaction.aggregate({
+          // Get completed transactions total
+          const completedTotal = await prisma.saleTransaction.aggregate({
             where: {
               customerId: result.customerId,
               status: 'completed'
@@ -440,9 +441,37 @@ export function registerSaleTransactionHandlers(prisma: any) {
             _sum: { total: true }
           })
           
+          // Get partially_refunded transactions and calculate net amounts
+          const partiallyRefundedTransactions = await prisma.saleTransaction.findMany({
+            where: {
+              customerId: result.customerId,
+              status: 'partially_refunded'
+            },
+            select: {
+              total: true,
+              items: {
+                select: {
+                  price: true,
+                  refundedQuantity: true
+                }
+              }
+            }
+          })
+          
+          // Calculate net amount for partially refunded transactions
+          const partiallyRefundedTotal = partiallyRefundedTransactions.reduce((sum, tx) => {
+            const refundedAmount = tx.items.reduce((itemSum, item) => {
+              const refunded = item.refundedQuantity || 0
+              return itemSum + (refunded * item.price)
+            }, 0)
+            return sum + (tx.total - refundedAmount)
+          }, 0)
+          
+          const totalSpent = (completedTotal._sum.total || 0) + partiallyRefundedTotal
+          
           await prisma.customer.update({
             where: { id: result.customerId },
-            data: { totalSpent: customerTotal._sum.total || 0 }
+            data: { totalSpent }
           })
         } catch (error) {
           console.error('Error updating customer totalSpent:', error)

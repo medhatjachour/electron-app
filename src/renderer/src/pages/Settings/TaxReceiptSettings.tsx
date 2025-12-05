@@ -63,7 +63,7 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
             type="number"
             className="w-32 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
             value={settings.refundPeriodDays}
-            onChange={(e) => handleChange('refundPeriodDays', parseInt(e.target.value) || 0)}
+            onChange={(e) => handleChange('refundPeriodDays', Math.max(0, parseInt(e.target.value, 10) || 0))}
             placeholder="30"
             min="0"
             max="365"

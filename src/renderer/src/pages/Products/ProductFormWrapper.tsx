@@ -246,7 +246,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     )
 
     if (skuExists) {
-      toast.error('A variant with this SKU already exists')
+      toast.error(`A variant with SKU "${newVariant.sku}" already exists in this product`)
       return
     }
 

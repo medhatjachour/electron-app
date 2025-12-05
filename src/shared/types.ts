@@ -136,7 +136,7 @@ export interface SaleItem {
   unitPrice: number
   total: number
   discount?: number
-  refundedAt?: Date | string | null
+  refundedAt?: string | null
 }
 
 // ============================================================================

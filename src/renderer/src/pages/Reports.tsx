@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { calculateRefundedAmount } from '@shared/utils/refundCalculations';
 import { 
   FileText, 
   TrendingUp, 
@@ -105,10 +106,7 @@ const EnhancedReports: React.FC = () => {
       // Calculate revenue accounting for refunds
       const revenue = salesData.reduce((sum: number, sale: any) => {
         // Calculate refunded amount for this sale
-        const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
-          const refunded = item.refundedQuantity || 0;
-          return refundSum + (refunded * item.price);
-        }, 0) || 0;
+        const refundedAmount = calculateRefundedAmount(sale.items || []);
         
         // Net revenue = total - refunded
         return sum + (sale.total - refundedAmount);

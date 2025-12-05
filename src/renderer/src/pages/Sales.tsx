@@ -4,6 +4,7 @@ import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
+import { calculateRefundedAmount } from '@shared/utils/refundCalculations'
 
 type SaleItem = {
   id: string
@@ -154,10 +155,7 @@ export default function Sales(): JSX.Element {
     // Calculate total revenue accounting for refunds
     const totalRevenue = activeTransactions.reduce((sum, transaction) => {
       // Calculate refunded amount for this transaction
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       // Add net revenue (total - refunded)
       return sum + (transaction.total - refundedAmount)
     }, 0)
@@ -180,10 +178,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= today && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const todayRevenue = todayTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     const todayCount = todayTransactions.length
@@ -196,10 +191,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= yesterday && transactionDate < today && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const yesterdayRevenue = yesterdayTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     const yesterdayCount = yesterdayTransactions.length
@@ -222,10 +214,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= startOfWeek && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const thisWeekRevenue = thisWeekTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
 
@@ -238,10 +227,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= lastWeekStart && transactionDate < lastWeekEnd && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const lastWeekRevenue = lastWeekTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     
