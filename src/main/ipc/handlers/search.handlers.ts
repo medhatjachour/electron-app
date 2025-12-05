@@ -511,9 +511,13 @@ export function registerSearchHandlers(prisma: any) {
       }
 
       // Fetch current period data using SaleTransaction and SaleItem, plus operational expenses
+      // Include both completed and partially_refunded transactions
       const [currentTransactions, previousTransactions, currentExpenses, previousExpenses] = await Promise.all([
         prisma.saleTransaction.findMany({
-          where: { ...currentWhere, status: 'completed' },
+          where: { 
+            ...currentWhere, 
+            status: { in: ['completed', 'partially_refunded'] }
+          },
           include: {
             items: {
               include: {
@@ -527,11 +531,20 @@ export function registerSearchHandlers(prisma: any) {
           }
         }),
         prisma.saleTransaction.findMany({
-          where: { ...previousWhere, status: 'completed' },
+          where: { 
+            ...previousWhere, 
+            status: { in: ['completed', 'partially_refunded'] }
+          },
           select: {
             id: true,
             total: true,
-            createdAt: true
+            createdAt: true,
+            items: {
+              select: {
+                refundedQuantity: true,
+                price: true
+              }
+            }
           }
         }),
         prisma.financialTransaction.findMany({
@@ -548,12 +561,43 @@ export function registerSearchHandlers(prisma: any) {
         })
       ])
 
-      // Calculate current metrics
-      const currentRevenue = currentTransactions.reduce((sum, txn) => sum + txn.total, 0)
+      // Calculate current metrics accounting for refunds
+      let currentRevenue = 0
+      let totalRefundedAmount = 0
+      let totalRefundedItems = 0
+      
+      currentTransactions.forEach(txn => {
+        // Calculate refunded amount for this transaction
+        const refundedAmount = txn.items.reduce((sum, item) => {
+          const refunded = item.refundedQuantity || 0
+          if (refunded > 0) {
+            totalRefundedItems += refunded
+            return sum + (refunded * item.price)
+          }
+          return sum
+        }, 0)
+        
+        totalRefundedAmount += refundedAmount
+        // Net revenue = total - refunded
+        currentRevenue += (txn.total - refundedAmount)
+      })
+      
       const currentTransactionCount = currentTransactions.length
 
-      // Calculate previous metrics
-      const previousRevenue = previousTransactions.reduce((sum, txn) => sum + txn.total, 0)
+      // Calculate previous metrics accounting for refunds
+      let previousRevenue = 0
+      let previousRefundedAmount = 0
+      
+      previousTransactions.forEach(txn => {
+        const refundedAmount = txn.items.reduce((sum, item) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        previousRefundedAmount += refundedAmount
+        previousRevenue += (txn.total - refundedAmount)
+      })
+      
       const previousTransactionCount = previousTransactions.length
 
       // Calculate changes
@@ -571,10 +615,10 @@ export function registerSearchHandlers(prisma: any) {
         ? ((avgOrderValue - previousAvgOrderValue) / previousAvgOrderValue) * 100
         : 0
 
-      // Top products analysis from transaction items
+      // Top products analysis from transaction items (excluding refunded items)
       const productSales = new Map<string, { name: string; revenue: number; qty: number; cost: number }>()
       
-      // Calculate total cost and profit from ALL transaction items
+      // Calculate total cost and profit from ALL transaction items (excluding refunds)
       let totalCost = 0
       let totalRevenue = 0
       
@@ -582,22 +626,28 @@ export function registerSearchHandlers(prisma: any) {
         transaction.items.forEach(item => {
           const productId = item.product.id
           const productName = item.product.name
-          const revenue = item.total
-          // Cost calculation: use baseCost from product (actual cost)
-          const unitCost = item.product.baseCost || 0
-          const cost = item.quantity * unitCost
           
-          // Accumulate total cost and revenue for ALL products
-          totalCost += cost
-          totalRevenue += revenue
+          // Calculate active (non-refunded) quantities and revenue
+          const refundedQty = item.refundedQuantity || 0
+          const activeQty = item.quantity - refundedQty
+          const refundedRevenue = refundedQty * item.price
+          const activeRevenue = item.total - refundedRevenue
+          
+          // Cost calculation: use baseCost from product (actual cost) for active items only
+          const unitCost = item.product.baseCost || 0
+          const activeCost = activeQty * unitCost
+          
+          // Accumulate total cost and revenue for ALL products (active items only)
+          totalCost += activeCost
+          totalRevenue += activeRevenue
           
           if (productSales.has(productId)) {
             const existing = productSales.get(productId)!
-            existing.revenue += revenue
-            existing.qty += item.quantity
-            existing.cost += cost
+            existing.revenue += activeRevenue
+            existing.qty += activeQty
+            existing.cost += activeCost
           } else {
-            productSales.set(productId, { name: productName, revenue, qty: item.quantity, cost })
+            productSales.set(productId, { name: productName, revenue: activeRevenue, qty: activeQty, cost: activeCost })
           }
         })
       })
@@ -614,24 +664,37 @@ export function registerSearchHandlers(prisma: any) {
           profitMargin: p.revenue > 0 ? ((p.revenue - p.cost) / p.revenue) * 100 : 0
         }))
 
-      // Sales by day
+      // Sales by day (accounting for refunds)
       const salesByDay = new Map<string, number>()
       currentTransactions.forEach(transaction => {
         const day = new Date(transaction.createdAt).toISOString().split('T')[0]
-        salesByDay.set(day, (salesByDay.get(day) || 0) + transaction.total)
+        
+        // Calculate net revenue for this transaction
+        const refundedAmount = transaction.items.reduce((sum, item) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        const netRevenue = transaction.total - refundedAmount
+        salesByDay.set(day, (salesByDay.get(day) || 0) + netRevenue)
       })
 
       const salesByDayArray = Array.from(salesByDay.entries())
         .map(([date, revenue]) => ({ date, revenue }))
         .sort((a, b) => a.date.localeCompare(b.date))
 
-      // Sales by category
+      // Sales by category (accounting for refunds)
       const categoryMap = new Map<string, number>()
       currentTransactions.forEach(transaction => {
         transaction.items.forEach(item => {
           const categoryName = item.product.category?.name || 'Uncategorized'
-          const revenue = item.total
-          categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + revenue)
+          
+          // Calculate active revenue (excluding refunded items)
+          const refundedQty = item.refundedQuantity || 0
+          const refundedRevenue = refundedQty * item.price
+          const activeRevenue = item.total - refundedRevenue
+          
+          categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + activeRevenue)
         })
       })
 
@@ -657,6 +720,15 @@ export function registerSearchHandlers(prisma: any) {
         : 0
 
 
+      // Calculate refund statistics
+      const refundedTransactionsCount = currentTransactions.filter(t => 
+        t.status === 'partially_refunded' || t.items.some(i => (i.refundedQuantity || 0) > 0)
+      ).length
+      
+      const refundRate = currentTransactionCount > 0 
+        ? (refundedTransactionsCount / currentTransactionCount) * 100 
+        : 0
+
       return {
         currentMetrics: {
           revenue: currentRevenue,
@@ -670,12 +742,18 @@ export function registerSearchHandlers(prisma: any) {
           totalCost,
           totalExpenses: totalOperationalExpenses,
           grossProfit,
-          profitChange
+          profitChange,
+          // Refund statistics
+          totalRefunded: totalRefundedAmount,
+          refundedItems: totalRefundedItems,
+          refundedTransactions: refundedTransactionsCount,
+          refundRate
         },
         previousMetrics: {
           revenue: previousRevenue,
           transactions: previousTransactionCount,
-          avgOrderValue: previousAvgOrderValue
+          avgOrderValue: previousAvgOrderValue,
+          totalRefunded: previousRefundedAmount
         },
         topProducts,
         salesByDay: salesByDayArray,

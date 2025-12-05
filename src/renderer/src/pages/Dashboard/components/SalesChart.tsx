@@ -47,10 +47,19 @@ export default function SalesChart() {
 
         const daySales = (transactions || []).filter((sale: any) => {
           const saleDate = new Date(sale.createdAt)
-          return saleDate >= date && saleDate < nextDate && sale.status === 'completed'
+          return saleDate >= date && saleDate < nextDate && 
+                 (sale.status === 'completed' || sale.status === 'partially_refunded')
         })
 
-        const total = daySales.reduce((sum: number, sale: any) => sum + sale.total, 0)
+        // Calculate net revenue accounting for refunds
+        const total = daySales.reduce((sum: number, sale: any) => {
+          const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
+            const refunded = item.refundedQuantity || 0
+            return refundSum + (refunded * item.price)
+          }, 0) || 0
+          
+          return sum + (sale.total - refundedAmount)
+        }, 0)
 
         data.push({
           date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -69,7 +78,10 @@ export default function SalesChart() {
 
   // Calculate key metrics
   const metrics = useMemo(() => {
-    const completedSales = allSales.filter((s: any) => s.status === 'completed')
+    // Include both completed and partially_refunded transactions
+    const completedSales = allSales.filter((s: any) => 
+      s.status === 'completed' || s.status === 'partially_refunded'
+    )
     
     // Current period
     const totalRevenue = chartData.reduce((sum, d) => sum + d.total, 0)
@@ -88,7 +100,15 @@ export default function SalesChart() {
       return saleDate >= previousPeriodStart && saleDate < previousPeriodEnd
     })
     
-    const previousRevenue = previousSales.reduce((sum: number, sale: any) => sum + sale.total, 0)
+    // Calculate previous revenue accounting for refunds
+    const previousRevenue = previousSales.reduce((sum: number, sale: any) => {
+      const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
+        const refunded = item.refundedQuantity || 0
+        return refundSum + (refunded * item.price)
+      }, 0) || 0
+      
+      return sum + (sale.total - refundedAmount)
+    }, 0)
     const previousCount = previousSales.length
     
     const revenueChange = previousRevenue > 0 

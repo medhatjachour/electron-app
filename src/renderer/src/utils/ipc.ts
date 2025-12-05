@@ -296,6 +296,13 @@ export const ipc = isElectron ? {
     getAll: () => window.electron.ipcRenderer.invoke('saleTransactions:getAll'),
     getById: (id: string) => window.electron.ipcRenderer.invoke('saleTransactions:getById', id),
     refund: (id: string) => window.electron.ipcRenderer.invoke('saleTransactions:refund', id),
+    refundItems: (data: { 
+      transactionId: string
+      items: Array<{
+        saleItemId: string
+        quantityToRefund: number
+      }>
+    }) => window.electron.ipcRenderer.invoke('saleTransactions:refundItems', data),
     getByDateRange: (data: { startDate: Date, endDate: Date }) => window.electron.ipcRenderer.invoke('saleTransactions:getByDateRange', data)
   }
 } : mockIPC

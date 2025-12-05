@@ -34,12 +34,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 animate-fade-in">
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        className="absolute inset-0 bg-black/60 backdrop-blur-md z-[51]"
         onClick={onClose}
       />
-      <div className={`glass-card ${sizeClasses[size]} w-full max-h-[90vh] overflow-hidden animate-scale-up relative`}>
+      <div className={`glass-card ${sizeClasses[size]} w-full max-h-[90vh] overflow-hidden animate-scale-up relative z-[52]`}>
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h2>
           <button

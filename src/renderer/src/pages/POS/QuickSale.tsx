@@ -530,7 +530,7 @@ export default function QuickSale() {
           {showDropdown && searchResults.length > 0 && (
             <div
               ref={dropdownRef}
-              className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-80 overflow-auto z-50"
+              className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-80 overflow-auto z-40"
             >
               {searchResults.map((product, index) => {
                 const cartItemsForProduct = cartItems.filter(item => item.productId === product.id)
@@ -696,7 +696,7 @@ export default function QuickSale() {
       </div>
 
       {/* Cart Section - Takes Most of the Screen */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-1 flex flex-col min-h-0">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-1 flex flex-col min-h-0 relative z-10">
         <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShoppingCart size={18} className="text-primary" />

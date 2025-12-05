@@ -132,9 +132,11 @@ export interface SaleItem {
   productId: string
   variantId?: string
   quantity: number
+  refundedQuantity?: number
   unitPrice: number
   total: number
   discount?: number
+  refundedAt?: Date | string | null
 }
 
 // ============================================================================

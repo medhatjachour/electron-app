@@ -64,6 +64,11 @@ type FinanceMetrics = {
   totalExpenses?: number
   grossProfit?: number
   profitChange?: number
+  // Refund statistics
+  totalRefunded?: number
+  refundedItems?: number
+  refundedTransactions?: number
+  refundRate?: number
 }
 
 type TopProduct = {
@@ -360,7 +365,7 @@ export default function Finance() {
           </div>
 
           {/* KPI Cards - Improved Layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <KPICard
               title="Total Revenue"
               value={`$${currentMetrics?.revenue.toFixed(2) || '0.00'}`}
@@ -381,7 +386,17 @@ export default function Finance() {
                 : `Cost: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`
               }
               showChange={currentMetrics?.profitChange !== undefined}
-              tooltip="Net profit calculated as Revenue minus COGS (Cost of Goods Sold) minus Operational Expenses. This is your actual earnings after all costs."
+              tooltip="Net profit after deducting costs of goods sold (COGS) and operational expenses. Formula: Revenue - COGS - Expenses = Profit"
+            />
+            <KPICard
+              title="Refunds"
+              value={`$${currentMetrics?.totalRefunded?.toFixed(2) || '0.00'}`}
+              change={-(currentMetrics?.refundRate || 0)}
+              icon={<TrendingDown size={24} />}
+              color="red"
+              subtitle={`${currentMetrics?.refundedTransactions || 0} transactions | ${currentMetrics?.refundedItems || 0} items`}
+              showChange={true}
+              tooltip={`Total refunded amount and refund rate. ${currentMetrics?.refundRate?.toFixed(1) || 0}% of transactions had refunds. Revenue shown is NET after refunds.`}
             />
             <KPICard
               title="Profit Margin"

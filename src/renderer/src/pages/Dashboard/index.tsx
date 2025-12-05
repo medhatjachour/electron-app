@@ -98,9 +98,26 @@ export default function Dashboard() {
         yesterdaySales: yesterdaySales.length
       })
 
-      // Calculate metrics from filtered data
-      const todayRevenue = (todaySales || []).reduce((sum: number, sale: any) => sum + sale.total, 0)
-      const yesterdayRevenue = (yesterdaySales || []).reduce((sum: number, sale: any) => sum + sale.total, 0)
+      // Calculate metrics from filtered data, accounting for refunds
+      const todayRevenue = (todaySales || []).reduce((sum: number, sale: any) => {
+        // Calculate refunded amount for this sale
+        const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0
+          return refundSum + (refunded * item.price)
+        }, 0) || 0
+        
+        // Net revenue = total - refunded
+        return sum + (sale.total - refundedAmount)
+      }, 0)
+      
+      const yesterdayRevenue = (yesterdaySales || []).reduce((sum: number, sale: any) => {
+        const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0
+          return refundSum + (refunded * item.price)
+        }, 0) || 0
+        
+        return sum + (sale.total - refundedAmount)
+      }, 0)
       
       const revenueChange = yesterdayRevenue > 0 
         ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 

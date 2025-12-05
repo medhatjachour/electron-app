@@ -173,7 +173,7 @@ export default function POS(): JSX.Element {
       {viewMode === 'grid' && (
         <div 
           className={`
-            fixed lg:relative right-0 top-0 h-full z-50
+            fixed lg:relative right-0 top-0 h-full z-10
             w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
             bg-white dark:bg-slate-800 
             border-l border-slate-200 dark:border-slate-700

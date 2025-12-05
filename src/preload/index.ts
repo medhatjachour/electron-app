@@ -47,6 +47,13 @@ const api = {
     getAll: () => ipcRenderer.invoke('saleTransactions:getAll'),
     getById: (id: string) => ipcRenderer.invoke('saleTransactions:getById', id),
     refund: (id: string) => ipcRenderer.invoke('saleTransactions:refund', id),
+    refundItems: (data: { 
+      transactionId: string
+      items: Array<{
+        saleItemId: string
+        quantityToRefund: number
+      }>
+    }) => ipcRenderer.invoke('saleTransactions:refundItems', data),
     getByDateRange: (data: { startDate: string; endDate: string }) =>
       ipcRenderer.invoke('saleTransactions:getByDateRange', data)
   },
