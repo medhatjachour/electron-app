@@ -313,6 +313,150 @@ export function registerSaleTransactionHandlers(prisma: any) {
   })
 
   /**
+   * Refund specific items (partial refund)
+   */
+  ipcMain.handle('saleTransactions:refundItems', async (_, { transactionId, items }: {
+    transactionId: string
+    items: Array<{
+      saleItemId: string
+      quantityToRefund: number
+    }>
+  }) => {
+    try {
+      if (!prisma) {
+        return { success: false, error: 'Database not initialized' }
+      }
+
+      const result = await prisma.$transaction(async (tx: any) => {
+        // Get transaction with items
+        const transaction = await tx.saleTransaction.findUnique({
+          where: { id: transactionId },
+          include: { items: true }
+        })
+
+        if (!transaction) {
+          throw new Error('Transaction not found')
+        }
+
+        if (transaction.status === 'refunded') {
+          throw new Error('Transaction already fully refunded')
+        }
+
+        // Validate and process each item refund
+        for (const refundItem of items) {
+          const saleItem = transaction.items.find((item: any) => item.id === refundItem.saleItemId)
+          
+          if (!saleItem) {
+            throw new Error(`Sale item ${refundItem.saleItemId} not found`)
+          }
+
+          const remainingQuantity = saleItem.quantity - saleItem.refundedQuantity
+          
+          if (refundItem.quantityToRefund <= 0) {
+            throw new Error('Refund quantity must be greater than 0')
+          }
+
+          if (refundItem.quantityToRefund > remainingQuantity) {
+            throw new Error(`Cannot refund ${refundItem.quantityToRefund} units. Only ${remainingQuantity} units available for refund`)
+          }
+
+          const newRefundedQuantity = saleItem.refundedQuantity + refundItem.quantityToRefund
+          const isFullyRefunded = newRefundedQuantity === saleItem.quantity
+
+          // Update sale item
+          await tx.saleItem.update({
+            where: { id: refundItem.saleItemId },
+            data: {
+              refundedQuantity: newRefundedQuantity,
+              refundedAt: isFullyRefunded && !saleItem.refundedAt ? new Date() : saleItem.refundedAt
+            }
+          })
+
+          // Restore stock and record stock movement
+          if (saleItem.variantId) {
+            const variant = await tx.productVariant.findUnique({
+              where: { id: saleItem.variantId }
+            })
+            
+            if (variant) {
+              const previousStock = variant.stock
+              const newStock = previousStock + refundItem.quantityToRefund
+              
+              // Update stock
+              await tx.productVariant.update({
+                where: { id: saleItem.variantId },
+                data: { stock: newStock }
+              })
+              
+              // Record stock movement as RETURN
+              await tx.stockMovement.create({
+                data: {
+                  variantId: saleItem.variantId,
+                  type: 'RETURN',
+                  quantity: refundItem.quantityToRefund,
+                  previousStock,
+                  newStock,
+                  referenceId: transactionId,
+                  userId: transaction.userId,
+                  reason: 'Partial Refund',
+                  notes: `Partial refund: ${refundItem.quantityToRefund} of ${saleItem.quantity} units from transaction ${transactionId}`
+                }
+              })
+            }
+          }
+        }
+
+        // Check if all items are fully refunded
+        const updatedItems = await tx.saleItem.findMany({
+          where: { transactionId }
+        })
+
+        const allFullyRefunded = updatedItems.every((item: any) => 
+          item.refundedQuantity === item.quantity
+        )
+        const anyRefunded = updatedItems.some((item: any) => 
+          item.refundedQuantity > 0
+        )
+
+        // Update transaction status
+        const newStatus = allFullyRefunded ? 'refunded' : (anyRefunded ? 'partially_refunded' : 'completed')
+        
+        const updatedTransaction = await tx.saleTransaction.update({
+          where: { id: transactionId },
+          data: { status: newStatus }
+        })
+
+        return updatedTransaction
+      })
+
+      // Recalculate customer totalSpent if customerId exists
+      if (result.customerId) {
+        try {
+          const customerTotal = await prisma.saleTransaction.aggregate({
+            where: {
+              customerId: result.customerId,
+              status: 'completed'
+            },
+            _sum: { total: true }
+          })
+          
+          await prisma.customer.update({
+            where: { id: result.customerId },
+            data: { totalSpent: customerTotal._sum.total || 0 }
+          })
+        } catch (error) {
+          console.error('Error updating customer totalSpent:', error)
+        }
+      }
+
+      return { success: true, transaction: result }
+    } catch (error) {
+      console.error('Error refunding items:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  /**
    * Get transactions by date range
    */
   ipcMain.handle('saleTransactions:getByDateRange', async (_, { startDate, endDate }) => {

@@ -52,9 +52,28 @@ export function registerReportsHandlers(prisma: any) {
         }
       })
 
-      // Calculate statistics
+      // Calculate statistics accounting for refunds
       const totalSales = saleTransactions.length
-      const totalRevenue = saleTransactions.reduce((sum, sale) => sum + sale.total, 0)
+      let totalRevenue = 0
+      let totalRefunded = 0
+      let refundedTransactions = 0
+      
+      saleTransactions.forEach(sale => {
+        // Calculate refunded amount for this sale
+        const refundedAmount = sale.items.reduce((sum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        if (refundedAmount > 0 || sale.status === 'partially_refunded') {
+          refundedTransactions++
+          totalRefunded += refundedAmount
+        }
+        
+        // Net revenue = total - refunded
+        totalRevenue += (sale.total - refundedAmount)
+      })
+      
       const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0
       
       // Group by payment method
@@ -63,21 +82,28 @@ export function registerReportsHandlers(prisma: any) {
         return acc
       }, {} as Record<string, number>)
 
-      // Group by category and calculate top products
+      // Group by category and calculate top products (excluding refunded items)
       const byCategory: Record<string, number> = {}
       const productSales: Record<string, any> = {}
       
       saleTransactions.forEach(transaction => {
         transaction.items.forEach((item: any) => {
           const category = item.product?.category?.name || 'Uncategorized'
-          byCategory[category] = (byCategory[category] || 0) + item.total
+          
+          // Calculate active quantities and revenue
+          const refundedQty = item.refundedQuantity || 0
+          const activeQty = item.quantity - refundedQty
+          const refundedRevenue = refundedQty * item.price
+          const activeRevenue = item.total - refundedRevenue
+          
+          byCategory[category] = (byCategory[category] || 0) + activeRevenue
           
           const productName = item.product?.name || 'Unknown'
           if (!productSales[productName]) {
             productSales[productName] = { name: productName, quantity: 0, revenue: 0 }
           }
-          productSales[productName].quantity += item.quantity
-          productSales[productName].revenue += item.total
+          productSales[productName].quantity += activeQty
+          productSales[productName].revenue += activeRevenue
         })
       })
 
@@ -85,15 +111,29 @@ export function registerReportsHandlers(prisma: any) {
         .sort((a: any, b: any) => b.revenue - a.revenue)
         .slice(0, 10)
 
-      // Daily breakdown
+      // Daily breakdown accounting for refunds
       const dailySales = saleTransactions.reduce((acc, transaction) => {
         const date = new Date(transaction.createdAt).toISOString().split('T')[0]
         if (!acc[date]) {
-          acc[date] = { date, sales: 0, revenue: 0, orders: 0 }
+          acc[date] = { date, sales: 0, revenue: 0, orders: 0, refunded: 0 }
         }
+        
+        // Calculate refunded amount for this transaction
+        const refundedAmount = transaction.items.reduce((sum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        const netRevenue = transaction.total - refundedAmount
+        const activeItems = transaction.items.reduce((sum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (item.quantity - refunded)
+        }, 0)
+        
         acc[date].orders += 1
-        acc[date].revenue += transaction.total
-        acc[date].sales += transaction.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+        acc[date].revenue += netRevenue
+        acc[date].sales += activeItems
+        acc[date].refunded += refundedAmount
         return acc
       }, {} as Record<string, any>)
 
@@ -104,6 +144,9 @@ export function registerReportsHandlers(prisma: any) {
             totalSales,
             totalRevenue,
             averageOrderValue,
+            totalRefunded,
+            refundedTransactions,
+            refundRate: totalSales > 0 ? (refundedTransactions / totalSales) * 100 : 0,
             dateRange: { startDate, endDate }
           },
           saleTransactions,
@@ -235,18 +278,33 @@ export function registerReportsHandlers(prisma: any) {
     try {
       if (!prisma) return { success: false, data: null }
 
-      // Get sales revenue from SaleTransaction (new model)
+      // Get sales revenue from SaleTransaction (new model) - include partially refunded
       const saleTransactions = await prisma.saleTransaction.findMany({
         where: {
           createdAt: {
             gte: new Date(startDate),
             lte: new Date(endDate)
           },
-          status: 'completed'
+          status: { in: ['completed', 'partially_refunded'] }
+        },
+        include: {
+          items: true
         }
       })
 
-      const totalRevenue = saleTransactions.reduce((sum, sale) => sum + sale.total, 0)
+      // Calculate revenue accounting for refunds
+      let totalRevenue = 0
+      let totalRefunded = 0
+      
+      saleTransactions.forEach(sale => {
+        const refundedAmount = sale.items.reduce((sum, item) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        totalRefunded += refundedAmount
+        totalRevenue += (sale.total - refundedAmount)
+      })
 
       // Get financial transactions (expenses)
       const transactions = await prisma.financialTransaction.findMany({
@@ -307,13 +365,22 @@ export function registerReportsHandlers(prisma: any) {
       const netProfit = totalRevenue + income - totalExpenses
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
-      // Daily breakdown
+      // Daily breakdown accounting for refunds
       const dailyFinancials = saleTransactions.reduce((acc, sale) => {
         const date = new Date(sale.createdAt).toISOString().split('T')[0]
         if (!acc[date]) {
-          acc[date] = { date, revenue: 0, expenses: 0, profit: 0 }
+          acc[date] = { date, revenue: 0, expenses: 0, profit: 0, refunded: 0 }
         }
-        acc[date].revenue += sale.total
+        
+        // Calculate net revenue for this sale
+        const refundedAmount = sale.items.reduce((sum, item) => {
+          const refunded = item.refundedQuantity || 0
+          return sum + (refunded * item.price)
+        }, 0)
+        
+        const netRevenue = sale.total - refundedAmount
+        acc[date].revenue += netRevenue
+        acc[date].refunded += refundedAmount
         return acc
       }, {} as Record<string, any>)
 
@@ -357,6 +424,7 @@ export function registerReportsHandlers(prisma: any) {
             totalExpenses: totalExpenses,
             salaryExpense: salaryExpenseForPeriod,
             otherExpenses: expensesFromTransactions,
+            totalRefunded,
             netProfit,
             profitMargin,
             salesCount: saleTransactions.length,

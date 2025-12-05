@@ -13,19 +13,31 @@ async function main() {
 
   // ==================== CLEAR EXISTING DATA ====================
   console.log('🗑️ Clearing existing data...')
-  await prisma.productImage.deleteMany()
-  await prisma.productVariant.deleteMany()
-  await prisma.saleItem.deleteMany()
-  await prisma.saleTransaction.deleteMany()
-  await prisma.sale.deleteMany()
-  await prisma.financialTransaction.deleteMany()
-  await prisma.product.deleteMany()
-  await prisma.employee.deleteMany()
-  await prisma.customer.deleteMany()
-  await prisma.store.deleteMany()
-  await prisma.user.deleteMany()
-  await prisma.category.deleteMany()
-  console.log('✅ Cleared existing data\n')
+  
+  // Delete in correct order respecting foreign key constraints
+  // Use try-catch to handle cases where tables might not exist yet
+  try {
+    await prisma.stockMovement.deleteMany()
+    await prisma.productImage.deleteMany()
+    await prisma.productVariant.deleteMany()
+    await prisma.saleItem.deleteMany()
+    await prisma.saleTransaction.deleteMany()
+    await prisma.sale.deleteMany()
+    await prisma.financialTransaction.deleteMany()
+    await prisma.product.deleteMany()
+    await prisma.employee.deleteMany()
+    await prisma.customer.deleteMany()
+    await prisma.store.deleteMany()
+    await prisma.user.deleteMany()
+    await prisma.category.deleteMany()
+    console.log('✅ Cleared existing data\n')
+  } catch (error: any) {
+    if (error.code === 'P2021') {
+      console.log('⚠️  Database tables not found. They will be created by migrations.\n')
+    } else {
+      throw error
+    }
+  }
 
   // ==================== SETUP USER ====================
   console.log('👤 Creating setup user...')

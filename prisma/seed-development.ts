@@ -596,6 +596,186 @@ async function main() {
   
   console.log(`✅ Updated ${customerUpdates} customer records\n`)
 
+  // ==================== PARTIAL REFUNDS ====================
+  console.log('🔄 Creating partial refunds for testing...')
+  
+  // Get some recent completed transactions
+  const recentTransactions = await prisma.saleTransaction.findMany({
+    where: { 
+      status: 'completed',
+      createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } // Last 90 days
+    },
+    include: { items: true },
+    take: 50,
+    orderBy: { createdAt: 'desc' }
+  })
+  
+  let partialRefundCount = 0
+  let fullRefundCount = 0
+  
+  // Create 10 partially refunded transactions
+  for (let i = 0; i < Math.min(10, recentTransactions.length); i++) {
+    const transaction = recentTransactions[i]
+    
+    if (transaction.items.length === 0) continue
+    
+    await prisma.$transaction(async (tx) => {
+      // Pick random items to partially refund
+      const itemsToRefund = transaction.items.slice(0, Math.ceil(transaction.items.length / 2))
+      
+      for (const item of itemsToRefund) {
+        // Refund 30-70% of the quantity
+        const refundPercentage = 0.3 + Math.random() * 0.4
+        const quantityToRefund = Math.max(1, Math.floor(item.quantity * refundPercentage))
+        
+        // Update sale item
+        await tx.saleItem.update({
+          where: { id: item.id },
+          data: {
+            refundedQuantity: quantityToRefund,
+            refundedAt: new Date()
+          }
+        })
+        
+        // Restore stock if variant exists
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId }
+          })
+          
+          if (variant) {
+            const previousStock = variant.stock
+            const newStock = previousStock + quantityToRefund
+            
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: newStock }
+            })
+            
+            // Create stock movement
+            await tx.stockMovement.create({
+              data: {
+                variantId: item.variantId,
+                type: 'RETURN',
+                quantity: quantityToRefund,
+                previousStock,
+                newStock,
+                referenceId: transaction.id,
+                userId: transaction.userId,
+                reason: 'Partial Refund',
+                notes: `Partial refund: ${quantityToRefund} of ${item.quantity} units`,
+                createdAt: new Date()
+              }
+            })
+          }
+        }
+      }
+      
+      // Update transaction status to partially_refunded
+      await tx.saleTransaction.update({
+        where: { id: transaction.id },
+        data: { status: 'partially_refunded' }
+      })
+      
+      partialRefundCount++
+    })
+  }
+  
+  // Create 5 fully refunded transactions
+  for (let i = 10; i < Math.min(15, recentTransactions.length); i++) {
+    const transaction = recentTransactions[i]
+    
+    if (transaction.items.length === 0) continue
+    
+    await prisma.$transaction(async (tx) => {
+      // Refund all items completely
+      for (const item of transaction.items) {
+        await tx.saleItem.update({
+          where: { id: item.id },
+          data: {
+            refundedQuantity: item.quantity,
+            refundedAt: new Date()
+          }
+        })
+        
+        // Restore stock if variant exists
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId }
+          })
+          
+          if (variant) {
+            const previousStock = variant.stock
+            const newStock = previousStock + item.quantity
+            
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: newStock }
+            })
+            
+            // Create stock movement
+            await tx.stockMovement.create({
+              data: {
+                variantId: item.variantId,
+                type: 'RETURN',
+                quantity: item.quantity,
+                previousStock,
+                newStock,
+                referenceId: transaction.id,
+                userId: transaction.userId,
+                reason: 'Full Refund',
+                notes: `Full refund of ${item.quantity} units`,
+                createdAt: new Date()
+              }
+            })
+          }
+        }
+      }
+      
+      // Update transaction status to refunded
+      await tx.saleTransaction.update({
+        where: { id: transaction.id },
+        data: { status: 'refunded' }
+      })
+      
+      fullRefundCount++
+    })
+  }
+  
+  console.log(`✅ Created ${partialRefundCount} partially refunded and ${fullRefundCount} fully refunded transactions\n`)
+  
+  // Recalculate customer totalSpent after refunds
+  console.log('💳 Recalculating customer totalSpent after refunds...')
+  
+  let refundedCustomerUpdates = 0
+  
+  // Update customers in batches to avoid transaction timeout
+  const customerBatchSize = 50
+  for (let i = 0; i < customers.length; i += customerBatchSize) {
+    const batch = customers.slice(i, i + customerBatchSize)
+    
+    await prisma.$transaction(async (tx) => {
+      for (const customer of batch) {
+        const totalSpent = await tx.saleTransaction.aggregate({
+          where: { 
+            customerId: customer.id,
+            status: 'completed' // Only count completed, not refunded
+          },
+          _sum: { total: true }
+        })
+        
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: { totalSpent: totalSpent._sum.total || 0 }
+        })
+        
+        refundedCustomerUpdates++
+      }
+    })
+  }
+  
+  console.log(`✅ Updated ${refundedCustomerUpdates} customer records\n`)
+
   // ==================== ADDITIONAL STOCK MOVEMENTS ====================
   console.log('📦 Creating additional stock movements (restocks, adjustments, returns)...')
   

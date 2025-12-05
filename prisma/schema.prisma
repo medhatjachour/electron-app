@@ -147,7 +147,7 @@ model SaleTransaction {
   userId        String
   customerId    String?    // Optional: Link to Customer for tracking
   paymentMethod String     @default("cash") // cash or card
-  status        String     @default("completed") // completed, pending, refunded
+  status        String     @default("completed") // completed, pending, partially_refunded, refunded
   customerName  String?    // Optional customer name (kept for backward compatibility)
   subtotal      Float      // Sum of all items before tax
   tax           Float      @default(0) // Tax amount
@@ -174,9 +174,11 @@ model SaleItem {
   transactionId    String
   productId        String
   variantId        String?         // Optional: which variant was sold
-  quantity         Int
+  quantity         Int             // Total quantity sold
+  refundedQuantity Int             @default(0) // How many units were refunded
   price            Float           // Price per item at time of sale
   total            Float           // Total = price * quantity
+  refundedAt       DateTime?       // When this item was refunded (null if not refunded)
   transaction      SaleTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   product          Product         @relation(fields: [productId], references: [id])
   createdAt        DateTime        @default(now())

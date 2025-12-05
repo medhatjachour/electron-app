@@ -102,7 +102,18 @@ const EnhancedReports: React.FC = () => {
         })
       ]);
 
-      const revenue = salesData.reduce((sum: number, sale: any) => sum + sale.total, 0);
+      // Calculate revenue accounting for refunds
+      const revenue = salesData.reduce((sum: number, sale: any) => {
+        // Calculate refunded amount for this sale
+        const refundedAmount = sale.items?.reduce((refundSum: number, item: any) => {
+          const refunded = item.refundedQuantity || 0;
+          return refundSum + (refunded * item.price);
+        }, 0) || 0;
+        
+        // Net revenue = total - refunded
+        return sum + (sale.total - refundedAmount);
+      }, 0);
+      
       const expenses = financeData
         .filter((t: any) => t.type === 'expense')
         .reduce((sum: number, t: any) => sum + t.amount, 0);
@@ -261,9 +272,11 @@ const EnhancedReports: React.FC = () => {
       const summaryData: any[] = [];
       if (reportForm.reportType === 'sales' && reportData.summary) {
         summaryData.push(
-          ['Total Revenue', formatCurrency(reportData.summary.totalRevenue || 0)],
+          ['Total Revenue (Net)', formatCurrency(reportData.summary.totalRevenue || 0)],
           ['Total Sales', `${reportData.summary.totalSales || 0}`],
-          ['Average Order Value', formatCurrency(reportData.summary.averageOrderValue || 0)]
+          ['Average Order Value', formatCurrency(reportData.summary.averageOrderValue || 0)],
+          ['Total Refunded', formatCurrency(reportData.summary.totalRefunded || 0)],
+          ['Refunded Transactions', `${reportData.summary.refundedTransactions || 0} (${(reportData.summary.refundRate || 0).toFixed(1)}%)`]
         );
       } else if (reportForm.reportType === 'inventory' && reportData.summary) {
         summaryData.push(
@@ -274,10 +287,13 @@ const EnhancedReports: React.FC = () => {
         );
       } else if (reportForm.reportType === 'financial' && reportData.summary) {
         summaryData.push(
-          ['Total Revenue', formatCurrency(reportData.summary.totalRevenue || 0)],
+          ['Total Revenue (Net)', formatCurrency(reportData.summary.totalRevenue || 0)],
+          ['Total Refunded', formatCurrency(reportData.summary.totalRefunded || 0)],
           ['Total Expenses', formatCurrency(reportData.summary.totalExpenses || 0)],
+          ['  - Salaries', formatCurrency(reportData.summary.salaryExpense || 0)],
+          ['  - Other Expenses', formatCurrency(reportData.summary.otherExpenses || 0)],
           ['Net Profit', formatCurrency(reportData.summary.netProfit || 0)],
-          ['Profit Margin', `${reportData.summary.profitMargin || 0}%`]
+          ['Profit Margin', `${(reportData.summary.profitMargin || 0).toFixed(2)}%`]
         );
       } else if (reportForm.reportType === 'customer' && reportData.summary) {
         summaryData.push(
