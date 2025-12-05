@@ -53,6 +53,23 @@ export default function Sales(): JSX.Element {
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  
+  // Get refund period from settings
+  const refundPeriodDays = parseInt(localStorage.getItem('refundPeriodDays') || '30')
+  
+  // Check if transaction is within refund period
+  const isWithinRefundPeriod = (transactionDate: string): boolean => {
+    if (refundPeriodDays === 0) return false // 0 means refunds disabled
+    
+    const transactionTime = new Date(transactionDate).getTime()
+    const now = new Date().getTime()
+    const daysDifference = (now - transactionTime) / (1000 * 60 * 60 * 24)
+    
+    return daysDifference <= refundPeriodDays
+  }
+  
+  // Check if refunds are enabled in settings
+  const refundsEnabled = refundPeriodDays > 0
 
   useEffect(() => {
     loadTransactions()
@@ -662,28 +679,41 @@ export default function Sales(): JSX.Element {
                               <Eye size={14} />
                               View
                             </button>
-                            {(transaction.status === 'completed' || transaction.status === 'partially_refunded') && (
+                            {(transaction.status === 'completed' || transaction.status === 'partially_refunded') && refundsEnabled && (
                               <>
-                                <button 
-                                  onClick={() => handlePartialRefund(transaction)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
-                                  title="Refund specific items"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                                  </svg>
-                                  Items
-                                </button>
-                                <button 
-                                  onClick={() => handleRefund(transaction.id)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
-                                  title="Refund entire transaction"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
-                                  </svg>
-                                  All
-                                </button>
+                                {isWithinRefundPeriod(transaction.createdAt) ? (
+                                  <>
+                                    <button 
+                                      onClick={() => handlePartialRefund(transaction)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
+                                      title="Refund specific items"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                      </svg>
+                                      Items
+                                    </button>
+                                    <button 
+                                      onClick={() => handleRefund(transaction.id)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
+                                      title="Refund entire transaction"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                                      </svg>
+                                      All
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold cursor-not-allowed"
+                                    title={`Refund period expired (${refundPeriodDays} days)`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    Expired
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
@@ -939,43 +969,71 @@ export default function Sales(): JSX.Element {
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                 {(selectedTransaction.status === 'completed' || selectedTransaction.status === 'partially_refunded') && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Refund Options</h4>
-                    </div>
-                    <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
-                      Choose to refund specific items or the entire transaction
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => {
-                          setShowViewModal(false)
-                          handlePartialRefund(selectedTransaction)
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-orange-500 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors font-medium text-sm"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        Refund Items
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowViewModal(false)
-                          handleRefund(selectedTransaction.id)
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-red-500 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
-                        </svg>
-                        Refund All
-                      </button>
-                    </div>
-                  </div>
+                  <>
+                    {!refundsEnabled ? (
+                      <div className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Refunds Disabled</h4>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          Refunds are currently disabled in the system settings. Please contact an administrator to enable refunds.
+                        </p>
+                      </div>
+                    ) : isWithinRefundPeriod(selectedTransaction.createdAt) ? (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Refund Options</h4>
+                        </div>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+                          Choose to refund specific items or the entire transaction
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => {
+                              setShowViewModal(false)
+                              handlePartialRefund(selectedTransaction)
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-orange-500 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors font-medium text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            Refund Items
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowViewModal(false)
+                              handleRefund(selectedTransaction.id)
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-red-500 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                            </svg>
+                            Refund All
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Refund Period Expired</h4>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          This transaction is beyond the {refundPeriodDays}-day refund period and can no longer be refunded. Please contact an administrator if you need to override this policy.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
                 <button
                   onClick={() => setShowViewModal(false)}

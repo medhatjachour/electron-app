@@ -18,6 +18,7 @@ export interface TaxReceiptSettings {
   receiptFooter: string
   autoPrint: boolean
   includeLogo: boolean
+  refundPeriodDays: number // Number of days allowed for refunds/returns
 }
 
 export interface NotificationSettings {

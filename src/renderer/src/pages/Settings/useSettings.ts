@@ -31,7 +31,8 @@ export function useSettings() {
     receiptHeader: localStorage.getItem('receiptHeader') || '',
     receiptFooter: localStorage.getItem('receiptFooter') || 'Thank you for your business!',
     autoPrint: localStorage.getItem('autoPrint') === 'true',
-    includeLogo: localStorage.getItem('includeLogo') === 'true'
+    includeLogo: localStorage.getItem('includeLogo') === 'true',
+    refundPeriodDays: parseInt(localStorage.getItem('refundPeriodDays') || '30')
   }))
 
   // Notification Settings
