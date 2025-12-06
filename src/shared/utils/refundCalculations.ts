@@ -6,6 +6,7 @@
 export interface RefundableItem {
   refundedQuantity?: number
   price: number
+  finalPrice?: number
 }
 
 /**
@@ -15,8 +16,8 @@ export interface RefundableItem {
  */
 export function calculateRefundedAmount(items: RefundableItem[]): number {
   return items.reduce((sum, item) => {
-    const refunded = item.refundedQuantity || 0
-    return sum + (refunded * item.price)
+    const refundedQty = item.refundedQuantity || 0
+    return sum + (refundedQty * (item.finalPrice || item.price))
   }, 0)
 }
 

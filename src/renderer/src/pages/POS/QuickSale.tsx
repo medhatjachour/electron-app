@@ -442,7 +442,7 @@ export default function QuickSale() {
 
   const openDiscountModal = (item: CartItem) => {
     if (!canApplyDiscount()) {
-      showToast('error', 'Only administrators and managers can apply discounts')
+      showToast('error', 'Discounts are currently disabled in settings')
       return
     }
     setDiscountingItem(item)

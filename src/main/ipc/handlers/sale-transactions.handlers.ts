@@ -469,7 +469,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
           const partiallyRefundedTotal = partiallyRefundedTransactions.reduce((sum, tx) => {
             const refundedAmount = tx.items.reduce((itemSum, item) => {
               const refunded = item.refundedQuantity || 0
-              return itemSum + (refunded * item.price)
+              return itemSum + (refunded * (item.finalPrice || item.price))
             }, 0)
             return sum + (tx.total - refundedAmount)
           }, 0)

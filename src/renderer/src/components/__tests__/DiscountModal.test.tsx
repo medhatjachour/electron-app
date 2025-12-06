@@ -28,13 +28,13 @@ describe('DiscountModal', () => {
 
   it('renders when open', () => {
     render(<DiscountModal {...defaultProps} />)
-    expect(screen.getByText('Apply Discount')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Apply Discount/i })).toBeInTheDocument()
     expect(screen.getByText('Test Product')).toBeInTheDocument()
   })
 
   it('does not render when closed', () => {
     render(<DiscountModal {...defaultProps} isOpen={false} />)
-    expect(screen.queryByText('Apply Discount')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Apply Discount/i })).not.toBeInTheDocument()
   })
 
   it('switches between percentage and fixed amount', () => {
@@ -43,18 +43,20 @@ describe('DiscountModal', () => {
     const percentageBtn = screen.getByText('Percentage')
     const fixedBtn = screen.getByText('Fixed Amount')
     
-    expect(percentageBtn).toHaveClass('bg-primary')
+    // Initially percentage is selected
+    expect(percentageBtn.parentElement).toHaveClass('border-primary')
     
+    // Switch to fixed amount
     fireEvent.click(fixedBtn)
-    expect(fixedBtn).toHaveClass('bg-primary')
+    expect(fixedBtn.parentElement).toHaveClass('border-primary')
   })
 
   it('validates percentage discount exceeding max', () => {
     render(<DiscountModal {...defaultProps} />)
     
     const input = screen.getByPlaceholderText('0')
-    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty reward, Damaged item, etc.')
-    const applyBtn = screen.getByText('Apply Discount')
+    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty, Price match, Clearance sale')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(input, { target: { value: '60' } })
     fireEvent.change(reasonInput, { target: { value: 'Test reason' } })
@@ -71,8 +73,8 @@ describe('DiscountModal', () => {
     fireEvent.click(fixedBtn)
     
     const input = screen.getByPlaceholderText('0')
-    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty reward, Damaged item, etc.')
-    const applyBtn = screen.getByText('Apply Discount')
+    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty, Price match, Clearance sale')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(input, { target: { value: '150' } })
     fireEvent.change(reasonInput, { target: { value: 'Test reason' } })
@@ -89,8 +91,8 @@ describe('DiscountModal', () => {
     fireEvent.click(fixedBtn)
     
     const input = screen.getByPlaceholderText('0')
-    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty reward, Damaged item, etc.')
-    const applyBtn = screen.getByText('Apply Discount')
+    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty, Price match, Clearance sale')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(input, { target: { value: '100' } })
     fireEvent.change(reasonInput, { target: { value: 'Test reason' } })
@@ -104,7 +106,7 @@ describe('DiscountModal', () => {
     render(<DiscountModal {...defaultProps} />)
     
     const input = screen.getByPlaceholderText('0')
-    const applyBtn = screen.getByText('Apply Discount')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(input, { target: { value: '10' } })
     fireEvent.click(applyBtn)
@@ -116,14 +118,13 @@ describe('DiscountModal', () => {
   it('validates discount must be greater than 0', () => {
     render(<DiscountModal {...defaultProps} />)
     
-    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty reward, Damaged item, etc.')
-    const applyBtn = screen.getByText('Apply Discount')
+    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty, Price match, Clearance sale')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(reasonInput, { target: { value: 'Test reason' } })
-    fireEvent.click(applyBtn)
     
-    expect(screen.getByText('Discount must be greater than 0')).toBeInTheDocument()
-    expect(mockOnApply).not.toHaveBeenCalled()
+    // Button should be disabled when discount is 0
+    expect(applyBtn).toBeDisabled()
   })
 
   it('calculates percentage discount correctly', () => {
@@ -133,8 +134,8 @@ describe('DiscountModal', () => {
     fireEvent.change(input, { target: { value: '20' } })
     
     // Check if final price is displayed (100 - 20% = 80)
-    expect(screen.getByText('$80.00')).toBeInTheDocument()
-    expect(screen.getByText('$20.00')).toBeInTheDocument() // savings
+    expect(screen.getByText(/\$\s*80\.00/)).toBeInTheDocument()
+    expect(screen.getByText(/\$\s*20\.00/)).toBeInTheDocument() // savings
   })
 
   it('calculates fixed discount correctly', () => {
@@ -147,16 +148,16 @@ describe('DiscountModal', () => {
     fireEvent.change(input, { target: { value: '25' } })
     
     // Check if final price is displayed (100 - 25 = 75)
-    expect(screen.getByText('$75.00')).toBeInTheDocument()
-    expect(screen.getByText('$25.00')).toBeInTheDocument() // savings
+    expect(screen.getByText(/\$\s*75\.00/)).toBeInTheDocument()
+    expect(screen.getByText(/\$\s*25\.00/)).toBeInTheDocument() // savings
   })
 
   it('applies discount successfully with valid data', async () => {
     render(<DiscountModal {...defaultProps} />)
     
     const input = screen.getByPlaceholderText('0')
-    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty reward, Damaged item, etc.')
-    const applyBtn = screen.getByText('Apply Discount')
+    const reasonInput = screen.getByPlaceholderText('e.g., Customer loyalty, Price match, Clearance sale')
+    const applyBtn = screen.getByRole('button', { name: /^Apply Discount$/i })
     
     fireEvent.change(input, { target: { value: '15' } })
     fireEvent.change(reasonInput, { target: { value: 'Loyal customer' } })

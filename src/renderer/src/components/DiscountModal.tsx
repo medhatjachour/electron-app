@@ -130,6 +130,7 @@ export default function DiscountModal({
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            aria-label="Close"
           >
             <X className="w-5 h-5 text-slate-500" />
           </button>
