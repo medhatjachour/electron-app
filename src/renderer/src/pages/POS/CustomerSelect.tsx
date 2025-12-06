@@ -58,8 +58,12 @@ export default function CustomerSelect({
           className="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors pr-8"
           value={selectedCustomer ? selectedCustomer.name : customerQuery}
           onChange={(e) => {
-            onQueryChange(e.target.value)
-            onSelectCustomer(null)
+            const value = e.target.value
+            onQueryChange(value)
+            // Only clear selected customer if user is typing something different
+            if (selectedCustomer && value !== selectedCustomer.name) {
+              onSelectCustomer(null)
+            }
             setShowDropdown(true)
           }}
           onFocus={() => setShowDropdown(true)}

@@ -166,7 +166,18 @@ export function usePOS() {
     setSelectedCustomer(null)
   }, [])
 
-  const completeSale = async () => {
+  const completeSale = async (overrideCustomer?: Customer | null) => {
+    // Use override customer if provided, otherwise use state
+    const currentCustomer = overrideCustomer !== undefined ? overrideCustomer : selectedCustomer
+    
+    console.log('🛒 completeSale called:', { 
+      selectedCustomer, 
+      overrideCustomer, 
+      currentCustomer,
+      paymentMethod,
+      cartLength: cart.length 
+    })
+    
     if (!paymentMethod) {
       alert('Please select a payment method (Cash or Card)')
       return
@@ -218,8 +229,17 @@ export function usePOS() {
         }
       }
       
-      const finalCustomerName = selectedCustomer?.name || customerQuery.trim() || null
-      const finalCustomerId = selectedCustomer?.id || null
+      const finalCustomerName = currentCustomer?.name || customerQuery.trim() || null
+      const finalCustomerId = currentCustomer?.id || null
+      
+      console.log('💰 Preparing transaction:', {
+        finalCustomerId,
+        finalCustomerName,
+        items: cart.length,
+        subtotal,
+        tax,
+        total
+      })
       
       // Prepare transaction items
       const items = cart.map((item) => ({

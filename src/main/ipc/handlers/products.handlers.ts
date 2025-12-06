@@ -416,13 +416,22 @@ export function registerProductsHandlers(prisma: any) {
       })
 
       // Delete old image files from filesystem (after successful transaction)
+      // Only delete images that are not in the new image list
       if (existingProduct?.images) {
+        const newFilenames = imageFilenames.map(img => img.filename)
         for (const image of existingProduct.images) {
-          if (image.filename) {
+          if (image.filename && !newFilenames.includes(image.filename)) {
             try {
-              await imageService.deleteImage(image.filename)
+              // Small delay to ensure UI has updated before deleting
+              setTimeout(async () => {
+                try {
+                  await imageService.deleteImage(image.filename)
+                } catch (err) {
+                  console.error(`Failed to delete old image ${image.filename}:`, err)
+                }
+              }, 1000)
             } catch (error) {
-              console.error(`Failed to delete old image ${image.filename}:`, error)
+              console.error(`Failed to schedule deletion of ${image.filename}:`, error)
             }
           }
         }
