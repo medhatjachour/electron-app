@@ -176,8 +176,14 @@ model SaleItem {
   variantId        String?         // Optional: which variant was sold
   quantity         Int             // Total quantity sold
   refundedQuantity Int             @default(0) // How many units were refunded
-  price            Float           // Price per item at time of sale
-  total            Float           // Total = price * quantity
+  price            Float           // Original price per item at time of sale
+  discountType     String          @default("NONE") // "PERCENTAGE", "FIXED_AMOUNT", "NONE"
+  discountValue    Float           @default(0) // The discount amount or percentage
+  finalPrice       Float           // Price after discount (what customer pays)
+  total            Float           // Total = finalPrice * quantity
+  discountReason   String?         // Why discount was given
+  discountAppliedBy String?        // User ID who applied discount
+  discountAppliedAt DateTime?      // When discount was applied
   refundedAt       DateTime?       // When this item was refunded (null if not refunded)
   transaction      SaleTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   product          Product         @relation(fields: [productId], references: [id])

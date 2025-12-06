@@ -4,7 +4,7 @@
  */
 
 import { memo } from 'react'
-import { ShoppingCart as CartIcon, Trash2, AlertCircle } from 'lucide-react'
+import { ShoppingCart as CartIcon, Trash2, AlertCircle, Percent } from 'lucide-react'
 import type { CartItem } from './types'
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
   onUpdateQuantity: (id: string, delta: number) => void
   onRemoveFromCart: (id: string) => void
   onClearCart: () => void
+  canApplyDiscount?: () => boolean
+  onApplyDiscount?: (item: CartItem) => void
 }
 
 function ShoppingCart({ 
@@ -20,7 +22,9 @@ function ShoppingCart({
   totalItems,
   onUpdateQuantity, 
   onRemoveFromCart, 
-  onClearCart 
+  onClearCart,
+  canApplyDiscount,
+  onApplyDiscount
 }: Props) {
   return (
     <div className="flex flex-col h-full">
@@ -122,29 +126,53 @@ function ShoppingCart({
 
                 {/* Unit Price */}
                 <div className="col-span-2 flex items-center justify-end">
-                  <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">
-                    ${item.price.toFixed(2)}
-                  </span>
+                  {item.discountType && item.discountType !== 'NONE' ? (
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="font-mono text-[9px] text-slate-400 dark:text-slate-500 line-through">
+                        ${item.price.toFixed(2)}
+                      </span>
+                      <span className="font-mono text-[11px] font-semibold text-green-600 dark:text-green-400">
+                        ${(item.finalPrice || item.price).toFixed(2)}
+                      </span>
+                      <span className="text-[8px] text-green-600 dark:text-green-400">
+                        {item.discountType === 'PERCENTAGE'
+                          ? `-${item.discountValue}%`
+                          : `-$${item.discountValue?.toFixed(2)}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                      ${item.price.toFixed(2)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Line Total */}
                 <div className="col-span-2 flex items-center justify-end">
                   <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ${((item.finalPrice || item.price) * item.quantity).toFixed(2)}
                   </span>
                 </div>
 
-                {/* Remove Button */}
-                <div className="col-span-1 flex items-center justify-center">
+                {/* Action Buttons (Discount + Remove) */}
+                <div className="col-span-1 flex items-center justify-center gap-0.5">
+                  {onApplyDiscount && canApplyDiscount?.() && (
+                    <button
+                      onClick={() => onApplyDiscount(item)}
+                      className="w-5 h-5 rounded hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center transition-colors"
+                      title="Apply Discount"
+                      aria-label={`Apply discount to ${item.name}`}
+                    >
+                      <Percent size={11} />
+                    </button>
+                  )}
                   <button
                     onClick={() => onRemoveFromCart(item.id)}
-                    className="w-6 h-6 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center transition-colors"
+                    className="w-5 h-5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center transition-colors"
                     title="Remove"
                     aria-label={`Remove ${item.name}`}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <Trash2 size={11} />
                   </button>
                 </div>
               </div>

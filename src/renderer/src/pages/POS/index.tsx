@@ -19,6 +19,7 @@ import CustomerSelect from './CustomerSelect'
 import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
+import DiscountModal from '../../components/DiscountModal'
 import { usePOS } from './usePOS'
 import type { Customer } from './types'
 
@@ -32,6 +33,8 @@ export default function POS(): JSX.Element {
     customerQuery,
     paymentMethod,
     showSuccess,
+    showDiscountModal,
+    discountingItem,
     subtotal,
     tax,
     total,
@@ -45,6 +48,10 @@ export default function POS(): JSX.Element {
     setCustomerQuery,
     setPaymentMethod,
     refreshCustomers,
+    canApplyDiscount,
+    openDiscountModal,
+    handleApplyDiscount,
+    setShowDiscountModal,
   } = usePOS()
 
   const [cartOpen, setCartOpen] = useState(false)
@@ -219,6 +226,8 @@ export default function POS(): JSX.Element {
               onUpdateQuantity={updateQuantity}
               onRemoveFromCart={removeFromCart}
               onClearCart={clearCart}
+              canApplyDiscount={canApplyDiscount}
+              onApplyDiscount={openDiscountModal}
             />
           </div>
 
@@ -308,6 +317,20 @@ export default function POS(): JSX.Element {
           )}
         </div>
       </div>
+      )}
+
+      {/* Discount Modal */}
+      {discountingItem && (
+        <DiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => setShowDiscountModal(false)}
+          onApply={handleApplyDiscount}
+          productName={`${discountingItem.name}${discountingItem.variant ? ` (${discountingItem.variant})` : ''}`}
+          originalPrice={discountingItem.price}
+          maxDiscountPercentage={parseFloat(localStorage.getItem('maxDiscountPercentage') || '50')}
+          maxDiscountAmount={parseFloat(localStorage.getItem('maxDiscountAmount') || '100')}
+          requireReason={true}
+        />
       )}
     </div>
   )

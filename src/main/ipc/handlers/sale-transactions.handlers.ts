@@ -52,7 +52,14 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 variantId: item.variantId || null,
                 quantity: item.quantity,
                 price: item.price,
-                total: item.price * item.quantity
+                total: item.price * item.quantity,
+                // Discount fields
+                discountType: item.discountType || 'NONE',
+                discountValue: item.discountValue || 0,
+                finalPrice: item.price, // price passed is already the final price after discount
+                discountReason: item.discountReason || null,
+                discountAppliedBy: item.discountAppliedBy || null,
+                discountAppliedAt: item.discountAppliedBy ? new Date() : null
               }
             })
           )

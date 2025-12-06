@@ -5,10 +5,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ShoppingCart, Trash2, X, User, DollarSign, UserPlus } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, X, User, DollarSign, UserPlus, Percent } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import AddCustomerModal from './AddCustomerModal'
+import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
 
 type ProductVariant = {
   id: string
@@ -42,6 +43,12 @@ type CartItem = {
   subtotal: number
   availableStock?: number
   variantLabel?: string // e.g., "Red / L" or "Small"
+  // Discount fields
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'NONE'
+  discountValue?: number
+  finalPrice?: number
+  discountReason?: string
+  discountAppliedBy?: string
 }
 
 type Customer = {
@@ -84,6 +91,10 @@ export default function QuickSale() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  
+  // Discount state
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
+  const [discountingItem, setDiscountingItem] = useState<CartItem | null>(null)
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
@@ -274,7 +285,11 @@ export default function QuickSale() {
           discount: 0,
           subtotal: price,
           availableStock: stock,
-          variantLabel
+          variantLabel,
+          // Initialize discount fields
+          discountType: 'NONE',
+          discountValue: 0,
+          finalPrice: price
         }]
       }
     })
@@ -397,9 +412,11 @@ export default function QuickSale() {
         // Check stock availability
         if (item.availableStock && quantity > item.availableStock) {
           showToast('warning', 'Stock limit reached')
-          return { ...item, quantity: item.availableStock, subtotal: item.price * item.availableStock }
+          const priceToUse = item.finalPrice || item.price
+          return { ...item, quantity: item.availableStock, subtotal: priceToUse * item.availableStock }
         }
-        return { ...item, quantity, subtotal: item.price * quantity }
+        const priceToUse = item.finalPrice || item.price
+        return { ...item, quantity, subtotal: priceToUse * quantity }
       }
       return item
     }))
@@ -415,6 +432,58 @@ export default function QuickSale() {
       
       return !isMatch
     }))
+  }
+
+  // Discount functions
+  const canApplyDiscount = () => {
+    const isEnabled = localStorage.getItem('allowDiscounts') === 'true'
+    return isEnabled
+  }
+
+  const openDiscountModal = (item: CartItem) => {
+    if (!canApplyDiscount()) {
+      showToast('error', 'Only administrators and managers can apply discounts')
+      return
+    }
+    setDiscountingItem(item)
+    setShowDiscountModal(true)
+  }
+
+  const calculateFinalPrice = (price: number, discountType: string, discountValue: number): number => {
+    if (discountType === 'PERCENTAGE') {
+      return price - (price * discountValue / 100)
+    } else if (discountType === 'FIXED_AMOUNT') {
+      return Math.max(0, price - discountValue)
+    }
+    return price
+  }
+
+  const handleApplyDiscount = (discountData: DiscountData) => {
+    if (!discountingItem) return
+
+    const finalPrice = calculateFinalPrice(discountingItem.price, discountData.type, discountData.value)
+    
+    setCartItems(prev => prev.map(item => {
+      const isMatch = discountingItem.variantId
+        ? (item.productId === discountingItem.productId && item.variantId === discountingItem.variantId)
+        : (item.productId === discountingItem.productId && !item.variantId)
+      
+      if (isMatch) {
+        return {
+          ...item,
+          discountType: discountData.type,
+          discountValue: discountData.value,
+          finalPrice,
+          discountReason: discountData.reason,
+          discountAppliedBy: user?.id,
+          subtotal: finalPrice * item.quantity
+        }
+      }
+      return item
+    }))
+
+    showToast('success', `Discount applied: ${discountData.type === 'PERCENTAGE' ? `${discountData.value}%` : `$${discountData.value}`}`)
+    setDiscountingItem(null)
   }
 
   // Clear cart
@@ -448,7 +517,12 @@ export default function QuickSale() {
           productId: item.productId,
           variantId: item.variantId,
           quantity: item.quantity,
-          price: item.price
+          price: item.finalPrice || item.price, // Use final price after discount
+          // Discount fields
+          discountType: item.discountType || 'NONE',
+          discountValue: item.discountValue || 0,
+          discountReason: item.discountReason,
+          discountAppliedBy: item.discountAppliedBy
         })),
         transactionData: {
           userId: user.id,
@@ -821,9 +895,36 @@ export default function QuickSale() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <span className="text-slate-900 dark:text-white font-medium">
-                        ${item.price.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        {item.discountValue && item.discountValue > 0 ? (
+                          <>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 line-through">
+                              ${item.price.toFixed(2)}
+                            </span>
+                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                              ${(item.finalPrice || item.price).toFixed(2)}
+                            </span>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                              -{item.discountType === 'PERCENTAGE' ? `${item.discountValue}%` : `$${item.discountValue}`}
+                            </span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-900 dark:text-white font-medium">
+                              ${item.price.toFixed(2)}
+                            </span>
+                            {canApplyDiscount() && (
+                              <button
+                                onClick={() => openDiscountModal(item)}
+                                className="p-1 text-primary hover:bg-primary/10 rounded transition-all hover:scale-110 active:scale-95"
+                                title="Apply discount"
+                              >
+                                <Percent size={12} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="font-bold text-slate-900 dark:text-white">
@@ -1023,6 +1124,23 @@ export default function QuickSale() {
         onClose={() => setShowAddCustomerModal(false)}
         onCustomerAdded={handleCustomerAdded}
       />
+
+      {/* Discount Modal */}
+      {discountingItem && (
+        <DiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => {
+            setShowDiscountModal(false)
+            setDiscountingItem(null)
+          }}
+          onApply={handleApplyDiscount}
+          productName={discountingItem.name}
+          originalPrice={discountingItem.price}
+          maxDiscountPercentage={parseFloat(localStorage.getItem('maxDiscountPercentage') || '50')}
+          maxDiscountAmount={parseFloat(localStorage.getItem('maxDiscountAmount') || '100')}
+          requireReason={true}
+        />
+      )}
     </div>
   )
 }

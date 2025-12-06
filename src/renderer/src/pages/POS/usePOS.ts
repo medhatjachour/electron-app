@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { ipc } from '../../utils/ipc'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import type { Product, Customer, CartItem, PaymentMethod } from './types'
+import type { DiscountData } from '../../components/DiscountModal'
 
 export function usePOS() {
   const [products, setProducts] = useState<Product[]>([])
@@ -16,6 +17,8 @@ export function usePOS() {
   const [customerQuery, setCustomerQuery] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
+  const [discountingItem, setDiscountingItem] = useState<CartItem | null>(null)
   const { settings } = useDisplaySettings()
   
   // Get tax rate from settings (default 10%)
@@ -66,7 +69,7 @@ export function usePOS() {
 
   // Cart calculations
   const subtotal = useMemo(() => 
-    cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    cart.reduce((sum, item) => sum + ((item.finalPrice || item.price) * item.quantity), 0)
   , [cart])
 
   const tax = subtotal * taxRate
@@ -118,6 +121,10 @@ export function usePOS() {
         price,
         stock: availableStock,
         quantity: 1,
+        // Discount fields
+        discountType: 'NONE',
+        discountValue: 0,
+        finalPrice: price,
         // Store snapshots for validation
         productSnapshot: product,
         variantSnapshot: variant
@@ -216,7 +223,12 @@ export function usePOS() {
         productId: item.productId,
         variantId: item.variantId || null,
         quantity: item.quantity,
-        price: item.price
+        price: item.finalPrice || item.price,
+        // Discount fields
+        discountType: item.discountType || 'NONE',
+        discountValue: item.discountValue || 0,
+        discountReason: item.discountReason,
+        discountAppliedBy: item.discountAppliedBy
       }))
       
       // Create single transaction with all items
@@ -265,6 +277,53 @@ export function usePOS() {
     loadCustomers()
   }, [])
 
+  // Discount functions
+  const canApplyDiscount = useCallback(() => {
+    const allowDiscounts = localStorage.getItem('allowDiscounts') === 'true'
+    return allowDiscounts
+  }, [])
+
+  const openDiscountModal = useCallback((item: CartItem) => {
+    setDiscountingItem(item)
+    setShowDiscountModal(true)
+  }, [])
+
+  const calculateFinalPrice = useCallback((price: number, type: string, value: number) => {
+    if (type === 'PERCENTAGE') {
+      return price - (price * value / 100)
+    } else {
+      return price - value
+    }
+  }, [])
+
+  const handleApplyDiscount = useCallback((discountData: DiscountData) => {
+    if (!discountingItem) return
+
+    const finalPrice = calculateFinalPrice(
+      discountingItem.price,
+      discountData.type,
+      discountData.value
+    )
+
+    const currentUser = localStorage.getItem('userId') || 'unknown'
+
+    setCart(prev => prev.map(item => 
+      item.id === discountingItem.id
+        ? {
+            ...item,
+            discountType: discountData.type,
+            discountValue: discountData.value,
+            finalPrice,
+            discountReason: discountData.reason || undefined,
+            discountAppliedBy: currentUser
+          }
+        : item
+    ))
+
+    setShowDiscountModal(false)
+    setDiscountingItem(null)
+  }, [discountingItem, calculateFinalPrice])
+
   return {
     // State
     products,
@@ -275,6 +334,8 @@ export function usePOS() {
     customerQuery,
     paymentMethod,
     showSuccess,
+    showDiscountModal,
+    discountingItem,
     // Calculations
     subtotal,
     tax,
@@ -286,6 +347,11 @@ export function usePOS() {
     removeFromCart,
     clearCart,
     completeSale,
+    // Discount actions
+    canApplyDiscount,
+    openDiscountModal,
+    handleApplyDiscount,
+    setShowDiscountModal,
     setSelectedCustomer,
     setCustomerQuery,
     setPaymentMethod,
