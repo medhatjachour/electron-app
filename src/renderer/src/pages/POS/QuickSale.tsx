@@ -33,6 +33,7 @@ type Product = {
 }
 
 type CartItem = {
+  id: string
   productId: string
   variantId?: string
   name: string
