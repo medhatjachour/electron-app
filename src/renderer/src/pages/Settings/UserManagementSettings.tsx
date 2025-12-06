@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { UserPlus, Edit2, Trash2, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react'
+import { UserPlus, Edit2, Trash2, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, UserX } from 'lucide-react'
+import SmartDeleteDialog from '../../components/SmartDeleteDialog'
 
 interface User {
   id: string
@@ -53,6 +54,11 @@ export default function UserManagementSettings() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
   
   const [newUser, setNewUser] = useState<NewUser>({
     username: '',
@@ -201,22 +207,63 @@ export default function UserManagementSettings() {
   }
 
   const handleDeleteUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
-      return
-    }
-
     try {
-      const result = await window.api.users.delete(user.id)
-
+      // Check if user can be deleted
+      const result = await window.electron.ipcRenderer.invoke('delete:check-user', {
+        userId: user.id
+      })
+      
+      if (result.success) {
+        setUserToDelete(user)
+        setDeleteCheckResult(result.data)
+        setShowDeleteDialog(true)
+      } else {
+        alert('Failed to check user dependencies')
+      }
+    } catch (error) {
+      console.error('Failed to check user:', error)
+      alert('Failed to check user')
+    }
+  }
+  
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:hard-delete-user', {
+        userId: userToDelete.id
+      })
+      
       if (result.success) {
         await loadUsers()
-        alert('User deleted successfully!')
+        alert('User deleted successfully')
       } else {
-        alert(`Failed to delete user: ${result.error}`)
+        alert(result.error || 'Failed to delete user')
       }
     } catch (error) {
       console.error('Failed to delete user:', error)
       alert('Failed to delete user')
+    }
+  }
+  
+  const handleDeactivateUser = async (reason?: string) => {
+    if (!userToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:deactivate-user', {
+        userId: userToDelete.id,
+        deactivatedBy: 'current-user', // TODO: Get from auth context
+      })
+      
+      if (result.success) {
+        await loadUsers()
+        alert('User deactivated successfully')
+      } else {
+        alert('Failed to deactivate user')
+      }
+    } catch (error) {
+      console.error('Failed to deactivate user:', error)
+      alert('Failed to deactivate user')
     }
   }
 
@@ -348,9 +395,9 @@ export default function UserManagementSettings() {
                     <button
                       onClick={() => handleDeleteUser(user)}
                       className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                      title="Delete user"
+                      title="Deactivate or delete user"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <UserX className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -722,6 +769,21 @@ export default function UserManagementSettings() {
           </div>
         </div>
       )}
+      
+      {/* Smart Delete Dialog */}
+      <SmartDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false)
+          setUserToDelete(null)
+          setDeleteCheckResult(null)
+        }}
+        entityType="user"
+        entityName={userToDelete?.username || ''}
+        checkResult={deleteCheckResult}
+        onDelete={handleConfirmDelete}
+        onArchive={handleDeactivateUser}
+      />
     </div>
   )
 }

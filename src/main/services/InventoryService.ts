@@ -69,7 +69,9 @@ export class InventoryService {
     const { includeImages = false, category, searchTerm } = options
 
     // Build where clause for filtering
-    const where: any = {}
+    const where: any = {
+      isArchived: false // Filter out archived products
+    }
     if (category) {
       where.category = category
     }
@@ -123,8 +125,9 @@ export class InventoryService {
    */
   async getInventoryMetrics(): Promise<InventoryMetrics> {
     // Use raw SQL for better performance with large datasets
+    // Filter out archived products
     const [totalProducts] = await this.prisma.$queryRaw<[{ count: number }]>`
-      SELECT COUNT(*) as count FROM Product
+      SELECT COUNT(*) as count FROM Product WHERE isArchived = 0
     `
 
     const [variantStats] = await this.prisma.$queryRaw<[{ total: number, totalStock: bigint, totalValue: number }]>`
@@ -133,18 +136,21 @@ export class InventoryService {
         SUM(stock) as totalStock,
         SUM(price * stock) as totalValue
       FROM ProductVariant
+      WHERE productId IN (SELECT id FROM Product WHERE isArchived = 0)
     `
 
     const [lowStockCount] = await this.prisma.$queryRaw<[{ count: number }]>`
       SELECT COUNT(DISTINCT productId) as count
       FROM ProductVariant
       WHERE stock > 0 AND stock <= 10
+        AND productId IN (SELECT id FROM Product WHERE isArchived = 0)
     `
 
     const [outOfStockCount] = await this.prisma.$queryRaw<[{ count: number }]>`
       SELECT COUNT(DISTINCT productId) as count
       FROM ProductVariant
       WHERE stock = 0
+        AND productId IN (SELECT id FROM Product WHERE isArchived = 0)
     `
 
     const totalRetailValue = Number(variantStats.totalValue || 0)

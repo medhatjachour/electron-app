@@ -24,7 +24,7 @@ function ProductActions({
   productsCount
 }: Readonly<ProductActionsProps>) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="w-full   flex items-center justify-between mb-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
           Product Catalog
@@ -72,9 +72,9 @@ function ProductActions({
 
         <button
           onClick={onAdd}
-          className="px-6 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors flex items-center gap-2 font-medium"
+          className="btn-primary flex items-center gap-2"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5 " />
           <span>Add Product</span>
         </button>
       </div>

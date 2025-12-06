@@ -27,11 +27,12 @@ export default function CustomerSelect({
 
   const filteredCustomers = (() => {
     if (!customerQuery.trim()) return []
+    if (!Array.isArray(customers)) return []
     const query = customerQuery.toLowerCase()
     return customers.filter(c =>
-      c.name.toLowerCase().includes(query) ||
-      c.email.toLowerCase().includes(query) ||
-      c.phone.includes(customerQuery)
+      (c.name && c.name.toLowerCase().includes(query)) ||
+      (c.email && c.email.toLowerCase().includes(query)) ||
+      (c.phone && c.phone.includes(customerQuery))
     ).slice(0, 5)
   })()
 

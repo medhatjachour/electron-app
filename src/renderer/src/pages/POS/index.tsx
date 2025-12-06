@@ -44,6 +44,7 @@ export default function POS(): JSX.Element {
     removeFromCart,
     clearCart,
     completeSale,
+    completeSaleFromQuickView,
     setSelectedCustomer,
     setCustomerQuery,
     setPaymentMethod,
@@ -126,7 +127,7 @@ export default function POS(): JSX.Element {
             cartOpen={cartOpen}
           />
         ) : (
-          <QuickSale />
+          <QuickSale onCompleteSale={completeSaleFromQuickView} />
         )}
       </div>
 

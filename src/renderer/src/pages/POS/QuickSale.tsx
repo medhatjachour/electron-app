@@ -58,7 +58,11 @@ type Customer = {
   email: string
 }
 
-export default function QuickSale() {
+type QuickSaleProps = {
+  onCompleteSale?: (items: CartItem[], customer: Customer | null, paymentMethod: string) => Promise<void>
+}
+
+export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
   const { showToast } = useToast()
   const { user } = useAuth()
   
@@ -513,6 +517,19 @@ export default function QuickSale() {
         return
       }
 
+      // If shared completeSale function is provided, use it
+      if (onCompleteSale) {
+        await onCompleteSale(cartItems, selectedCustomer, 'cash')
+        showToast('success', 'Sale completed')
+        // Reset
+        setCartItems([])
+        setSelectedCustomer(null)
+        setSearchQuery('')
+        setSearchResults([])
+        return
+      }
+
+      // Fallback: original implementation
       // Prepare sale data using the saleTransactions API
       const saleData = {
         items: cartItems.map(item => ({

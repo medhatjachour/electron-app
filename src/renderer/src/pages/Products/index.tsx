@@ -11,6 +11,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useDebounce } from '../../hooks/useDebounce'
 import Modal from '../../components/ui/Modal'
+import SmartDeleteDialog from '../../components/SmartDeleteDialog'
 import ProductFormWrapper from './ProductFormWrapper'
 import ProductActions from './ProductActions'
 import ProductFilters from './ProductFilters'
@@ -29,6 +30,11 @@ export default function Products() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
   // Filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -194,17 +200,66 @@ export default function Products() {
   }, [toast])
 
   const handleDelete = useCallback(async (product: Product) => {
-    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) return
-
     try {
-      await ipc.products.delete(product.id)
-      toast.success('Product deleted successfully')
-      refetch() // Refetch to reload fresh data
+      // Check if product can be deleted
+      const result = await window.electron.ipcRenderer.invoke('delete:check-product', {
+        productId: product.id
+      })
+      
+      if (result.success) {
+        setProductToDelete(product)
+        setDeleteCheckResult(result.data)
+        setShowDeleteDialog(true)
+      } else {
+        toast.error('Failed to check product dependencies')
+      }
+    } catch (error) {
+      console.error('Failed to check product:', error)
+      toast.error('Failed to check product')
+    }
+  }, [toast])
+  
+  const handleConfirmDelete = useCallback(async () => {
+    if (!productToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:hard-delete-product', {
+        productId: productToDelete.id
+      })
+      
+      if (result.success) {
+        toast.success('Product deleted successfully')
+        refetch()
+      } else {
+        toast.error(result.error || 'Failed to delete product')
+      }
     } catch (error) {
       console.error('Failed to delete product:', error)
       toast.error('Failed to delete product')
     }
-  }, [toast, refetch])
+  }, [productToDelete, toast, refetch])
+  
+  const handleArchiveProduct = useCallback(async (reason?: string) => {
+    if (!productToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:archive-product', {
+        productId: productToDelete.id,
+        archivedBy: 'current-user', // TODO: Get from auth context
+        reason
+      })
+      
+      if (result.success) {
+        toast.success('Product archived successfully')
+        refetch()
+      } else {
+        toast.error('Failed to archive product')
+      }
+    } catch (error) {
+      console.error('Failed to archive product:', error)
+      toast.error('Failed to archive product')
+    }
+  }, [productToDelete, toast, refetch])
 
   const handleImport = useCallback(() => {
     toast.info('Import feature coming soon')
@@ -260,14 +315,17 @@ export default function Products() {
   return (
     <div className="p-6 mx-auto">
       {/* Actions Toolbar */}
-      <ProductActions
-        onAdd={() => setShowAddModal(true)}
-        onImport={handleImport}
-        onExport={handleExport}
-        onScan={handleScan}
-        onRefresh={refetch}
-        productsCount={totalCount}
-      />
+      <div className="flex items-center justify-between mb-6">
+        
+        <ProductActions
+          onAdd={() => setShowAddModal(true)}
+          onImport={handleImport}
+          onExport={handleExport}
+          onScan={handleScan}
+          onRefresh={refetch}
+          productsCount={totalCount}
+        />
+      </div>
 
       {/* Filters */}
       <ProductFilters
@@ -451,6 +509,21 @@ export default function Products() {
           </div>
         )}
       </Modal>
+      
+      {/* Smart Delete Dialog */}
+      <SmartDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false)
+          setProductToDelete(null)
+          setDeleteCheckResult(null)
+        }}
+        entityType="product"
+        entityName={productToDelete?.name || ''}
+        checkResult={deleteCheckResult}
+        onDelete={handleConfirmDelete}
+        onArchive={handleArchiveProduct}
+      />
     </div>
   )
 }

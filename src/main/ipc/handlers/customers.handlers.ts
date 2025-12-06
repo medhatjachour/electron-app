@@ -43,7 +43,9 @@ export function registerCustomersHandlers(prisma: any) {
         } = options
 
         // Build where clause for search
-        const where: any = {}
+        const where: any = {
+          isArchived: false // Always exclude archived customers
+        }
         if (searchTerm) {
           where.OR = [
             { name: { contains: searchTerm } },

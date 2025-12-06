@@ -19,6 +19,8 @@ model User {
   phone                 String?
   isActive              Boolean                @default(true) // Can disable users without deleting
   lastLogin             DateTime?              // Track last login time
+  deactivatedAt         DateTime?              // When user was deactivated
+  deactivatedBy         String?                // User ID who deactivated this user
   sales                 Sale[]                 // Old sales (backward compatibility)
   saleTransactions      SaleTransaction[]      // New transaction-based sales
   financialTransactions FinancialTransaction[] // Financial records
@@ -46,23 +48,27 @@ model Category {
 }
 
 model Product {
-  id          String           @id @default(uuid())
-  name        String
-  baseSKU     String           @unique
-  categoryId  String
-  category    Category         @relation(fields: [categoryId], references: [id])
-  description String?
-  basePrice   Float
-  baseCost    Float
-  hasVariants Boolean          @default(false)
-  storeId     String?          // Optional: Products can be assigned to specific stores
-  store       Store?           @relation(fields: [storeId], references: [id])
-  images      ProductImage[]
-  variants    ProductVariant[]
-  sales       Sale[]           // Old sales (backward compatibility)
-  saleItems   SaleItem[]       // New transaction-based sale items
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  name          String
+  baseSKU       String           @unique
+  categoryId    String
+  category      Category         @relation(fields: [categoryId], references: [id])
+  description   String?
+  basePrice     Float
+  baseCost      Float
+  hasVariants   Boolean          @default(false)
+  isArchived    Boolean          @default(false) // Soft delete flag
+  archivedAt    DateTime?        // When product was archived
+  archivedBy    String?          // User ID who archived this product
+  archiveReason String?          // Why product was archived
+  storeId       String?          // Optional: Products can be assigned to specific stores
+  store         Store?           @relation(fields: [storeId], references: [id])
+  images        ProductImage[]
+  variants      ProductVariant[]
+  sales         Sale[]           // Old sales (backward compatibility)
+  saleItems     SaleItem[]       // New transaction-based sale items
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   
   // Single-column indexes
   @@index([createdAt])
@@ -70,12 +76,14 @@ model Product {
   @@index([storeId])
   @@index([name])
   @@index([baseSKU])
+  @@index([isArchived])
   
   // Composite indexes for common query patterns
   @@index([categoryId, createdAt])
   @@index([name, categoryId])
   @@index([hasVariants, categoryId])
   @@index([basePrice, categoryId])
+  @@index([isArchived, categoryId])
 }
 
 model ProductImage {
@@ -268,6 +276,10 @@ model Customer {
   phone            String            @unique
   loyaltyTier      String            @default("Bronze")
   totalSpent       Float             @default(0) // Cached value, recalculated from transactions
+  isArchived       Boolean           @default(false) // Soft delete flag
+  archivedAt       DateTime?         // When customer was archived
+  archivedBy       String?           // User ID who archived this customer
+  archiveReason    String?           // Why customer was archived
   saleTransactions SaleTransaction[] // Sales linked to this customer
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -275,4 +287,5 @@ model Customer {
   @@index([email])
   @@index([phone])
   @@index([loyaltyTier])
+  @@index([isArchived])
 }

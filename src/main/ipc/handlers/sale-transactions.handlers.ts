@@ -69,7 +69,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
         await Promise.all(
           items.map(async (item: any) => {
             if (item.variantId) {
-              // Get current stock before update
+              // Handle variant stock
               const variant = await tx.productVariant.findUnique({
                 where: { id: item.variantId }
               })
@@ -78,7 +78,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 const previousStock = variant.stock
                 const newStock = previousStock - item.quantity
                 
-                // Update stock
+                // Update variant stock
                 await tx.productVariant.update({
                   where: { id: item.variantId },
                   data: { stock: newStock }
@@ -97,6 +97,47 @@ export function registerSaleTransactionHandlers(prisma: any) {
                     notes: `Sale transaction ${saleTransaction.id}`
                   }
                 })
+              }
+            } else {
+              // Handle product without variants - update all variants' stock
+              const product = await tx.product.findUnique({
+                where: { id: item.productId },
+                include: { variants: true }
+              })
+              
+              if (product && product.variants && product.variants.length > 0) {
+                // Deduct from variants proportionally or from first available
+                let remainingQty = item.quantity
+                
+                for (const variant of product.variants) {
+                  if (remainingQty <= 0) break
+                  
+                  const deductQty = Math.min(variant.stock, remainingQty)
+                  if (deductQty > 0) {
+                    const previousStock = variant.stock
+                    const newStock = previousStock - deductQty
+                    
+                    await tx.productVariant.update({
+                      where: { id: variant.id },
+                      data: { stock: newStock }
+                    })
+                    
+                    await tx.stockMovement.create({
+                      data: {
+                        variantId: variant.id,
+                        type: 'SALE',
+                        quantity: -deductQty,
+                        previousStock,
+                        newStock,
+                        referenceId: saleTransaction.id,
+                        userId: transactionData.userId,
+                        notes: `Sale transaction ${saleTransaction.id} (product sale)`
+                      }
+                    })
+                    
+                    remainingQty -= deductQty
+                  }
+                }
               }
             }
             return Promise.resolve()

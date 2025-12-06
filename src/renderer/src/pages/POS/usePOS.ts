@@ -61,9 +61,12 @@ export function usePOS() {
   const loadCustomers = async () => {
     try {
       const data = await ipc.customers.getAll()
-      setCustomers(data)
+      // Handle both array response and object with customers property
+      const customersList = Array.isArray(data) ? data : (data?.customers || [])
+      setCustomers(Array.isArray(customersList) ? customersList : [])
     } catch (error) {
       console.error('Failed to load customers:', error)
+      setCustomers([])
     }
   }
 
@@ -324,6 +327,93 @@ export function usePOS() {
     setDiscountingItem(null)
   }, [discountingItem, calculateFinalPrice])
 
+  // Wrapper for QuickSale to use the shared completeSale logic
+  const completeSaleFromQuickView = useCallback(async (quickCartItems: any[], customer: any, payment: string) => {
+    if (!payment) {
+      alert('Please select a payment method (Cash or Card)')
+      return
+    }
+    
+    if (quickCartItems.length === 0) {
+      alert('Cart is empty. Please add items first.')
+      return
+    }
+
+    try {
+      const userStr = localStorage.getItem('user')
+      if (!userStr) {
+        alert('⚠️ Session expired!\n\nPlease log out and log in again to continue.')
+        return
+      }
+      
+      const user = JSON.parse(userStr)
+      if (!user || !user.id) {
+        alert('⚠️ Invalid user session!\n\nPlease log out and log in again.')
+        return
+      }
+      
+      const finalCustomerName = customer?.name || null
+      const finalCustomerId = customer?.id || null
+      
+      // Calculate totals from QuickSale cart
+      const subtotalCalc = quickCartItems.reduce((sum, item) => sum + ((item.finalPrice || item.price) * item.quantity), 0)
+      const taxCalc = subtotalCalc * taxRate
+      const totalCalc = subtotalCalc + taxCalc
+      
+      // Prepare transaction items
+      const items = quickCartItems.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        quantity: item.quantity,
+        price: item.finalPrice || item.price,
+        // Discount fields
+        discountType: item.discountType || 'NONE',
+        discountValue: item.discountValue || 0,
+        discountReason: item.discountReason,
+        discountAppliedBy: item.discountAppliedBy
+      }))
+      
+      // Create single transaction with all items
+      const result = await ipc.saleTransactions.create({
+        items,
+        transactionData: {
+          userId: user.id,
+          customerId: finalCustomerId,
+          paymentMethod: payment,
+          customerName: finalCustomerName,
+          subtotal: subtotalCalc,
+          tax: taxCalc,
+          total: totalCalc
+        }
+      })
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create transaction')
+      }
+      
+      setShowSuccess(true)
+      await loadProducts()
+      
+      setTimeout(() => {
+        setShowSuccess(false)
+      }, 2000)
+      
+    } catch (error) {
+      console.error('❌ Failed to complete sale:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      
+      if (errorMessage.includes('Foreign key constraint failed') || errorMessage.includes('userId')) {
+        alert('⚠️ User authentication error!\n\nYour session may be invalid. Please log out and log in again.')
+      } else if (errorMessage.includes('stock')) {
+        alert('⚠️ Stock error!\n\nOne or more items have insufficient stock.')
+        await loadProducts()
+      } else {
+        alert(`❌ Error completing sale!\n\n${errorMessage}`)
+      }
+      throw error // Re-throw so QuickSale knows it failed
+    }
+  }, [taxRate, loadProducts])
+
   return {
     // State
     products,
@@ -347,6 +437,7 @@ export function usePOS() {
     removeFromCart,
     clearCart,
     completeSale,
+    completeSaleFromQuickView,
     // Discount actions
     canApplyDiscount,
     openDiscountModal,

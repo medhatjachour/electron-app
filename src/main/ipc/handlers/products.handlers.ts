@@ -34,7 +34,9 @@ export function registerProductsHandlers(prisma: any) {
       } = options
 
       // Build where clause
-      const where: any = {}
+      const where: any = {
+        isArchived: false // Filter out archived products
+      }
       if (searchTerm) {
         where.OR = [
           { name: { contains: searchTerm } },
@@ -560,6 +562,7 @@ export function registerProductsHandlers(prisma: any) {
 
       const products = await prisma.product.findMany({
         where: {
+          isArchived: false, // Filter out archived products
           OR: [
             { name: { contains: query } },
             { baseSKU: { contains: query } },
