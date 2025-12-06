@@ -53,17 +53,17 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
 
       {/* Key Metrics */}
       <div className="space-y-3">
-        {/* Total SKUs */}
+        {/* Total Products */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Package size={20} className="text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total SKUs</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Total Products</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                <span className="cursor-help" title={metrics.totalSKUs.toLocaleString()}>
-                  {formatLargeNumber(metrics.totalSKUs)}
+                <span className="cursor-help" title={metrics.totalProducts.toLocaleString()}>
+                  {formatLargeNumber(metrics.totalProducts)}
                 </span>
               </p>
             </div>
@@ -71,7 +71,9 @@ export default function InventoryMetrics({ metrics, loading, items }: Props) {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             <span className="cursor-help" title={metrics.totalVariants.toLocaleString()}>
               {formatLargeNumber(metrics.totalVariants)}
-            </span> total variants
+            </span> variants · <span className="cursor-help" title={(metrics.totalPieces || 0).toLocaleString()}>
+              {formatLargeNumber(metrics.totalPieces || 0)}
+            </span> pieces
           </p>
         </div>
 

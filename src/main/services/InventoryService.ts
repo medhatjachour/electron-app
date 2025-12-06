@@ -123,7 +123,7 @@ export class InventoryService {
    */
   async getInventoryMetrics(): Promise<InventoryMetrics> {
     // Use raw SQL for better performance with large datasets
-    const [totalSKUs] = await this.prisma.$queryRaw<[{ count: number }]>`
+    const [totalProducts] = await this.prisma.$queryRaw<[{ count: number }]>`
       SELECT COUNT(*) as count FROM Product
     `
 
@@ -151,8 +151,9 @@ export class InventoryService {
     const totalStockValue = totalRetailValue * 0.6 // Assuming 60% cost ratio
 
     return {
-      totalSKUs: Number(totalSKUs.count || 0),
+      totalProducts: Number(totalProducts.count || 0),
       totalVariants: Number(variantStats.total || 0),
+      totalPieces: Number(variantStats.totalStock || 0),
       totalStockValue,
       totalRetailValue,
       potentialProfit: totalRetailValue - totalStockValue,

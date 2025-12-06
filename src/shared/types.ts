@@ -86,8 +86,9 @@ export interface InventoryItem extends Product {
 export type StockStatus = 'out' | 'low' | 'normal' | 'high'
 
 export interface InventoryMetrics {
-  totalSKUs: number
+  totalProducts: number
   totalVariants: number
+  totalPieces: number
   totalStockValue: number
   totalRetailValue: number
   potentialProfit: number
