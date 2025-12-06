@@ -136,7 +136,14 @@ export interface SaleItem {
   unitPrice: number
   total: number
   discount?: number
-  refundedAt?: Date | string | null
+  refundedAt?: string | null
+  // Discount fields
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'NONE'
+  discountValue?: number
+  finalPrice?: number
+  discountReason?: string
+  discountAppliedBy?: string
+  discountAppliedAt?: string
 }
 
 // ============================================================================

@@ -34,6 +34,12 @@ export type CartItem = {
   // Product snapshot for validation during checkout
   productSnapshot?: Product
   variantSnapshot?: ProductVariant
+  // Discount fields
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'NONE'
+  discountValue?: number
+  finalPrice?: number
+  discountReason?: string
+  discountAppliedBy?: string
 }
 
 export type Customer = {

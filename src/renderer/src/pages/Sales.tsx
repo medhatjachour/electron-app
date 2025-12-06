@@ -4,6 +4,7 @@ import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
+import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 
 type SaleItem = {
   id: string
@@ -14,6 +15,11 @@ type SaleItem = {
   price: number
   total: number
   refundedAt?: string | null
+  discountType?: string
+  discountValue?: number
+  finalPrice?: number
+  discountReason?: string
+  discountAppliedBy?: string
   product?: {
     name: string
     category: string | { name: string }
@@ -154,10 +160,7 @@ export default function Sales(): JSX.Element {
     // Calculate total revenue accounting for refunds
     const totalRevenue = activeTransactions.reduce((sum, transaction) => {
       // Calculate refunded amount for this transaction
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       // Add net revenue (total - refunded)
       return sum + (transaction.total - refundedAmount)
     }, 0)
@@ -180,10 +183,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= today && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const todayRevenue = todayTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     const todayCount = todayTransactions.length
@@ -196,10 +196,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= yesterday && transactionDate < today && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const yesterdayRevenue = yesterdayTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     const yesterdayCount = yesterdayTransactions.length
@@ -222,10 +219,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= startOfWeek && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const thisWeekRevenue = thisWeekTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
 
@@ -238,10 +232,7 @@ export default function Sales(): JSX.Element {
       return transactionDate >= lastWeekStart && transactionDate < lastWeekEnd && (t.status === 'completed' || t.status === 'partially_refunded')
     })
     const lastWeekRevenue = lastWeekTransactions.reduce((sum, transaction) => {
-      const refundedAmount = transaction.items.reduce((refundSum, item) => {
-        const refunded = item.refundedQuantity || 0
-        return refundSum + (refunded * item.price)
-      }, 0)
+      const refundedAmount = calculateRefundedAmount(transaction.items)
       return sum + (transaction.total - refundedAmount)
     }, 0)
     
@@ -746,6 +737,11 @@ export default function Sales(): JSX.Element {
                                           <span className="mr-3">SKU: {item.product.baseSKU}</span>
                                         )}
                                       </div>
+                                      {item.discountReason && (
+                                        <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded inline-block">
+                                          💡 Discount reason: {item.discountReason}
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-6 text-sm">
                                       <div className="text-slate-600 dark:text-slate-400">
@@ -757,7 +753,23 @@ export default function Sales(): JSX.Element {
                                         )}
                                       </div>
                                       <div className="text-slate-600 dark:text-slate-400">
-                                        @ ${item.price.toFixed(2)}
+                                        {item.discountType && item.discountType !== 'NONE' ? (
+                                          <div className="flex flex-col items-end">
+                                            <span className="line-through text-xs text-slate-400">
+                                              @ ${item.price.toFixed(2)}
+                                            </span>
+                                            <span className="text-green-600 dark:text-green-400 font-semibold">
+                                              @ ${(item.finalPrice || item.price).toFixed(2)}
+                                            </span>
+                                            <span className="text-xs text-green-600 dark:text-green-400">
+                                              {item.discountType === 'PERCENTAGE' 
+                                                ? `(-${item.discountValue}%)`
+                                                : `(-$${item.discountValue?.toFixed(2)})`}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <>@ ${item.price.toFixed(2)}</>
+                                        )}
                                       </div>
                                       <div className="font-semibold text-slate-900 dark:text-white min-w-[80px] text-right">
                                         ${item.total.toFixed(2)}
@@ -903,9 +915,25 @@ export default function Sales(): JSX.Element {
                             </div>
                           )}
                         </div>
-                        <span className="text-slate-600 dark:text-slate-400">
-                          Price: <span className="font-semibold text-slate-900 dark:text-white">${item.price.toFixed(2)}</span>
-                        </span>
+                        <div className="text-slate-600 dark:text-slate-400">
+                          {item.discountType && item.discountType !== 'NONE' ? (
+                            <div className="flex flex-col items-end">
+                              <span className="line-through text-xs text-slate-400">
+                                Original: ${item.price.toFixed(2)}
+                              </span>
+                              <span className="text-green-600 dark:text-green-400 font-semibold">
+                                Price: ${(item.finalPrice || item.price).toFixed(2)}
+                              </span>
+                              <span className="text-xs text-green-600 dark:text-green-400">
+                                {item.discountType === 'PERCENTAGE' 
+                                  ? `Discount: -${item.discountValue}%`
+                                  : `Discount: -$${item.discountValue?.toFixed(2)}`}
+                              </span>
+                            </div>
+                          ) : (
+                            <>Price: <span className="font-semibold text-slate-900 dark:text-white">${item.price.toFixed(2)}</span></>
+                          )}
+                        </div>
                         <div className="text-right">
                           <div className="font-bold text-slate-900 dark:text-white">${item.total.toFixed(2)}</div>
                           {item.refundedQuantity && item.refundedQuantity > 0 && (
@@ -915,6 +943,13 @@ export default function Sales(): JSX.Element {
                           )}
                         </div>
                       </div>
+                      {item.discountReason && (
+                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                          <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded">
+                            <span className="font-semibold">💡 Discount Reason:</span> {item.discountReason}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

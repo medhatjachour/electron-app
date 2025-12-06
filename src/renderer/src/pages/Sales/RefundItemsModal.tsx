@@ -114,7 +114,11 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center"
+      onKeyDown={(e) => e.key === 'Escape' && handleClose()}
+      tabIndex={-1}
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-md"

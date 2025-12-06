@@ -396,7 +396,7 @@ export default function Finance() {
               color="red"
               subtitle={`${currentMetrics?.refundedTransactions || 0} transactions | ${currentMetrics?.refundedItems || 0} items`}
               showChange={true}
-              tooltip={`Total refunded amount and refund rate. ${currentMetrics?.refundRate?.toFixed(1) || 0}% of transactions had refunds. Revenue shown is NET after refunds.`}
+              tooltip={`Total refunded amount and refund rate. ${currentMetrics?.refundRate?.toFixed(1) || 0}% of transactions had refunds. All revenue figures in this dashboard are NET values after deducting refunds.`}
             />
             <KPICard
               title="Profit Margin"

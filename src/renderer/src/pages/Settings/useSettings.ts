@@ -26,14 +26,25 @@ export function useSettings() {
   }))
 
   // Tax & Receipt Settings
-  const [taxReceiptSettings, setTaxReceiptSettings] = useState<TaxReceiptSettings>(() => ({
-    taxRate: parseFloat(localStorage.getItem('taxRate') || '10'),
-    receiptHeader: localStorage.getItem('receiptHeader') || '',
-    receiptFooter: localStorage.getItem('receiptFooter') || 'Thank you for your business!',
-    autoPrint: localStorage.getItem('autoPrint') === 'true',
-    includeLogo: localStorage.getItem('includeLogo') === 'true',
-    refundPeriodDays: parseInt(localStorage.getItem('refundPeriodDays') || '30')
-  }))
+  const [taxReceiptSettings, setTaxReceiptSettings] = useState<TaxReceiptSettings>(() => {
+    // Initialize allowDiscounts if not set
+    if (localStorage.getItem('allowDiscounts') === null) {
+      localStorage.setItem('allowDiscounts', 'true')
+    }
+    
+    return {
+      taxRate: parseFloat(localStorage.getItem('taxRate') || '10'),
+      receiptHeader: localStorage.getItem('receiptHeader') || '',
+      receiptFooter: localStorage.getItem('receiptFooter') || 'Thank you for your business!',
+      autoPrint: localStorage.getItem('autoPrint') === 'true',
+      includeLogo: localStorage.getItem('includeLogo') === 'true',
+      refundPeriodDays: parseInt(localStorage.getItem('refundPeriodDays') || '30'),
+      allowDiscounts: localStorage.getItem('allowDiscounts') === 'true',
+      maxDiscountPercentage: parseFloat(localStorage.getItem('maxDiscountPercentage') || '50'),
+      maxDiscountAmount: parseFloat(localStorage.getItem('maxDiscountAmount') || '100'),
+      requireDiscountReason: true // Always require reason
+    }
+  })
 
   // Notification Settings
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => ({

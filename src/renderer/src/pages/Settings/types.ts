@@ -19,6 +19,11 @@ export interface TaxReceiptSettings {
   autoPrint: boolean
   includeLogo: boolean
   refundPeriodDays: number // Number of days allowed for refunds/returns
+  // Discount settings
+  allowDiscounts: boolean
+  maxDiscountPercentage: number
+  maxDiscountAmount: number
+  requireDiscountReason: boolean
 }
 
 export interface NotificationSettings {
