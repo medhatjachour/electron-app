@@ -276,6 +276,7 @@ export default function QuickSale() {
       } else {
         // Add new item
         return [...prev, {
+          id: variant ? `${product.id}-${variant.id}` : product.id,
           productId: product.id,
           variantId: variant?.id,
           name: product.name,
@@ -830,7 +831,7 @@ export default function QuickSale() {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {cartItems.map((item) => (
-                  <tr key={item.productId} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                     <td className="px-3 py-3">
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white">{item.name}</p>
