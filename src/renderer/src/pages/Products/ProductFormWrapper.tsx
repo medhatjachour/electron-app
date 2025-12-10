@@ -6,7 +6,9 @@
 import { useState, useEffect } from 'react'
 import { ipc } from '../../utils/ipc'
 import { useToast } from '../../contexts/ToastContext'
+import { useAuth } from '../../../hooks/useAuth'
 import ProductForm from '../../components/ProductForm'
+import StockMovementDialog from '../../components/StockMovementDialog'
 import type { Product } from './types'
 
 type Store = {
@@ -59,6 +61,7 @@ interface ProductFormWrapperProps {
 
 export default function ProductFormWrapper({ product, onSuccess, onCancel }: ProductFormWrapperProps) {
   const toast = useToast()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -98,6 +101,23 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     price: 0,
     stock: 0
   })
+
+  // Stock movement dialog state
+  const [stockMovementDialog, setStockMovementDialog] = useState<{
+    isOpen: boolean
+    variantId: string | null
+    variantIndex: number | null
+    productName: string
+    variantLabel: string
+    currentStock: number
+  }>({ 
+    isOpen: false, 
+    variantId: null, 
+    variantIndex: null,
+    productName: '', 
+    variantLabel: '', 
+    currentStock: 0 
+  })
   const [colorInput, setColorInput] = useState('')
   const [sizeInput, setSizeInput] = useState('')
 
@@ -132,6 +152,98 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       })
     }
   }, [product])
+
+  /**
+   * Handle stock movement for existing product variants
+   */
+  const handleStockMovement = async (data: {
+    mode: 'add' | 'set' | 'remove'
+    value: number
+    reason: string
+    notes: string
+  }) => {
+    try {
+      if (!stockMovementDialog.variantId) {
+        toast.error('No variant selected')
+        return
+      }
+
+      // Record the stock movement
+      // @ts-ignore
+      const result = await window.api?.stockMovements?.record({
+        variantId: stockMovementDialog.variantId,
+        mode: data.mode,
+        value: data.value,
+        reason: data.reason,
+        notes: data.notes,
+        userId: user?.id
+      })
+
+      if (result?.success) {
+        toast.success(`Stock ${data.mode === 'add' ? 'added' : data.mode === 'remove' ? 'removed' : 'updated'} successfully`)
+        
+        // Update local formData to reflect new stock
+        if (stockMovementDialog.variantIndex !== null) {
+          const newStock = result.data?.variant?.stock || 0
+          setFormData(prev => ({
+            ...prev,
+            variants: prev.variants.map((v, idx) => 
+              idx === stockMovementDialog.variantIndex ? { ...v, stock: newStock } : v
+            )
+          }))
+        }
+        
+        setStockMovementDialog(prev => ({ ...prev, isOpen: false }))
+      } else {
+        toast.error(result?.error || 'Failed to record stock movement')
+      }
+    } catch (error) {
+      console.error('Error recording stock movement:', error)
+      toast.error('Failed to record stock movement')
+    }
+  }
+
+  /**
+   * Handle variant price update
+   */
+  const handleVariantPriceChange = (index: number, newPrice: number) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.map((v, idx) => 
+        idx === index ? { ...v, price: newPrice } : v
+      )
+    }))
+  }
+
+  /**
+   * Handle variant stock update (for new variants or before save)
+   */
+  const handleVariantStockChange = (index: number, newStock: number) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.map((v, idx) => 
+        idx === index ? { ...v, stock: newStock } : v
+      )
+    }))
+  }
+
+  /**
+   * Open stock adjustment dialog for a variant
+   */
+  const handleOpenStockDialog = (index: number, variant: any) => {
+    // Only open dialog for existing variants with valid IDs
+    if (product && variant.id && !variant.id.startsWith('temp-')) {
+      const variantLabel = [variant.color, variant.size].filter(Boolean).join(' • ')
+      setStockMovementDialog({
+        isOpen: true,
+        variantId: variant.id,
+        variantIndex: index,
+        productName: product.name,
+        variantLabel,
+        currentStock: variant.stock
+      })
+    }
+  }
 
   const loadStores = async () => {
     try {
@@ -531,6 +643,20 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         onRemoveColor={handleRemoveColor}
         onRemoveSize={handleRemoveSize}
         onGenerateBatchVariants={handleGenerateBatchVariants}
+        isEditMode={!!product}
+        onVariantPriceChange={handleVariantPriceChange}
+        onVariantStockChange={handleVariantStockChange}
+        onOpenStockDialog={handleOpenStockDialog}
+      />
+
+      {/* Stock Movement Dialog */}
+      <StockMovementDialog
+        isOpen={stockMovementDialog.isOpen}
+        onClose={() => setStockMovementDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleStockMovement}
+        productName={stockMovementDialog.productName}
+        variantLabel={stockMovementDialog.variantLabel}
+        currentStock={stockMovementDialog.currentStock}
       />
 
       {/* Action Buttons */}

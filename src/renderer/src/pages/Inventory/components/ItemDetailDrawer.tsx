@@ -16,9 +16,10 @@ interface Props {
   onRefresh: () => void
   onDelete?: (id: string) => Promise<void>
   isDeleting?: boolean
+  onAdjustStock?: (variantId: string, productName: string, variantLabel: string, currentStock: number) => void
 }
 
-export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, isDeleting = false }: Props) {
+export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, isDeleting = false, onAdjustStock }: Props) {
   const { canEdit, canDelete } = useAuth()
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -381,6 +382,21 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
                         Value: ${(variant.price * variant.stock).toFixed(2)}
                       </span>
                     </div>
+                    {canEdit && onAdjustStock && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const variantLabel = [variant.color, variant.size].filter(Boolean).join(' • ')
+                          onAdjustStock(variant.id, item.name, variantLabel, variant.stock)
+                        }}
+                        className="mt-2 w-full px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 
+                                 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 
+                                 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Package size={14} />
+                        Adjust Stock
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

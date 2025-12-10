@@ -106,37 +106,41 @@ export function registerSaleTransactionHandlers(prisma: any) {
               })
               
               if (product && product.variants && product.variants.length > 0) {
-                // Deduct from variants proportionally or from first available
-                let remainingQty = item.quantity
+                // Use the first variant (default variant) for simple products
+                const defaultVariant = product.variants[0]
                 
-                for (const variant of product.variants) {
-                  if (remainingQty <= 0) break
+                if (defaultVariant && defaultVariant.stock >= item.quantity) {
+                  const previousStock = defaultVariant.stock
+                  const newStock = previousStock - item.quantity
                   
-                  const deductQty = Math.min(variant.stock, remainingQty)
-                  if (deductQty > 0) {
-                    const previousStock = variant.stock
-                    const newStock = previousStock - deductQty
-                    
-                    await tx.productVariant.update({
-                      where: { id: variant.id },
-                      data: { stock: newStock }
+                  // Update variant stock
+                  await tx.productVariant.update({
+                    where: { id: defaultVariant.id },
+                    data: { stock: newStock }
+                  })
+                  
+                  // Update the sale item with the variantId so we can refund properly later
+                  const saleItemToUpdate = saleItems.find((si: any) => si.productId === item.productId)
+                  if (saleItemToUpdate) {
+                    await tx.saleItem.update({
+                      where: { id: saleItemToUpdate.id },
+                      data: { variantId: defaultVariant.id }
                     })
-                    
-                    await tx.stockMovement.create({
-                      data: {
-                        variantId: variant.id,
-                        type: 'SALE',
-                        quantity: -deductQty,
-                        previousStock,
-                        newStock,
-                        referenceId: saleTransaction.id,
-                        userId: transactionData.userId,
-                        notes: `Sale transaction ${saleTransaction.id} (product sale)`
-                      }
-                    })
-                    
-                    remainingQty -= deductQty
                   }
+                  
+                  // Record stock movement
+                  await tx.stockMovement.create({
+                    data: {
+                      variantId: defaultVariant.id,
+                      type: 'SALE',
+                      quantity: -item.quantity,
+                      previousStock,
+                      newStock,
+                      referenceId: saleTransaction.id,
+                      userId: transactionData.userId,
+                      notes: `Sale transaction ${saleTransaction.id} (simple product)`
+                    }
+                  })
                 }
               }
             }
@@ -291,26 +295,59 @@ export function registerSaleTransactionHandlers(prisma: any) {
         })
 
         // Restore stock for each item and record stock movements
+        console.log(`[REFUND-ALL] Processing full refund for transaction ${id}`)
+        console.log(`[REFUND-ALL] Transaction has ${transaction.items.length} items`)
+        
         await Promise.all(
-          transaction.items.map(async (item: any) => {
+          transaction.items.map(async (item: any, index: number) => {
+            console.log(`[REFUND-ALL] Processing item ${index + 1}:`, {
+              saleItemId: item.id,
+              productId: item.productId,
+              variantId: item.variantId,
+              quantity: item.quantity
+            })
+            
             if (item.variantId) {
               // Get current stock before update
               const variant = await tx.productVariant.findUnique({
-                where: { id: item.variantId }
+                where: { id: item.variantId },
+                include: {
+                  product: {
+                    select: { name: true, baseSKU: true }
+                  }
+                }
               })
               
               if (variant) {
+                console.log(`[REFUND-ALL] Variant found:`, {
+                  id: variant.id,
+                  sku: variant.sku,
+                  product: variant.product.name,
+                  currentStock: variant.stock
+                })
+                
                 const previousStock = variant.stock
                 const newStock = previousStock + item.quantity
                 
+                console.log(`[REFUND-ALL] Restoring stock:`, {
+                  previousStock,
+                  quantityToRestore: item.quantity,
+                  newStock
+                })
+                
                 // Update stock
-                await tx.productVariant.update({
+                const updated = await tx.productVariant.update({
                   where: { id: item.variantId },
                   data: { stock: newStock }
                 })
                 
+                console.log(`[REFUND-ALL] Stock updated:`, {
+                  variantId: updated.id,
+                  newStock: updated.stock
+                })
+                
                 // Record stock movement as RETURN
-                await tx.stockMovement.create({
+                const movement = await tx.stockMovement.create({
                   data: {
                     variantId: item.variantId,
                     type: 'RETURN',
@@ -323,11 +360,73 @@ export function registerSaleTransactionHandlers(prisma: any) {
                     notes: `Refund of transaction ${transaction.id}`
                   }
                 })
+                
+                console.log(`[REFUND-ALL] Stock movement created:`, {
+                  movementId: movement.id,
+                  type: movement.type
+                })
+              } else {
+                console.error(`[REFUND-ALL] ERROR: Variant ${item.variantId} not found!`)
+              }
+            } else {
+              // Handle legacy sales with null variantId - find the default variant
+              console.warn(`[REFUND-ALL] Item ${item.id} has no variantId, searching for default variant...`)
+              
+              const product = await tx.product.findUnique({
+                where: { id: item.productId },
+                include: { variants: true }
+              })
+              
+              if (product && product.variants && product.variants.length > 0) {
+                const defaultVariant = product.variants[0]
+                console.log(`[REFUND-ALL] Found default variant for product ${product.name}:`, {
+                  variantId: defaultVariant.id,
+                  sku: defaultVariant.sku,
+                  currentStock: defaultVariant.stock
+                })
+                
+                const previousStock = defaultVariant.stock
+                const newStock = previousStock + item.quantity
+                
+                // Update stock
+                await tx.productVariant.update({
+                  where: { id: defaultVariant.id },
+                  data: { stock: newStock }
+                })
+                
+                console.log(`[REFUND-ALL] Stock restored to default variant`)
+                
+                // Update sale item with the variantId for future reference
+                await tx.saleItem.update({
+                  where: { id: item.id },
+                  data: { variantId: defaultVariant.id }
+                })
+                
+                // Record stock movement as RETURN
+                await tx.stockMovement.create({
+                  data: {
+                    variantId: defaultVariant.id,
+                    type: 'RETURN',
+                    quantity: item.quantity,
+                    previousStock,
+                    newStock,
+                    referenceId: transaction.id,
+                    userId: transaction.userId,
+                    reason: 'Refund/Return',
+                    notes: `Refund of transaction ${transaction.id} (legacy null variantId)`
+                  }
+                })
+                
+                console.log(`[REFUND-ALL] Stock movement recorded for legacy sale`)
+              } else {
+                console.error(`[REFUND-ALL] ERROR: Could not find product or variants for item ${item.id}`)
               }
             }
             return Promise.resolve()
           })
         )
+        
+        console.log(`[REFUND-ALL] All items processed successfully`)
 
         return updated
       })
@@ -422,22 +521,51 @@ export function registerSaleTransactionHandlers(prisma: any) {
 
           // Restore stock and record stock movement
           if (saleItem.variantId) {
+            console.log(`[REFUND] Processing refund for sale item:`, {
+              saleItemId: saleItem.id,
+              variantId: saleItem.variantId,
+              quantityToRefund: refundItem.quantityToRefund
+            })
+            
             const variant = await tx.productVariant.findUnique({
-              where: { id: saleItem.variantId }
+              where: { id: saleItem.variantId },
+              include: {
+                product: {
+                  select: { name: true, baseSKU: true }
+                }
+              }
             })
             
             if (variant) {
+              console.log(`[REFUND] Variant found:`, {
+                id: variant.id,
+                sku: variant.sku,
+                product: variant.product.name,
+                currentStock: variant.stock
+              })
+              
               const previousStock = variant.stock
               const newStock = previousStock + refundItem.quantityToRefund
               
+              console.log(`[REFUND] Calculating new stock:`, {
+                previousStock,
+                quantityToRefund: refundItem.quantityToRefund,
+                newStock
+              })
+              
               // Update stock
-              await tx.productVariant.update({
+              const updatedVariant = await tx.productVariant.update({
                 where: { id: saleItem.variantId },
                 data: { stock: newStock }
               })
               
+              console.log(`[REFUND] Stock updated successfully:`, {
+                variantId: updatedVariant.id,
+                newStock: updatedVariant.stock
+              })
+              
               // Record stock movement as RETURN
-              await tx.stockMovement.create({
+              const movement = await tx.stockMovement.create({
                 data: {
                   variantId: saleItem.variantId,
                   type: 'RETURN',
@@ -450,6 +578,67 @@ export function registerSaleTransactionHandlers(prisma: any) {
                   notes: `Partial refund: ${refundItem.quantityToRefund} of ${saleItem.quantity} units from transaction ${transactionId}`
                 }
               })
+              
+              console.log(`[REFUND] Stock movement recorded:`, {
+                movementId: movement.id,
+                type: movement.type,
+                quantity: movement.quantity
+              })
+            } else {
+              console.error(`[REFUND] ERROR: Variant ${saleItem.variantId} not found in database!`)
+            }
+          } else {
+            // Handle legacy sales with null variantId
+            console.warn(`[REFUND] Sale item ${saleItem.id} has no variantId, searching for default variant...`)
+            
+            const product = await tx.product.findUnique({
+              where: { id: saleItem.productId },
+              include: { variants: true }
+            })
+            
+            if (product && product.variants && product.variants.length > 0) {
+              const defaultVariant = product.variants[0]
+              console.log(`[REFUND] Found default variant:`, {
+                variantId: defaultVariant.id,
+                product: product.name,
+                currentStock: defaultVariant.stock
+              })
+              
+              const previousStock = defaultVariant.stock
+              const newStock = previousStock + refundItem.quantityToRefund
+              
+              // Update stock
+              await tx.productVariant.update({
+                where: { id: defaultVariant.id },
+                data: { stock: newStock }
+              })
+              
+              console.log(`[REFUND] Stock restored to default variant`)
+              
+              // Update sale item with variantId for future reference
+              await tx.saleItem.update({
+                where: { id: saleItem.id },
+                data: { variantId: defaultVariant.id }
+              })
+              
+              // Record stock movement
+              await tx.stockMovement.create({
+                data: {
+                  variantId: defaultVariant.id,
+                  type: 'RETURN',
+                  quantity: refundItem.quantityToRefund,
+                  previousStock,
+                  newStock,
+                  referenceId: transactionId,
+                  userId: transaction.userId,
+                  reason: 'Partial Refund',
+                  notes: `Partial refund: ${refundItem.quantityToRefund} of ${saleItem.quantity} units from transaction ${transactionId} (legacy null variantId)`
+                }
+              })
+              
+              console.log(`[REFUND] Stock movement recorded for legacy sale`)
+            } else {
+              console.error(`[REFUND] ERROR: Could not find product or variants for sale item ${saleItem.id}`)
             }
           }
         }

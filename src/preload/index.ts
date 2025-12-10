@@ -245,6 +245,33 @@ const api = {
       endDate?: string
       search?: string
     }) => ipcRenderer.invoke('analytics:getAllStockMovements', options)
+  },
+  // Stock Movement Management (New System)
+  stockMovements: {
+    record: (data: {
+      variantId: string
+      mode: 'add' | 'set' | 'remove'
+      value: number
+      reason: string
+      notes?: string
+      userId?: string
+    }) => ipcRenderer.invoke('stockMovements:record', data),
+    getHistory: (variantId: string, limit?: number) => 
+      ipcRenderer.invoke('stockMovements:getHistory', { variantId, limit }),
+    getProductHistory: (productId: string, limit?: number) =>
+      ipcRenderer.invoke('stockMovements:getProductHistory', { productId, limit }),
+    getRecent: (limit?: number, type?: string) =>
+      ipcRenderer.invoke('stockMovements:getRecent', { limit, type }),
+    bulkRecord: (data: {
+      movements: Array<{
+        variantId: string
+        mode: 'add' | 'set' | 'remove'
+        value: number
+        reason: string
+        notes?: string
+      }>
+      userId?: string
+    }) => ipcRenderer.invoke('stockMovements:bulkRecord', data)
   }
 }
 

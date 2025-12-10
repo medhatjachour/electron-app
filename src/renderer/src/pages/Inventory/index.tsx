@@ -21,6 +21,7 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts'
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate'
 import { useToast } from '../../hooks/useToast'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
+import { useAuth } from '../../../hooks/useAuth'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
 import ToastContainer from '../../components/ui/ToastContainer'
@@ -34,6 +35,7 @@ import type { InventoryFilters as Filters, InventorySortOptions } from './types'
 import InventoryFilters from './components/InventoryFilters'
 import InventoryMetrics from './components/InventoryMetrics'
 import ItemDetailDrawer from './components/ItemDetailDrawer'
+import StockMovementDialog from '../../components/StockMovementDialog'
 import type { InventoryItem } from '../../../../shared/types'
 import logger from '../../../../shared/utils/logger'
 
@@ -47,7 +49,23 @@ export default function InventoryPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isExporting, setIsExporting] = useState(false)
+  
+  // Stock movement dialog state
+  const [stockMovementDialog, setStockMovementDialog] = useState<{
+    isOpen: boolean
+    variantId: string | null
+    productName: string
+    variantLabel: string
+    currentStock: number
+  }>({ 
+    isOpen: false, 
+    variantId: null, 
+    productName: '', 
+    variantLabel: '', 
+    currentStock: 0 
+  })
   
   // Get display settings for image loading
   const { settings: displaySettings } = useDisplaySettings()
@@ -198,6 +216,44 @@ export default function InventoryPage() {
     navigate('/products?create=true')
   }
   
+  /**
+   * Handle stock movement recording
+   */
+  const handleStockMovement = async (data: {
+    mode: 'add' | 'set' | 'remove'
+    value: number
+    reason: string
+    notes: string
+  }) => {
+    try {
+      if (!stockMovementDialog.variantId) {
+        showToast('error', 'No variant selected')
+        return
+      }
+
+      // @ts-ignore
+      const result = await window.api?.stockMovements?.record({
+        variantId: stockMovementDialog.variantId,
+        mode: data.mode,
+        value: data.value,
+        reason: data.reason,
+        notes: data.notes,
+        userId: user?.id
+      })
+
+      if (result?.success) {
+        showToast('success', `Stock ${data.mode === 'add' ? 'added' : data.mode === 'remove' ? 'removed' : 'updated'} successfully`)
+        refetch() // Refresh inventory list
+        setStockMovementDialog(prev => ({ ...prev, isOpen: false }))
+      } else {
+        showToast('error', result?.error || 'Failed to record stock movement')
+      }
+    } catch (error) {
+      logger.error('Error recording stock movement:', error)
+      showToast('error', 'Failed to record stock movement')
+    }
+  }
+
   /**
    * Handle delete with optimistic update
    */
@@ -491,8 +547,27 @@ export default function InventoryPage() {
           onRefresh={refetch}
           onDelete={handleDeleteItem}
           isDeleting={isDeleting}
+          onAdjustStock={(variantId, productName, variantLabel, currentStock) => {
+            setStockMovementDialog({
+              isOpen: true,
+              variantId,
+              productName,
+              variantLabel,
+              currentStock
+            })
+          }}
         />
       )}
+      
+      {/* Stock Movement Dialog */}
+      <StockMovementDialog
+        isOpen={stockMovementDialog.isOpen}
+        onClose={() => setStockMovementDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleStockMovement}
+        productName={stockMovementDialog.productName}
+        variantLabel={stockMovementDialog.variantLabel}
+        currentStock={stockMovementDialog.currentStock}
+      />
       
       {/* Toast Notifications */}
       <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />

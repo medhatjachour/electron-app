@@ -347,33 +347,151 @@ export function registerProductsHandlers(prisma: any) {
         }
       }
       
-      // Get existing images to delete from filesystem
+      // Get existing images to compare
       const imageService = getImageService()
       const existingProduct = await prisma.product.findUnique({
         where: { id },
-        include: { images: true }
+        include: { images: { orderBy: { order: 'asc' } } }
       })
 
-      // Save new images to filesystem first
+      // Build map of existing image data URLs to filenames
+      const existingImageMap = new Map<string, string>()
+      if (existingProduct?.images) {
+        for (const img of existingProduct.images) {
+          if (img.filename) {
+            const dataUrl = await imageService.getImageDataUrl(img.filename)
+            if (dataUrl) {
+              existingImageMap.set(dataUrl, img.filename)
+            }
+          }
+        }
+      }
+
+      // Process images: separate existing from new
       const imageFilenames: Array<{ filename: string, order: number }> = []
       
       if (images?.length) {
         for (let idx = 0; idx < images.length; idx++) {
-          const base64Data = images[idx]
-          try {
-            const filename = await imageService.saveImage(base64Data)
+          const imageData = images[idx]
+          
+          // Check if this matches an existing image
+          if (existingImageMap.has(imageData)) {
+            // This is an existing image - reuse the filename
+            const filename = existingImageMap.get(imageData)!
             imageFilenames.push({ filename, order: idx })
-          } catch (error) {
-            console.error(`Failed to save image ${idx}:`, error)
+          } else if (imageData.startsWith('data:image/')) {
+            // This is a new image - save to filesystem
+            try {
+              const filename = await imageService.saveImage(imageData)
+              imageFilenames.push({ filename, order: idx })
+            } catch (error) {
+              console.error(`Failed to save new image ${idx}:`, error)
+            }
+          } else {
+            console.warn(`[products:update] Unrecognized image format at index ${idx}`)
           }
         }
       }
 
       // Use transaction for atomic operation
       const updated = await prisma.$transaction(async (tx: any) => {
-        // Delete existing images and variants from database
+        // Get existing variants to track stock changes
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+          select: { id: true, sku: true, stock: true, color: true, size: true, price: true }
+        })
+        
+        // Build map of existing variants by SKU for comparison
+        const existingVariantMap = new Map(existingVariants.map(v => [v.sku, v]))
+        
+        // Delete existing images from database
         await tx.productImage.deleteMany({ where: { productId: id } })
-        await tx.productVariant.deleteMany({ where: { productId: id } })
+        
+        // Handle variants
+        let variantData: any = undefined
+        
+        if (variants?.length) {
+          // Process each variant
+          const variantsToCreate: any[] = []
+          const variantsToUpdate: any[] = []
+          const skusToKeep = new Set<string>()
+          
+          for (const v of variants) {
+            skusToKeep.add(v.sku)
+            const existing = existingVariantMap.get(v.sku)
+            
+            if (existing) {
+              // Update existing variant
+              const updates: any = {}
+              let needsUpdate = false
+              
+              // Check for changes (excluding stock - stock is only modified via stock movement dialog)
+              if (v.color !== existing.color) { updates.color = v.color; needsUpdate = true }
+              if (v.size !== existing.size) { updates.size = v.size; needsUpdate = true }
+              if (v.price !== existing.price) { updates.price = v.price; needsUpdate = true }
+              // Stock is NOT updated here - use stock movement dialog to change stock
+              
+              if (needsUpdate) {
+                variantsToUpdate.push({ sku: v.sku, updates })
+              }
+            } else {
+              // New variant
+              variantsToCreate.push({
+                color: v.color,
+                size: v.size,
+                sku: v.sku,
+                price: v.price,
+                stock: v.stock
+              })
+            }
+          }
+          
+          // Delete variants that are no longer present
+          const skusToDelete = existingVariants
+            .filter(v => !skusToKeep.has(v.sku))
+            .map(v => v.sku)
+          
+          if (skusToDelete.length > 0) {
+            await tx.productVariant.deleteMany({
+              where: { productId: id, sku: { in: skusToDelete } }
+            })
+          }
+          
+          // Apply variant updates
+          for (const { sku, updates } of variantsToUpdate) {
+            await tx.productVariant.updateMany({
+              where: { productId: id, sku },
+              data: updates
+            })
+          }
+          
+          // Create new variants
+          if (variantsToCreate.length > 0) {
+            variantData = { create: variantsToCreate }
+          }
+        } else if (product.hasVariants === false && baseStock !== undefined) {
+          // Handle simple product (no variants) - check if default variant exists
+          const defaultVariant = existingVariants.find(v => v.sku === product.baseSKU)
+          
+          if (defaultVariant) {
+            // Update default variant (excluding stock - use stock movement dialog)
+            await tx.productVariant.updateMany({
+              where: { productId: id, sku: product.baseSKU },
+              data: { price: product.basePrice }
+            })
+          } else if (!defaultVariant) {
+            // Create default variant
+            variantData = {
+              create: [{
+                sku: product.baseSKU,
+                color: 'Default',
+                size: 'Default',
+                price: product.basePrice,
+                stock: baseStock
+              }]
+            }
+          }
+        }
         
         // Update product with new data
         return await tx.product.update({
@@ -387,24 +505,7 @@ export function registerProductsHandlers(prisma: any) {
                 order
               }))
             } : undefined,
-            variants: variants?.length ? {
-              create: variants.map((v: any) => ({
-                color: v.color,
-                size: v.size,
-                sku: v.sku,
-                price: v.price,
-                stock: v.stock
-              }))
-            } : product.hasVariants === false && baseStock !== undefined ? {
-              // Auto-create default variant for simple products
-              create: [{
-                sku: product.baseSKU,
-                color: 'Default',
-                size: 'Default',
-                price: product.basePrice,
-                stock: baseStock
-              }]
-            } : undefined
+            variants: variantData
           },
           include: {
             images: true,
@@ -417,23 +518,25 @@ export function registerProductsHandlers(prisma: any) {
 
       // Delete old image files from filesystem (after successful transaction)
       // Only delete images that are not in the new image list
-      if (existingProduct?.images) {
+      if (existingProduct?.images && imageFilenames.length > 0) {
         const newFilenames = imageFilenames.map(img => img.filename)
-        for (const image of existingProduct.images) {
-          if (image.filename && !newFilenames.includes(image.filename)) {
-            try {
-              // Small delay to ensure UI has updated before deleting
-              setTimeout(async () => {
-                try {
-                  await imageService.deleteImage(image.filename)
-                } catch (err) {
-                  console.error(`Failed to delete old image ${image.filename}:`, err)
-                }
-              }, 1000)
-            } catch (error) {
-              console.error(`Failed to schedule deletion of ${image.filename}:`, error)
+        const filesToDelete = existingProduct.images
+          .filter(img => img.filename && !newFilenames.includes(img.filename))
+          .map(img => img.filename)
+        
+        if (filesToDelete.length > 0) {
+          console.log(`[products:update] Scheduling deletion of ${filesToDelete.length} unused images`)
+          // Small delay to ensure UI has updated before deleting
+          setTimeout(async () => {
+            for (const filename of filesToDelete) {
+              try {
+                await imageService.deleteImage(filename)
+                console.log(`[products:update] Deleted old image: ${filename}`)
+              } catch (err) {
+                console.error(`Failed to delete old image ${filename}:`, err)
+              }
             }
-          }
+          }, 2000)
         }
       }
 
