@@ -850,6 +850,16 @@ function buildWhereClause(filters: SearchFilters): any {
   const where: any = {}
   const andConditions: any[] = []
 
+  // Filter archived products by default (unless explicitly requested)
+  if ((filters as any).showArchivedOnly) {
+    // Show only archived products
+    andConditions.push({ isArchived: true })
+  } else if (!(filters as any).includeArchived) {
+    // Default: exclude archived products
+    andConditions.push({ isArchived: false })
+  }
+  // If includeArchived is true, don't filter by isArchived at all (show both)
+
   // Text search across multiple fields (OR within this group)
   if (filters.query && filters.query.trim()) {
     const query = filters.query.trim()

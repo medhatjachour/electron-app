@@ -106,3 +106,4 @@ export type SettingsTab =
   | 'notifications' 
   | 'security' 
   | 'backup'
+  | 'archive'

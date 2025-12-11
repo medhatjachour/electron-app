@@ -1,4 +1,4 @@
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, Package } from 'lucide-react'
 
 type ProductVariant = {
   id: string
@@ -76,6 +76,11 @@ type ProductFormProps = {
   onRemoveColor: (color: string) => void
   onRemoveSize: (size: string) => void
   onGenerateBatchVariants: () => void
+  // New props for inline variant editing
+  isEditMode?: boolean
+  onVariantPriceChange?: (index: number, newPrice: number) => void
+  onVariantStockChange?: (index: number, newStock: number) => void
+  onOpenStockDialog?: (index: number, variant: any) => void
 }
 
 export default function ProductForm({
@@ -102,7 +107,11 @@ export default function ProductForm({
   onAddSize,
   onRemoveColor,
   onRemoveSize,
-  onGenerateBatchVariants
+  onGenerateBatchVariants,
+  isEditMode = false,
+  onVariantPriceChange,
+  onVariantStockChange,
+  onOpenStockDialog
 }: Readonly<ProductFormProps>): JSX.Element {
   return (
     <div className="space-y-6">
@@ -255,17 +264,43 @@ export default function ProductForm({
         {!formData.hasVariants && (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Stock * (Units)
+              Stock * (Units) {isEditMode && <span className="text-xs text-blue-600 dark:text-blue-400">(tracked)</span>}
             </label>
-            <input
-              type="number"
-              value={formData.baseStock}
-              onChange={(e) => setFormData({ ...formData, baseStock: parseInt(e.target.value) || 0 })}
-              className="input-field w-full"
-              placeholder="0"
-              min="0"
-            />
-            <p className="text-xs text-slate-500 mt-1">Initial stock quantity</p>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={formData.baseStock}
+                onChange={(e) => setFormData({ ...formData, baseStock: parseInt(e.target.value) || 0 })}
+                disabled={isEditMode}
+                className="input-field flex-1"
+                placeholder="0"
+                min="0"
+                title={isEditMode ? 'Use Adjust Stock button to change' : 'Set initial stock quantity'}
+              />
+              {isEditMode && onOpenStockDialog && formData.variants.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultVariant = formData.variants[0]
+                    if (defaultVariant && defaultVariant.id && !defaultVariant.id.startsWith('temp-')) {
+                      onOpenStockDialog(0, defaultVariant)
+                    }
+                  }}
+                  className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 
+                           bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 
+                           rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5"
+                  title="Adjust stock with reason tracking"
+                >
+                  <Package size={16} />
+                  Adjust Stock
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {isEditMode 
+                ? 'Stock changes are tracked. Click "Adjust Stock" to modify with reason.'
+                : 'Initial stock quantity'}
+            </p>
           </div>
         )}
       </div>
@@ -532,35 +567,98 @@ export default function ProductForm({
             {/* Variant List */}
             {formData.variants.length > 0 && (
               <div className="space-y-2">
-                {formData.variants.map((variant) => (
-                  <div key={variant.id} className="flex items-center justify-between bg-white dark:bg-slate-700 p-3 rounded-lg">
-                    <div className="flex-1 grid grid-cols-5 gap-4 text-sm">
-                      {variant.color && (
-                        <div>
-                          <span className="px-2 py-1 bg-secondary/10 text-secondary rounded text-xs font-semibold">
-                            {variant.color}
+                {formData.variants.map((variant, index) => {
+                  const isExistingVariant = isEditMode && variant.id && !variant.id.startsWith('temp-')
+                  
+                  return (
+                    <div key={variant.id} className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all">
+                      {/* Compact Header */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {variant.color && (
+                            <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary rounded text-xs font-medium">
+                              {variant.color}
+                            </span>
+                          )}
+                          {variant.size && (
+                            <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
+                              {variant.size}
+                            </span>
+                          )}
+                          <span className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs font-mono">
+                            {variant.sku}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            • ${(variant.price * variant.stock).toFixed(2)}
                           </span>
                         </div>
-                      )}
-                      {variant.size && (
+                        <button
+                          onClick={() => onRemoveVariant(variant.id)}
+                          className="p-1 hover:bg-error/10 text-error rounded transition-colors"
+                          title="Remove variant"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* Compact Editable Fields */}
+                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                        {/* Price Field */}
                         <div>
-                          <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-semibold">
-                            {variant.size}
-                          </span>
+                          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={variant.price}
+                            onChange={(e) => onVariantPriceChange?.(index, parseFloat(e.target.value) || 0)}
+                            className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded
+                                     focus:ring-1 focus:ring-primary focus:border-primary transition-shadow
+                                     bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                          />
                         </div>
-                      )}
-                      <div className="text-slate-600 dark:text-slate-400 font-mono">{variant.sku}</div>
-                      <div className="text-slate-900 dark:text-white font-semibold">${variant.price.toFixed(2)}</div>
-                      <div className="text-slate-600 dark:text-slate-400">Stock: {variant.stock}</div>
+
+                        {/* Stock Field */}
+                        <div>
+                          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">
+                            Stock {isExistingVariant && <span className="text-blue-500 dark:text-blue-400">•</span>}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.stock}
+                            onChange={(e) => onVariantStockChange?.(index, parseInt(e.target.value) || 0)}
+                            disabled={isExistingVariant}
+                            className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded
+                                     focus:ring-1 focus:ring-primary focus:border-primary transition-shadow
+                                     bg-white dark:bg-slate-900 text-slate-900 dark:text-white
+                                     disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                            title={isExistingVariant ? 'Use Adjust button' : 'Set initial stock'}
+                          />
+                        </div>
+
+                        {/* Adjust Button */}
+                        {isExistingVariant && onOpenStockDialog ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenStockDialog(index, variant)}
+                            className="px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 
+                                     bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 
+                                     rounded transition-all flex items-center gap-1 whitespace-nowrap h-[32px]"
+                            title="Adjust stock"
+                          >
+                            <Package size={13} />
+                            Adjust
+                          </button>
+                        ) : (
+                          <div className="w-[68px]"></div>
+                        )}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => onRemoveVariant(variant.id)}
-                      className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

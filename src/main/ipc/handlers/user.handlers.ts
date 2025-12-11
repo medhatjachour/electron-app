@@ -11,6 +11,11 @@ export function registerUserHandlers(prisma: any) {
   ipcMain.handle('users:getAll', async () => {
     try {
       const users = await prisma.user.findMany({
+        where: {
+          NOT: {
+            deactivatedAt: { not: null } // Filter out deactivated users
+          }
+        },
         orderBy: {
           createdAt: 'desc'
         },

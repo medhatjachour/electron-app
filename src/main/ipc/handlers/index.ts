@@ -21,6 +21,8 @@ import { registerSearchHandlers } from './search.handlers'
 import { registerUserHandlers } from './user.handlers'
 import { registerReportsHandlers } from './reports.handlers'
 import { registerAnalyticsHandlers } from './analytics.handlers'
+import { registerDeleteHandlers } from './delete.handlers'
+import { registerStockMovementHandlers } from './stock-movements.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
@@ -123,6 +125,12 @@ export function registerAllHandlers() {
   
   // Register analytics handlers (self-contained with own Prisma instance)
   registerAnalyticsHandlers()
+  
+  // Register delete handlers (archive/restore functionality)
+  registerDeleteHandlers(prisma)
+  
+  // Register stock movement handlers (restock, adjustments, etc.)
+  registerStockMovementHandlers(prisma)
   
   console.log('✅ All IPC handlers registered successfully')
 }

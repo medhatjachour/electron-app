@@ -170,6 +170,9 @@ export function registerReportsHandlers(prisma: any) {
       if (!prisma) return { success: false, data: null }
 
       const products = await prisma.product.findMany({
+        where: {
+          isArchived: false // Filter out archived products
+        },
         include: {
           category: true,
           variants: true,
@@ -450,6 +453,9 @@ export function registerReportsHandlers(prisma: any) {
       if (!prisma) return { success: false, data: null }
 
       const customers = await prisma.customer.findMany({
+        where: {
+          isArchived: false // Filter out archived customers
+        },
         orderBy: {
           totalSpent: 'desc'
         }
@@ -542,6 +548,9 @@ export function registerReportsHandlers(prisma: any) {
 
       // Low stock items
       const products = await prisma.product.findMany({
+        where: {
+          isArchived: false // Filter out archived products
+        },
         include: {
           variants: true
         }

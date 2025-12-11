@@ -14,7 +14,8 @@ import {
   Save,
   Monitor,
   Tag,
-  Users
+  Users,
+  Archive
 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -28,6 +29,7 @@ import PaymentMethodsSettings from './PaymentMethodsSettings'
 import TaxReceiptSettings from './TaxReceiptSettings'
 import NotificationsSettings from './NotificationsSettings'
 import BackupSettings from './BackupSettings'
+import ArchiveManagementSettings from './ArchiveManagementSettings'
 import type { SettingsTab } from './types'
 
 export default function Settings() {
@@ -66,6 +68,7 @@ export default function Settings() {
     { id: 'tax' as SettingsTab, name: 'Tax & Receipt', icon: Receipt },
     { id: 'notifications' as SettingsTab, name: 'Notifications', icon: Bell },
     { id: 'backup' as SettingsTab, name: 'Backup', icon: Database },
+    { id: 'archive' as SettingsTab, name: 'Archive', icon: Archive },
   ]
 
   const handleSave = () => {
@@ -188,6 +191,10 @@ export default function Settings() {
               settings={backupSettings}
               onChange={setBackupSettings}
             />
+          )}
+
+          {activeTab === 'archive' && (
+            <ArchiveManagementSettings />
           )}
         </div>
       </div>

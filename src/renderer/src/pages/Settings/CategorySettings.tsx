@@ -84,11 +84,12 @@ export default function CategorySettings() {
 
   const handleDelete = async (id: string, name: string, productCount: number) => {
     if (productCount > 0) {
-      alert(`Cannot delete "${name}" category as it has ${productCount} products. Please reassign or delete the products first.`)
+      setError(`Cannot delete "${name}" - it has ${productCount} product(s). Please reassign or archive the products first.`)
+      setTimeout(() => setError(null), 5000)
       return
     }
 
-    if (!confirm(`Are you sure you want to delete "${name}" category?`)) return
+    if (!confirm(`⚠️ Are you sure you want to permanently delete "${name}" category?\n\nThis action cannot be undone.`)) return
 
     try {
       setError(null)
@@ -96,7 +97,7 @@ export default function CategorySettings() {
       const result = await ipc.categories.delete(id)
 
       if (result.success) {
-        showSuccess('Category deleted successfully')
+        showSuccess(`Category "${name}" deleted successfully`)
         await loadCategories()
       } else {
         setError(result.message || 'Failed to delete category')

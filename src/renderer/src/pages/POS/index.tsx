@@ -10,7 +10,7 @@
  * - usePOS: Business logic and state management
  */
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Grid, Zap } from 'lucide-react'
 import ProductSearch from './ProductSearch'
 import QuickSale from './QuickSale'
@@ -29,8 +29,7 @@ export default function POS(): JSX.Element {
   const {
     customers,
     cart,
-    selectedCustomer,
-    customerQuery,
+    customerQuery: sharedCustomerQuery,
     paymentMethod,
     showSuccess,
     showDiscountModal,
@@ -44,8 +43,8 @@ export default function POS(): JSX.Element {
     removeFromCart,
     clearCart,
     completeSale,
-    setSelectedCustomer,
-    setCustomerQuery,
+    completeSaleFromQuickView,
+    setCustomerQuery: setSharedCustomerQuery,
     setPaymentMethod,
     refreshCustomers,
     canApplyDiscount,
@@ -58,11 +57,32 @@ export default function POS(): JSX.Element {
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  
+  // Grid view has its own local customer state (like QuickSale does)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [customerQuery, setCustomerQuery] = useState('')
+
+  // Clear local customer state when sale is completed successfully
+  useEffect(() => {
+    if (showSuccess) {
+      setSelectedCustomer(null)
+      setCustomerQuery('')
+    }
+  }, [showSuccess])
 
   const handleCustomerAdded = (newCustomer: Customer) => {
+    console.log('👤 Customer added in POS:', newCustomer)
+    // Refresh customers list and select the new customer immediately
     refreshCustomers()
     setSelectedCustomer(newCustomer)
-    setCustomerQuery('')
+    // Don't clear the query - leave it so the customer name shows
+    // The CustomerSelect component will display selectedCustomer.name
+  }
+  
+  // Wrapper to call completeSale with the local customer
+  const handleCompleteSale = () => {
+    console.log('🎯 Complete sale with customer:', selectedCustomer)
+    completeSale(selectedCustomer)
   }
 
   // Quick checkout with cash, no customer
@@ -126,7 +146,7 @@ export default function POS(): JSX.Element {
             cartOpen={cartOpen}
           />
         ) : (
-          <QuickSale />
+          <QuickSale onCompleteSale={completeSaleFromQuickView} />
         )}
       </div>
 
@@ -257,7 +277,7 @@ export default function POS(): JSX.Element {
                       subtotal={subtotal}
                       tax={tax}
                       total={total}
-                      onCompleteSale={completeSale}
+                      onCompleteSale={handleCompleteSale}
                     />
                   </div>
 

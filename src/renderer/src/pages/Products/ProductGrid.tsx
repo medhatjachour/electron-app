@@ -4,7 +4,7 @@
  */
 
 import { memo } from 'react'
-import { Edit2, Trash2, Eye, Package } from 'lucide-react'
+import { Edit2, Eye, Package, Archive } from 'lucide-react'
 import type { Product } from './types'
 
 interface ProductGridProps {
@@ -101,23 +101,24 @@ function ProductGrid({ products, onView, onEdit, onDelete }: Readonly<ProductGri
               <div className="flex gap-2">
                 <button
                   onClick={() => onView(product)}
-                  className="flex-1 px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                  className="flex-1 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-1"
                 >
                   <Eye className="w-4 h-4" />
                   View
                 </button>
                 <button
                   onClick={() => onEdit(product)}
-                  className="flex-1 px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                  className="flex-1 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium flex items-center justify-center gap-1"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit
                 </button>
                 <button
                   onClick={() => onDelete(product)}
-                  className="px-3 py-2 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                  className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-1.5"
+                  title="Archive product"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Archive className="w-4 h-4" />
                 </button>
               </div>
             </div>

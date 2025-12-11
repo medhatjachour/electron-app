@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
 import Modal from '../components/ui/Modal'
+import SmartDeleteDialog from '../components/SmartDeleteDialog'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
 import { formatCurrency } from '@renderer/utils/formatNumber'
@@ -41,6 +42,11 @@ export default function Customers(): JSX.Element {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedCustomerHistory, setSelectedCustomerHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
   // Debounce search input
   useEffect(() => {
@@ -64,9 +70,9 @@ export default function Customers(): JSX.Element {
         searchTerm: debouncedSearch
       })
       
-      setCustomers(data.customers)
-      setTotalCount(data.totalCount)
-      setHasMore(data.hasMore)
+      setCustomers(Array.isArray(data.customers) ? data.customers : [])
+      setTotalCount(data.totalCount || 0)
+      setHasMore(data.hasMore || false)
       
       if (data.customers.length === 0 && page === 0 && !debouncedSearch) {
         const localCustomers = localStorage.getItem('customers')
@@ -119,8 +125,10 @@ export default function Customers(): JSX.Element {
       
       if (result.success) {
         await loadCustomers()
-        const updatedCustomers = [...customers, result.customer]
-        localStorage.setItem('customers', JSON.stringify(updatedCustomers))
+        if (Array.isArray(customers)) {
+          const updatedCustomers = [...customers, result.customer]
+          localStorage.setItem('customers', JSON.stringify(updatedCustomers))
+        }
         
         setShowAddModal(false)
         resetForm()
@@ -161,20 +169,65 @@ export default function Customers(): JSX.Element {
     }
   }
 
-  const handleDeleteCustomer = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return
-
+  const handleDeleteCustomer = async (id: string, customer: Customer) => {
     try {
-      const result = await ipc.customers.delete(id)
+      // Check if customer can be deleted
+      const result = await window.electron.ipcRenderer.invoke('delete:check-customer', {
+        customerId: id
+      })
+      
       if (result.success) {
-        await loadCustomers()
-        toast.success('Customer deleted successfully!')
+        setCustomerToDelete(customer)
+        setDeleteCheckResult(result.data)
+        setShowDeleteDialog(true)
       } else {
-        toast.error('Failed to delete customer')
+        toast.error('Failed to check customer dependencies')
       }
     } catch (error) {
-      console.error('Error deleting customer:', error)
+      console.error('Failed to check customer:', error)
+      toast.error('Failed to check customer')
+    }
+  }
+  
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:hard-delete-customer', {
+        customerId: customerToDelete.id
+      })
+      
+      if (result.success) {
+        toast.success('Customer deleted successfully')
+        await loadCustomers()
+      } else {
+        toast.error(result.error || 'Failed to delete customer')
+      }
+    } catch (error) {
+      console.error('Failed to delete customer:', error)
       toast.error('Failed to delete customer')
+    }
+  }
+  
+  const handleArchiveCustomer = async (reason?: string) => {
+    if (!customerToDelete) return
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('delete:archive-customer', {
+        customerId: customerToDelete.id,
+        archivedBy: 'current-user', // TODO: Get from auth context
+        reason
+      })
+      
+      if (result.success) {
+        toast.success('Customer archived successfully')
+        await loadCustomers()
+      } else {
+        toast.error('Failed to archive customer')
+      }
+    } catch (error) {
+      console.error('Failed to archive customer:', error)
+      toast.error('Failed to archive customer')
     }
   }
 
@@ -233,7 +286,7 @@ export default function Customers(): JSX.Element {
   }
 
   // Stats calculations
-  const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0)
+  const totalRevenue = Array.isArray(customers) ? customers.reduce((sum, c) => sum + c.totalSpent, 0) : 0
   const averageSpent = totalCount > 0 ? totalRevenue / totalCount : 0
   
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -249,13 +302,15 @@ export default function Customers(): JSX.Element {
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">Manage customer relationships and loyalty</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Add Customer
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Add Customer
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -457,8 +512,9 @@ export default function Customers(): JSX.Element {
                     <span className="text-xs">Edit</span>
                   </button>
                   <button
-                    onClick={() => handleDeleteCustomer(customer.id)}
-                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-error/10 text-error hover:bg-error/20 rounded-lg transition-colors"
+                    onClick={() => handleDeleteCustomer(customer.id, customer)}
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    title="Delete customer"
                   >
                     <Trash2 size={16} />
                     <span className="text-xs">Delete</span>
@@ -725,6 +781,21 @@ export default function Customers(): JSX.Element {
           </div>
         </div>
       </Modal>
+      
+      {/* Smart Delete Dialog */}
+      <SmartDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false)
+          setCustomerToDelete(null)
+          setDeleteCheckResult(null)
+        }}
+        entityType="customer"
+        entityName={customerToDelete?.name || ''}
+        checkResult={deleteCheckResult}
+        onDelete={handleConfirmDelete}
+        onArchive={handleArchiveCustomer}
+      />
     </div>
   )
 }
