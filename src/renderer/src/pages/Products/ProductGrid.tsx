@@ -3,8 +3,8 @@
  * Displays products in a responsive grid with action buttons
  */
 
-import { memo, useState } from 'react'
-import { Edit2, Trash2, Eye, Package, MoreVertical, Archive } from 'lucide-react'
+import { memo } from 'react'
+import { Edit2, Eye, Package, Archive } from 'lucide-react'
 import type { Product } from './types'
 
 interface ProductGridProps {

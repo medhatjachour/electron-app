@@ -24,7 +24,7 @@ function ProductActions({
   productsCount
 }: Readonly<ProductActionsProps>) {
   return (
-    <div className="w-full   flex items-center justify-between mb-6">
+    <div className="w-full flex items-center justify-between mb-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
           Product Catalog
@@ -74,7 +74,7 @@ function ProductActions({
           onClick={onAdd}
           className="btn-primary flex items-center gap-2"
         >
-          <Plus className="w-5 h-5 " />
+          <Plus className="w-5 h-5" />
           <span>Add Product</span>
         </button>
       </div>

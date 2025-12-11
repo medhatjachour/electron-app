@@ -169,7 +169,6 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       }
 
       // Record the stock movement
-      // @ts-ignore
       const result = await window.api?.stockMovements?.record({
         variantId: stockMovementDialog.variantId,
         mode: data.mode,

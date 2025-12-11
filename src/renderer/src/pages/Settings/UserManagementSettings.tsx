@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { UserPlus, Edit2, Trash2, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, UserX } from 'lucide-react'
+import { UserPlus, Edit2, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, UserX } from 'lucide-react'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
+import { useAuth } from '../../../hooks/useAuth'
 
 interface User {
   id: string
@@ -46,6 +47,7 @@ const roleColors = {
 }
 
 export default function UserManagementSettings() {
+  const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -252,7 +254,7 @@ export default function UserManagementSettings() {
     try {
       const result = await window.electron.ipcRenderer.invoke('delete:deactivate-user', {
         userId: userToDelete.id,
-        deactivatedBy: 'current-user', // TODO: Get from auth context
+        deactivatedBy: user?.id,
       })
       
       if (result.success) {

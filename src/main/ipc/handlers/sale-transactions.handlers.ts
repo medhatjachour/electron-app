@@ -293,19 +293,9 @@ export function registerSaleTransactionHandlers(prisma: any) {
           where: { id },
           data: { status: 'refunded' }
         })
-
-        // Restore stock for each item and record stock movements
-        console.log(`[REFUND-ALL] Processing full refund for transaction ${id}`)
-        console.log(`[REFUND-ALL] Transaction has ${transaction.items.length} items`)
         
         await Promise.all(
           transaction.items.map(async (item: any, index: number) => {
-            console.log(`[REFUND-ALL] Processing item ${index + 1}:`, {
-              saleItemId: item.id,
-              productId: item.productId,
-              variantId: item.variantId,
-              quantity: item.quantity
-            })
             
             if (item.variantId) {
               // Get current stock before update
@@ -319,31 +309,13 @@ export function registerSaleTransactionHandlers(prisma: any) {
               })
               
               if (variant) {
-                console.log(`[REFUND-ALL] Variant found:`, {
-                  id: variant.id,
-                  sku: variant.sku,
-                  product: variant.product.name,
-                  currentStock: variant.stock
-                })
-                
                 const previousStock = variant.stock
                 const newStock = previousStock + item.quantity
-                
-                console.log(`[REFUND-ALL] Restoring stock:`, {
-                  previousStock,
-                  quantityToRestore: item.quantity,
-                  newStock
-                })
                 
                 // Update stock
                 const updated = await tx.productVariant.update({
                   where: { id: item.variantId },
                   data: { stock: newStock }
-                })
-                
-                console.log(`[REFUND-ALL] Stock updated:`, {
-                  variantId: updated.id,
-                  newStock: updated.stock
                 })
                 
                 // Record stock movement as RETURN
@@ -360,11 +332,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
                     notes: `Refund of transaction ${transaction.id}`
                   }
                 })
-                
-                console.log(`[REFUND-ALL] Stock movement created:`, {
-                  movementId: movement.id,
-                  type: movement.type
-                })
+               
               } else {
                 console.error(`[REFUND-ALL] ERROR: Variant ${item.variantId} not found!`)
               }
@@ -379,11 +347,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
               
               if (product && product.variants && product.variants.length > 0) {
                 const defaultVariant = product.variants[0]
-                console.log(`[REFUND-ALL] Found default variant for product ${product.name}:`, {
-                  variantId: defaultVariant.id,
-                  sku: defaultVariant.sku,
-                  currentStock: defaultVariant.stock
-                })
                 
                 const previousStock = defaultVariant.stock
                 const newStock = previousStock + item.quantity
@@ -393,8 +356,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
                   where: { id: defaultVariant.id },
                   data: { stock: newStock }
                 })
-                
-                console.log(`[REFUND-ALL] Stock restored to default variant`)
                 
                 // Update sale item with the variantId for future reference
                 await tx.saleItem.update({
@@ -417,7 +378,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
                   }
                 })
                 
-                console.log(`[REFUND-ALL] Stock movement recorded for legacy sale`)
               } else {
                 console.error(`[REFUND-ALL] ERROR: Could not find product or variants for item ${item.id}`)
               }
@@ -426,8 +386,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
           })
         )
         
-        console.log(`[REFUND-ALL] All items processed successfully`)
-
         return updated
       })
 
@@ -521,11 +479,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
 
           // Restore stock and record stock movement
           if (saleItem.variantId) {
-            console.log(`[REFUND] Processing refund for sale item:`, {
-              saleItemId: saleItem.id,
-              variantId: saleItem.variantId,
-              quantityToRefund: refundItem.quantityToRefund
-            })
+         
             
             const variant = await tx.productVariant.findUnique({
               where: { id: saleItem.variantId },
@@ -547,21 +501,10 @@ export function registerSaleTransactionHandlers(prisma: any) {
               const previousStock = variant.stock
               const newStock = previousStock + refundItem.quantityToRefund
               
-              console.log(`[REFUND] Calculating new stock:`, {
-                previousStock,
-                quantityToRefund: refundItem.quantityToRefund,
-                newStock
-              })
-              
               // Update stock
               const updatedVariant = await tx.productVariant.update({
                 where: { id: saleItem.variantId },
                 data: { stock: newStock }
-              })
-              
-              console.log(`[REFUND] Stock updated successfully:`, {
-                variantId: updatedVariant.id,
-                newStock: updatedVariant.stock
               })
               
               // Record stock movement as RETURN
@@ -579,11 +522,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               })
               
-              console.log(`[REFUND] Stock movement recorded:`, {
-                movementId: movement.id,
-                type: movement.type,
-                quantity: movement.quantity
-              })
             } else {
               console.error(`[REFUND] ERROR: Variant ${saleItem.variantId} not found in database!`)
             }
@@ -598,11 +536,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
             
             if (product && product.variants && product.variants.length > 0) {
               const defaultVariant = product.variants[0]
-              console.log(`[REFUND] Found default variant:`, {
-                variantId: defaultVariant.id,
-                product: product.name,
-                currentStock: defaultVariant.stock
-              })
               
               const previousStock = defaultVariant.stock
               const newStock = previousStock + refundItem.quantityToRefund
@@ -613,7 +546,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 data: { stock: newStock }
               })
               
-              console.log(`[REFUND] Stock restored to default variant`)
               
               // Update sale item with variantId for future reference
               await tx.saleItem.update({
@@ -636,7 +568,6 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               })
               
-              console.log(`[REFUND] Stock movement recorded for legacy sale`)
             } else {
               console.error(`[REFUND] ERROR: Could not find product or variants for sale item ${saleItem.id}`)
             }

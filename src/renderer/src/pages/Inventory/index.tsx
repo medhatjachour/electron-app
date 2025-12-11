@@ -231,7 +231,6 @@ export default function InventoryPage() {
         return
       }
 
-      // @ts-ignore
       const result = await window.api?.stockMovements?.record({
         variantId: stockMovementDialog.variantId,
         mode: data.mode,
