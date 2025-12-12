@@ -231,6 +231,17 @@ export function registerCustomersHandlers(prisma: any) {
     }
   })
 
+  // Helper function to sanitize vCard field values per RFC 2426
+  function sanitizeVCardField(value: string): string {
+    if (!value) return ''
+    return value
+      .replace(/\\/g, '\\\\')  // Escape backslashes first
+      .replace(/\n/g, '\\n')   // Escape newlines
+      .replace(/\r/g, '')      // Remove carriage returns
+      .replace(/,/g, '\\,')    // Escape commas
+      .replace(/;/g, '\\;')    // Escape semicolons
+  }
+
   // Export customers in different formats
   ipcMain.handle('customers:export', async (_, { format, searchTerm = '' }) => {
     try {
@@ -248,28 +259,73 @@ export function registerCustomersHandlers(prisma: any) {
         ]
       }
 
-      // Fetch all customers matching the filter
+      // Fetch customers with limit to prevent memory issues
+      const MAX_EXPORT_LIMIT = 10000
+      const customerCount = await prisma.customer.count({ where })
+      
+      if (customerCount > MAX_EXPORT_LIMIT) {
+        return { 
+          success: false, 
+          message: `Export limited to ${MAX_EXPORT_LIMIT} customers. Found ${customerCount}. Please use search to filter.` 
+        }
+      }
+
+      // Fetch all customers matching the filter (with limit)
       const customers = await prisma.customer.findMany({
         where,
         orderBy: { name: 'asc' },
+        take: MAX_EXPORT_LIMIT,
         include: {
           saleTransactions: {
-            where: { status: 'completed' },
-            select: { total: true }
+            where: { 
+              OR: [
+                { status: 'completed' },
+                { status: 'partially_refunded' }
+              ]
+            },
+            select: { 
+              status: true,
+              total: true,
+              items: {
+                select: {
+                  price: true,
+                  finalPrice: true,
+                  refundedQuantity: true
+                }
+              }
+            }
           }
         }
       })
 
-      // Recalculate totalSpent
-      const customersWithStats = customers.map((customer: any) => ({
-        id: customer.id,
-        name: customer.name,
-        email: customer.email || '',
-        phone: customer.phone,
-        loyaltyTier: customer.loyaltyTier,
-        totalSpent: customer.saleTransactions.reduce((sum: number, t: any) => sum + t.total, 0),
-        createdAt: customer.createdAt
-      }))
+      // Recalculate totalSpent including partially refunded transactions
+      const customersWithStats = customers.map((customer: any) => {
+        // Calculate completed transactions total
+        const completedTotal = customer.saleTransactions
+          .filter((t: any) => t.status === 'completed')
+          .reduce((sum: number, t: any) => sum + t.total, 0)
+        
+        // Calculate net amount for partially refunded transactions
+        const partiallyRefundedTotal = customer.saleTransactions
+          .filter((t: any) => t.status === 'partially_refunded')
+          .reduce((sum: number, tx: any) => {
+            const refundedAmount = tx.items.reduce((itemSum: number, item: any) => {
+              const refunded = item.refundedQuantity || 0
+              return itemSum + (refunded * (item.finalPrice || item.price))
+            }, 0)
+            return sum + (tx.total - refundedAmount)
+          }, 0)
+        
+        return {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email || '',
+          phone: customer.phone,
+          loyaltyTier: customer.loyaltyTier,
+          totalSpent: completedTotal + partiallyRefundedTotal,
+          createdAt: customer.createdAt
+        }
+      })
 
       const timestamp = new Date().toISOString().split('T')[0]
 
@@ -320,10 +376,10 @@ export function registerCustomersHandlers(prisma: any) {
           const vcard = [
             'BEGIN:VCARD',
             'VERSION:3.0',
-            `FN:${c.name}`,
-            `TEL;TYPE=CELL:${c.phone}`,
-            c.email ? `EMAIL:${c.email}` : '',
-            `NOTE:Loyalty Tier: ${c.loyaltyTier} | Total Spent: $${c.totalSpent.toFixed(2)}`,
+            `FN:${sanitizeVCardField(c.name)}`,
+            `TEL;TYPE=CELL:${sanitizeVCardField(c.phone)}`,
+            c.email ? `EMAIL:${sanitizeVCardField(c.email)}` : '',
+            `NOTE:${sanitizeVCardField(`Loyalty Tier: ${c.loyaltyTier} | Total Spent: $${c.totalSpent.toFixed(2)}`)}`,
             'END:VCARD'
           ].filter(line => line).join('\r\n')
           return vcard

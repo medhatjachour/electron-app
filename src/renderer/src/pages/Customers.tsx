@@ -48,6 +48,9 @@ export default function Customers(): JSX.Element {
   const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
+  // Export dropdown state
+  const [showExportDropdown, setShowExportDropdown] = useState(false)
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -337,35 +340,72 @@ export default function Customers(): JSX.Element {
           <p className="text-slate-600 dark:text-slate-400 mt-1">Manage customer relationships and loyalty</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Export Dropdown */}
-          <div className="relative group">
-            <button className="btn-secondary flex items-center gap-2">
+          {/* Export Dropdown - Accessible with keyboard and screen readers */}
+          <div className="relative">
+            <button 
+              className="btn-secondary flex items-center gap-2"
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              onBlur={(e) => {
+                // Close dropdown if focus leaves the dropdown container
+                if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                  setShowExportDropdown(false)
+                }
+              }}
+              aria-expanded={showExportDropdown}
+              aria-haspopup="true"
+            >
               <Download size={20} />
               Export
             </button>
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-              <button
-                onClick={() => handleExport('excel')}
-                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-t-lg"
+            {showExportDropdown && (
+              <div 
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-10"
+                role="menu"
               >
-                <FileSpreadsheet size={18} className="text-green-600" />
-                <span>Excel (.xlsx)</span>
-              </button>
-              <button
-                onClick={() => handleExport('csv')}
-                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-              >
-                <FileText size={18} className="text-blue-600" />
-                <span>CSV (.csv)</span>
-              </button>
-              <button
-                onClick={() => handleExport('vcf')}
-                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-b-lg"
-              >
-                <User size={18} className="text-purple-600" />
-                <span>vCard (.vcf)</span>
-              </button>
-            </div>
+                <button
+                  onClick={() => {
+                    handleExport('excel')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-t-lg"
+                  role="menuitem"
+                >
+                  <FileSpreadsheet size={18} className="text-green-600" />
+                  <span>Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleExport('csv')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                  role="menuitem"
+                >
+                  <FileText size={18} className="text-blue-600" />
+                  <span>CSV (.csv)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleExport('vcf')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-b-lg"
+                  role="menuitem"
+                >
+                  <User size={18} className="text-purple-600" />
+                  <span>vCard (.vcf)</span>
+                </button>
+              </div>
+            )}
           </div>
           
           <button
