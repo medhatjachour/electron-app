@@ -4,6 +4,7 @@
  */
 
 import { ipcMain } from 'electron'
+import * as XLSX from 'xlsx'
 
 export function registerCustomersHandlers(prisma: any) {
   // Helper function to recalculate customer totalSpent from transactions
@@ -226,6 +227,119 @@ export function registerCustomersHandlers(prisma: any) {
       return { success: true }
     } catch (error: any) {
       console.error('Error recalculating totalSpent:', error)
+      return { success: false, message: error.message }
+    }
+  })
+
+  // Export customers in different formats
+  ipcMain.handle('customers:export', async (_, { format, searchTerm = '' }) => {
+    try {
+      if (!prisma) return { success: false, message: 'Database not available' }
+
+      // Build where clause for search (same as getAll)
+      const where: any = {
+        isArchived: false
+      }
+      if (searchTerm) {
+        where.OR = [
+          { name: { contains: searchTerm } },
+          { email: { contains: searchTerm } },
+          { phone: { contains: searchTerm } }
+        ]
+      }
+
+      // Fetch all customers matching the filter
+      const customers = await prisma.customer.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include: {
+          saleTransactions: {
+            where: { status: 'completed' },
+            select: { total: true }
+          }
+        }
+      })
+
+      // Recalculate totalSpent
+      const customersWithStats = customers.map((customer: any) => ({
+        id: customer.id,
+        name: customer.name,
+        email: customer.email || '',
+        phone: customer.phone,
+        loyaltyTier: customer.loyaltyTier,
+        totalSpent: customer.saleTransactions.reduce((sum: number, t: any) => sum + t.total, 0),
+        createdAt: customer.createdAt
+      }))
+
+      const timestamp = new Date().toISOString().split('T')[0]
+
+      if (format === 'excel') {
+        // Create Excel workbook
+        const ws = XLSX.utils.json_to_sheet(customersWithStats.map(c => ({
+          'Name': c.name,
+          'Email': c.email,
+          'Phone': c.phone,
+          'Loyalty Tier': c.loyaltyTier,
+          'Total Spent': c.totalSpent,
+          'Member Since': new Date(c.createdAt).toLocaleDateString()
+        })))
+        
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Customers')
+        
+        const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+        
+        return {
+          success: true,
+          data: excelBuffer,
+          filename: `customers-${timestamp}.xlsx`,
+          count: customersWithStats.length
+        }
+      } else if (format === 'csv') {
+        // Create CSV
+        const ws = XLSX.utils.json_to_sheet(customersWithStats.map(c => ({
+          'Name': c.name,
+          'Email': c.email,
+          'Phone': c.phone,
+          'Loyalty Tier': c.loyaltyTier,
+          'Total Spent': c.totalSpent,
+          'Member Since': new Date(c.createdAt).toLocaleDateString()
+        })))
+        
+        const csv = XLSX.utils.sheet_to_csv(ws)
+        
+        return {
+          success: true,
+          data: Buffer.from(csv),
+          filename: `customers-${timestamp}.csv`,
+          count: customersWithStats.length
+        }
+      } else if (format === 'vcf') {
+        // Create vCard format (VCF) - compatible with iOS and Android
+        const vcards = customersWithStats.map(c => {
+          const vcard = [
+            'BEGIN:VCARD',
+            'VERSION:3.0',
+            `FN:${c.name}`,
+            `TEL;TYPE=CELL:${c.phone}`,
+            c.email ? `EMAIL:${c.email}` : '',
+            `NOTE:Loyalty Tier: ${c.loyaltyTier} | Total Spent: $${c.totalSpent.toFixed(2)}`,
+            'END:VCARD'
+          ].filter(line => line).join('\r\n')
+          return vcard
+        }).join('\r\n')
+
+        return {
+          success: true,
+          data: Buffer.from(vcards),
+          filename: `customers-${timestamp}.vcf`,
+          count: customersWithStats.length
+        }
+      } else {
+        return { success: false, message: 'Invalid export format' }
+      }
+    } catch (error: any) {
+      console.error('Error exporting customers:', error)
       return { success: false, message: error.message }
     }
   })

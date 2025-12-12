@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart, Download, FileSpreadsheet, FileText, User } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import SmartDeleteDialog from '../components/SmartDeleteDialog'
 import { ipc } from '../utils/ipc'
@@ -267,6 +267,40 @@ export default function Customers(): JSX.Element {
     })
   }
 
+  const handleExport = async (format: 'excel' | 'csv' | 'vcf') => {
+    try {
+      toast.info(`Exporting customers as ${format.toUpperCase()}...`)
+      
+      const result = await window.electron.ipcRenderer.invoke('customers:export', {
+        format,
+        searchTerm: debouncedSearch // Export only filtered customers if search is active
+      })
+
+      if (result.success) {
+        // Create download link
+        const blob = new Blob([result.data], { 
+          type: format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+                format === 'csv' ? 'text/csv' : 'text/vcard'
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = result.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+        toast.success(`Exported ${result.count} customers successfully!`)
+      } else {
+        toast.error(result.message || 'Failed to export customers')
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export customers')
+    }
+  }
+
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'Platinum': return 'from-slate-600 to-slate-800'
@@ -303,6 +337,37 @@ export default function Customers(): JSX.Element {
           <p className="text-slate-600 dark:text-slate-400 mt-1">Manage customer relationships and loyalty</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Export Dropdown */}
+          <div className="relative group">
+            <button className="btn-secondary flex items-center gap-2">
+              <Download size={20} />
+              Export
+            </button>
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <button
+                onClick={() => handleExport('excel')}
+                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-t-lg"
+              >
+                <FileSpreadsheet size={18} className="text-green-600" />
+                <span>Excel (.xlsx)</span>
+              </button>
+              <button
+                onClick={() => handleExport('csv')}
+                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+              >
+                <FileText size={18} className="text-blue-600" />
+                <span>CSV (.csv)</span>
+              </button>
+              <button
+                onClick={() => handleExport('vcf')}
+                className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-b-lg"
+              >
+                <User size={18} className="text-purple-600" />
+                <span>vCard (.vcf)</span>
+              </button>
+            </div>
+          </div>
+          
           <button
             onClick={() => setShowAddModal(true)}
             className="btn-primary flex items-center gap-2"
