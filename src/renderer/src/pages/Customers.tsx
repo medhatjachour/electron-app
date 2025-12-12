@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart, Download, FileSpreadsheet, FileText, User } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import SmartDeleteDialog from '../components/SmartDeleteDialog'
 import { ipc } from '../utils/ipc'
@@ -47,6 +47,9 @@ export default function Customers(): JSX.Element {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+
+  // Export dropdown state
+  const [showExportDropdown, setShowExportDropdown] = useState(false)
 
   // Debounce search input
   useEffect(() => {
@@ -267,6 +270,40 @@ export default function Customers(): JSX.Element {
     })
   }
 
+  const handleExport = async (format: 'excel' | 'csv' | 'vcf') => {
+    try {
+      toast.info(`Exporting customers as ${format.toUpperCase()}...`)
+      
+      const result = await window.electron.ipcRenderer.invoke('customers:export', {
+        format,
+        searchTerm: debouncedSearch // Export only filtered customers if search is active
+      })
+
+      if (result.success) {
+        // Create download link
+        const blob = new Blob([result.data], { 
+          type: format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+                format === 'csv' ? 'text/csv' : 'text/vcard'
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = result.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+        toast.success(`Exported ${result.count} customers successfully!`)
+      } else {
+        toast.error(result.message || 'Failed to export customers')
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export customers')
+    }
+  }
+
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'Platinum': return 'from-slate-600 to-slate-800'
@@ -303,6 +340,74 @@ export default function Customers(): JSX.Element {
           <p className="text-slate-600 dark:text-slate-400 mt-1">Manage customer relationships and loyalty</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Export Dropdown - Accessible with keyboard and screen readers */}
+          <div className="relative">
+            <button 
+              className="btn-secondary flex items-center gap-2"
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              onBlur={(e) => {
+                // Close dropdown if focus leaves the dropdown container
+                if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                  setShowExportDropdown(false)
+                }
+              }}
+              aria-expanded={showExportDropdown}
+              aria-haspopup="true"
+            >
+              <Download size={20} />
+              Export
+            </button>
+            {showExportDropdown && (
+              <div 
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-10"
+                role="menu"
+              >
+                <button
+                  onClick={() => {
+                    handleExport('excel')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-t-lg"
+                  role="menuitem"
+                >
+                  <FileSpreadsheet size={18} className="text-green-600" />
+                  <span>Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleExport('csv')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                  role="menuitem"
+                >
+                  <FileText size={18} className="text-blue-600" />
+                  <span>CSV (.csv)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleExport('vcf')
+                    setShowExportDropdown(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowExportDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 rounded-b-lg"
+                  role="menuitem"
+                >
+                  <User size={18} className="text-purple-600" />
+                  <span>vCard (.vcf)</span>
+                </button>
+              </div>
+            )}
+          </div>
+          
           <button
             onClick={() => setShowAddModal(true)}
             className="btn-primary flex items-center gap-2"
