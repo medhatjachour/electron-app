@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import * as XLSX from 'xlsx'
 import { Pie, Bar } from 'react-chartjs-2'
 
@@ -77,6 +78,7 @@ const EXPENSE_CATEGORIES = [
 export default function Expenses() {
   const { user } = useAuth()
   const { success, error } = useToast()
+  const { t } = useLanguage()
   
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
@@ -320,7 +322,7 @@ export default function Expenses() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading expenses...</p>
+          <p className="text-slate-600 dark:text-slate-400">{t('loading')}...</p>
         </div>
       </div>
     )
@@ -331,8 +333,8 @@ export default function Expenses() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Expenses Management</h1>
-          <p className="text-slate-600 dark:text-slate-400">Track and manage all business expenses</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{t('expensesManagement')}</h1>
+          <p className="text-slate-600 dark:text-slate-400">{t('trackBusinessExpenses')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -340,14 +342,14 @@ export default function Expenses() {
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Download size={18} />
-            Export
+            {t('export')}
           </button>
           <button
             onClick={handleAddExpense}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus size={18} />
-            Add Expense
+            {t('add')} {t('expenses')}
           </button>
         </div>
       </div>
@@ -356,7 +358,7 @@ export default function Expenses() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Expenses</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalExpenses')}</h3>
             <div className="p-2 bg-red-500/10 rounded-lg">
               <DollarSign size={20} className="text-red-600 dark:text-red-400" />
             </div>
@@ -369,7 +371,7 @@ export default function Expenses() {
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Employee Salaries</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('employeeSalaries')}</h3>
             <div className="p-2 bg-purple-500/10 rounded-lg">
               <Users size={20} className="text-purple-600 dark:text-purple-400" />
             </div>
@@ -395,7 +397,7 @@ export default function Expenses() {
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Categories</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('categories')}</h3>
             <div className="p-2 bg-blue-500/10 rounded-lg">
               <Filter size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -415,7 +417,7 @@ export default function Expenses() {
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search expenses..."
+              placeholder={t('searchExpenses')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -547,7 +549,7 @@ export default function Expenses() {
       {/* Expense List */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Expense History</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{t('expenseHistory')}</h3>
         </div>
         
         <div className="overflow-x-auto">
@@ -556,22 +558,22 @@ export default function Expenses() {
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Date
+                    {t('date')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Category
+                    {t('category')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Description
+                    {t('description')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Amount
+                    {t('amount')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Added By
+                    {t('recordedBy')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Actions
+                    {t('actions')}
                   </th>
                 </tr>
               </thead>
@@ -629,8 +631,8 @@ export default function Expenses() {
           ) : (
             <div className="text-center py-12">
               <Receipt size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-slate-600 dark:text-slate-400">No expenses found</p>
-              <p className="text-sm text-slate-500 mt-1">Add your first expense to get started</p>
+              <p className="text-slate-600 dark:text-slate-400">{t('noExpensesFound')}</p>
+              <p className="text-sm text-slate-500 mt-1">{t('addFirstExpense')}</p>
             </div>
           )}
         </div>
@@ -642,7 +644,7 @@ export default function Expenses() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+                {editingExpense ? t('edit') + ' ' + t('expenses') : t('add') + ' ' + t('expenses')}
               </h3>
               <button
                 onClick={() => {
@@ -660,7 +662,7 @@ export default function Expenses() {
               {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Category
+                  {t('category')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {EXPENSE_CATEGORIES.map((cat) => {
@@ -686,7 +688,7 @@ export default function Expenses() {
               {/* Amount */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Amount ($)
+                  {t('amount')} ($)
                 </label>
                 <input
                   type="number"
@@ -702,7 +704,7 @@ export default function Expenses() {
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Description
+                  {t('description')}
                 </label>
                 <textarea
                   value={formData.description}
@@ -724,14 +726,14 @@ export default function Expenses() {
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSaveExpense}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Save size={18} />
-                {editingExpense ? 'Update' : 'Add'} Expense
+                {editingExpense ? t('edit') : t('add')} {t('expenses')}
               </button>
             </div>
           </div>

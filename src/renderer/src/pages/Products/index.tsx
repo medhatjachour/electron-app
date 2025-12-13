@@ -10,6 +10,7 @@ import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearc
 import { useToast } from '../../contexts/ToastContext'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useLanguage } from '../../contexts/LanguageContext'
 import Modal from '../../components/ui/Modal'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
 import ProductFormWrapper from './ProductFormWrapper'
@@ -19,6 +20,7 @@ import ProductGrid from './ProductGrid'
 import type { Product, ProductFilters as Filters } from './types'
 
 export default function Products() {
+  const { t } = useLanguage()
   const toast = useToast()
   const { settings } = useDisplaySettings()
 
@@ -352,7 +354,7 @@ export default function Products() {
       {pagination.totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between">
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                Showing {((pagination.currentPage - 1) * itemsPerPage) + 1} to {Math.min(pagination.currentPage * itemsPerPage, totalCount)} of {totalCount} products
+                {t('showing')} {((pagination.currentPage - 1) * itemsPerPage) + 1} {t('to')} {Math.min(pagination.currentPage * itemsPerPage, totalCount)} {t('of')} {totalCount} {t('productsCount')}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -360,7 +362,7 @@ export default function Products() {
                   disabled={pagination.currentPage === 1}
                   className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Previous
+                  {t('previous')}
                 </button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -395,14 +397,14 @@ export default function Products() {
                   disabled={pagination.currentPage === pagination.totalPages}
                   className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Next
+                  {t('next')}
                 </button>
               </div>
             </div>
           )}
 
       {/* Add Product Modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add New Product">
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={t('addProduct')}>
         <ProductFormWrapper
           onSuccess={handleFormSuccess}
           onCancel={() => setShowAddModal(false)}
@@ -410,7 +412,7 @@ export default function Products() {
       </Modal>
 
       {/* Edit Product Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Product">
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title={t('editProduct')}>
         <ProductFormWrapper
           product={selectedProduct}
           onSuccess={handleFormSuccess}
@@ -419,14 +421,14 @@ export default function Products() {
       </Modal>
 
       {/* View Product Modal */}
-      <Modal isOpen={showViewModal} onClose={() => setShowViewModal(false)} title="Product Details">
+      <Modal isOpen={showViewModal} onClose={() => setShowViewModal(false)} title={t('productDetails')}>
         {selectedProduct && (
           <div className="space-y-4">
             {/* Product Images Gallery */}
             {selectedProduct.images && selectedProduct.images.length > 0 && (
               <div className="space-y-2">
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  Images ({selectedProduct.images.length})
+                  {t('images')} ({selectedProduct.images.length})
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedProduct.images.map((image: any, idx: number) => (
@@ -442,27 +444,27 @@ export default function Products() {
             )}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Name</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('productName')}</div>
                 <p className="text-lg font-semibold">{selectedProduct.name}</p>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">SKU</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('sku')}</div>
                 <p className="text-lg font-semibold">{selectedProduct.baseSKU}</p>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Category</div>
-                <p className="text-lg font-semibold">{selectedProduct.category || 'Uncategorized'}</p>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('category')}</div>
+                <p className="text-lg font-semibold">{selectedProduct.category || t('uncategorized')}</p>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Price</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('price')}</div>
                 <p className="text-lg font-semibold">${selectedProduct.basePrice.toFixed(2)}</p>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Cost</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('cost')}</div>
                 <p className="text-lg font-semibold">${selectedProduct.baseCost.toFixed(2)}</p>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Total Stock</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('totalStock')}</div>
                 <div className="flex items-center gap-2">
                   <p className="text-lg font-semibold">{selectedProduct.totalStock || 0}</p>
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -473,33 +475,33 @@ export default function Products() {
                       : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   }`}>
                     {(selectedProduct.totalStock || 0) === 0 
-                      ? 'Out of Stock' 
+                      ? t('outOfStock') 
                       : (selectedProduct.totalStock || 0) <= 10 
-                      ? 'Low Stock' 
-                      : 'In Stock'}
+                      ? t('lowStock') 
+                      : t('inStock')}
                   </span>
                 </div>
               </div>
             </div>
             {selectedProduct.description && (
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Description</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{t('description')}</div>
                 <p className="text-slate-900 dark:text-white">{selectedProduct.description}</p>
               </div>
             )}
             {selectedProduct.hasVariants && selectedProduct.variants && selectedProduct.variants.length > 0 && (
               <div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Variants</div>
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{t('variants')}</div>
                 <div className="space-y-2">
                   {selectedProduct.variants.map((variant, idx) => (
                     <div key={variant.id || idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                       <div>
                         <span className="font-medium">{variant.color} {variant.size}</span>
-                        <span className="text-sm text-slate-500 ml-2">SKU: {variant.sku}</span>
+                        <span className="text-sm text-slate-500 ml-2">{t('sku')}: {variant.sku}</span>
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">${variant.price.toFixed(2)}</div>
-                        <div className="text-sm text-slate-500">Stock: {variant.stock}</div>
+                        <div className="text-sm text-slate-500">{t('stock')}: {variant.stock}</div>
                       </div>
                     </div>
                   ))}

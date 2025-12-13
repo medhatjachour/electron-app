@@ -7,6 +7,7 @@
 import { memo } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart, Users } from 'lucide-react'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 interface Props {
   stats: {
@@ -22,9 +23,10 @@ interface Props {
 }
 
 function DashboardStats({ stats, loading }: Props) {
+  const { t } = useLanguage()
   const metrics = [
     {
-      label: 'Today\'s Revenue',
+      label: t('todayRevenue'),
       value: formatCurrency(stats.todayRevenue),
       rawValue: `$${stats.todayRevenue.toFixed(2)}`,
       change: stats.revenueChange,
@@ -34,7 +36,7 @@ function DashboardStats({ stats, loading }: Props) {
       iconColor: 'text-emerald-600',
     },
     {
-      label: 'Today\'s Orders',
+      label: t('todayOrders'),
       value: formatLargeNumber(stats.todayOrders),
       rawValue: stats.todayOrders.toLocaleString(),
       change: stats.ordersChange,
@@ -44,7 +46,7 @@ function DashboardStats({ stats, loading }: Props) {
       iconColor: 'text-blue-600',
     },
     {
-      label: 'Total Products',
+      label: t('totalProducts'),
       value: formatLargeNumber(stats.totalProducts),
       rawValue: stats.totalProducts.toLocaleString(),
       change: 0,
@@ -54,7 +56,7 @@ function DashboardStats({ stats, loading }: Props) {
       iconColor: 'text-purple-600',
     },
     {
-      label: 'Total Customers',
+      label: t('totalCustomers'),
       value: formatLargeNumber(stats.totalCustomers),
       rawValue: stats.totalCustomers.toLocaleString(),
       change: 0,

@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X, Edit2, Check, Tag, Loader2, AlertCircle } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface Category {
   id: string
@@ -17,6 +18,7 @@ interface Category {
 }
 
 export default function CategorySettings() {
+  const { t } = useLanguage()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [newCategory, setNewCategory] = useState('')
@@ -42,10 +44,10 @@ export default function CategorySettings() {
       if (result.success) {
         setCategories(result.categories || [])
       } else {
-        setError(result.message || 'Failed to load categories')
+        setError(result.message || t('failedToLoadCategories'))
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load categories')
+      setError(err.message || t('failedToLoadCategories'))
       console.error('Error loading categories:', err)
     } finally {
       setLoading(false)
@@ -69,27 +71,27 @@ export default function CategorySettings() {
       })
 
       if (result.success) {
-        showSuccess('Category added successfully')
+        showSuccess(t('categoryAddedSuccess'))
         setNewCategory('')
         setNewDescription('')
         await loadCategories()
       } else {
-        setError(result.message || 'Failed to add category')
+        setError(result.message || t('failedToAddCategory'))
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to add category')
+      setError(err.message || t('failedToAddCategory'))
       console.error('Error adding category:', err)
     }
   }
 
   const handleDelete = async (id: string, name: string, productCount: number) => {
     if (productCount > 0) {
-      setError(`Cannot delete "${name}" - it has ${productCount} product(s). Please reassign or archive the products first.`)
+      setError(`${t('cannotDeleteCategory')} "${name}" - ${productCount} ${t('productsCount')}. ${t('reassignProductsFirst')}`)
       setTimeout(() => setError(null), 5000)
       return
     }
 
-    if (!confirm(`⚠️ Are you sure you want to permanently delete "${name}" category?\n\nThis action cannot be undone.`)) return
+    if (!confirm(`⚠️ ${t('confirmDeleteCategory')} "${name}" ${t('category')}?\n\n${t('thisActionCannotBeUndone')}`)) return
 
     try {
       setError(null)
@@ -97,13 +99,13 @@ export default function CategorySettings() {
       const result = await ipc.categories.delete(id)
 
       if (result.success) {
-        showSuccess(`Category "${name}" deleted successfully`)
+        showSuccess(`${t('categoryDeletedSuccess')} "${name}"`)
         await loadCategories()
       } else {
-        setError(result.message || 'Failed to delete category')
+        setError(result.message || t('failedToDeleteCategory'))
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to delete category')
+      setError(err.message || t('failedToDeleteCategory'))
       console.error('Error deleting category:', err)
     }
   }
@@ -129,16 +131,16 @@ export default function CategorySettings() {
       })
 
       if (result.success) {
-        showSuccess('Category updated successfully')
+        showSuccess(t('categoryUpdatedSuccess'))
         setEditingId(null)
         setEditName('')
         setEditDescription('')
         await loadCategories()
       } else {
-        setError(result.message || 'Failed to update category')
+        setError(result.message || t('failedToUpdateCategory'))
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to update category')
+      setError(err.message || t('failedToUpdateCategory'))
       console.error('Error updating category:', err)
     }
   }
@@ -153,7 +155,7 @@ export default function CategorySettings() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-slate-600 dark:text-slate-400">Loading categories...</span>
+        <span className="ml-3 text-slate-600 dark:text-slate-400">{t('loadingCategories')}</span>
       </div>
     )
   }
@@ -162,10 +164,10 @@ export default function CategorySettings() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
-          Product Categories
+          {t('productCategories')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Manage categories for organizing your products across the entire application
+          {t('productCategoriesDesc')}
         </p>
       </div>
 
@@ -193,34 +195,34 @@ export default function CategorySettings() {
       <div className="glass-card p-6 space-y-4">
         <h4 className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
           <Plus className="w-5 h-5 text-primary" />
-          Add New Category
+          {t('addNewCategory')}
         </h4>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Category Name *
+              {t('categoryName')} *
             </label>
             <input
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
-              placeholder="e.g., Electronics, Clothing, Food"
+              placeholder={t('categoryNamePlaceholder')}
               className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Description (Optional)
+              {t('categoryDescription')}
             </label>
             <input
               type="text"
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
-              placeholder="Brief description of the category"
+              placeholder={t('categoryDescPlaceholder')}
               className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
@@ -232,7 +234,7 @@ export default function CategorySettings() {
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Add Category
+          {t('addCategory')}
         </button>
       </div>
 
@@ -240,13 +242,13 @@ export default function CategorySettings() {
       <div className="glass-card p-6">
         <h4 className="font-medium text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <Tag className="w-5 h-5 text-primary" />
-          Existing Categories ({categories.length})
+          {t('categories')} ({categories.length})
         </h4>
 
         {categories.length === 0 ? (
           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
             <Tag className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No categories yet. Add your first category above.</p>
+            <p>{t('noCategoriesYet')}. {t('addFirstCategory')}.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -271,7 +273,7 @@ export default function CategorySettings() {
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                      placeholder="Description (optional)"
+                      placeholder={t('categoryDescription')}
                     />
                   </div>
                 ) : (
@@ -282,7 +284,7 @@ export default function CategorySettings() {
                         {category.name}
                       </h5>
                       <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
-                        {category.productCount || 0} products
+                        {category.productCount || 0} {t('productsCount')}
                       </span>
                     </div>
                     {category.description && (
@@ -299,14 +301,14 @@ export default function CategorySettings() {
                       <button
                         onClick={handleSaveEdit}
                         className="p-2 text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                        title="Save"
+                        title={t('save')}
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         onClick={handleCancelEdit}
                         className="p-2 text-slate-600 hover:bg-slate-500/10 rounded-lg transition-colors"
-                        title="Cancel"
+                        title={t('cancel')}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -316,14 +318,14 @@ export default function CategorySettings() {
                       <button
                         onClick={() => handleEdit(category)}
                         className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
-                        title="Edit"
+                        title={t('edit')}
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(category.id, category.name, category.productCount || 0)}
                         className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete"
+                        title={t('delete')}
                         disabled={(category.productCount || 0) > 0}
                       >
                         <X className={`w-4 h-4 ${(category.productCount || 0) > 0 ? 'opacity-50' : ''}`} />

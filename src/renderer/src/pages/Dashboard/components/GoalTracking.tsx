@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { Target, TrendingUp, Edit2, Plus, X, Save } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type Goal = {
   id: string
@@ -17,10 +18,11 @@ type Goal = {
 }
 
 export default function GoalTracking() {
+  const { t } = useLanguage()
   const [goals, setGoals] = useState<Goal[]>([
     {
       id: '1',
-      name: 'Monthly Revenue',
+      name: t('monthlyRevenue'),
       target: 50000,
       current: 0,
       period: 'monthly',
@@ -29,7 +31,7 @@ export default function GoalTracking() {
     },
     {
       id: '2',
-      name: 'Weekly Sales',
+      name: t('weeklySales'),
       target: 100,
       current: 0,
       period: 'weekly',
@@ -38,7 +40,7 @@ export default function GoalTracking() {
     },
     {
       id: '3',
-      name: 'New Customers',
+      name: t('newCustomers'),
       target: 50,
       current: 0,
       period: 'monthly',
@@ -434,7 +436,7 @@ export default function GoalTracking() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <Target size={18} className="text-primary" />
-            Goal Tracking
+            {t('goalTracking')}
           </h3>
           <button 
             onClick={handleAddGoal}

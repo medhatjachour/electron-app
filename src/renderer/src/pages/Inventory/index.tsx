@@ -22,6 +22,7 @@ import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate'
 import { useToast } from '../../hooks/useToast'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useAuth } from '../../../hooks/useAuth'
+import { useLanguage } from '../../contexts/LanguageContext'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
 import ToastContainer from '../../components/ui/ToastContainer'
@@ -50,6 +51,7 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [isExporting, setIsExporting] = useState(false)
   
   // Stock movement dialog state
@@ -336,9 +338,9 @@ export default function InventoryPage() {
               <Package className="text-primary" size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inventory Management</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('inventoryManagement')}</h1>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Manage products, analyze sales, and track stock movements
+                {t('inventoryTrackStock')}
               </p>
             </div>
           </div>
@@ -350,29 +352,29 @@ export default function InventoryPage() {
                   onClick={refetch}
                   className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
                   disabled={loading}
-                  aria-label={loading ? 'Refreshing inventory' : 'Refresh inventory'}
+                  aria-label={loading ? t('inventoryRefreshing') : t('inventoryRefreshData')}
                   aria-busy={loading}
                 >
                   <RefreshCw size={18} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
-                  Refresh
+                  {t('inventoryRefreshData')}
                 </button>
                 <button
                   onClick={handleExport}
                   disabled={isExporting || items.length === 0}
                   className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label={isExporting ? 'Exporting inventory' : `Export ${items.length} items to Excel`}
+                  aria-label={isExporting ? t('inventoryExporting') : `${t('inventoryExportExcel')} ${items.length}`}
                   aria-busy={isExporting}
                   aria-disabled={items.length === 0}
                 >
                   {isExporting ? (
                     <>
                       <RefreshCw size={18} className="animate-spin" aria-hidden="true" />
-                      Exporting...
+                      {t('inventoryExporting')}
                     </>
                   ) : (
                     <>
                       <Download size={18} aria-hidden="true" />
-                      Export ({items.length})
+                      {t('inventoryExportExcel')} ({items.length})
                     </>
                   )}
                 </button>
@@ -400,7 +402,7 @@ export default function InventoryPage() {
             }`}
           >
             <Package size={18} />
-            Products
+            {t('inventoryProducts')}
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
@@ -411,7 +413,7 @@ export default function InventoryPage() {
             }`}
           >
             <TrendingUp size={18} />
-            Analytics
+            {t('inventoryAnalytics')}
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -422,7 +424,7 @@ export default function InventoryPage() {
             }`}
           >
             <History size={18} />
-            Stock History
+            {t('inventoryHistory')}
           </button>
         </div>
 
@@ -434,11 +436,11 @@ export default function InventoryPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
                 <input
                   type="search"
-                  placeholder="Search by name, SKU, category..."
+                  placeholder={t('inventorySearchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                  aria-label="Search inventory items by name, SKU, or category"
+                  aria-label={t('inventorySearchPlaceholder')}
                   role="searchbox"
                 />
               </div>
@@ -449,12 +451,12 @@ export default function InventoryPage() {
                     ? 'bg-primary text-white border-primary'
                     : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
                 }`}
-                aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                aria-label={showFilters ? t('inventoryHideFilters') : t('inventoryShowFilters')}
                 aria-expanded={showFilters}
                 aria-controls="inventory-filters"
               >
                 <Filter size={18} aria-hidden="true" />
-                Filters
+                {t('inventoryFilters')}
               </button>
             </div>
 

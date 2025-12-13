@@ -6,9 +6,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
 import { Eye, EyeOff, Store, Zap, Shield, TrendingUp, Lock, User } from 'lucide-react'
 
 export default function Login() {
+  const { t } = useLanguage()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -22,7 +24,7 @@ export default function Login() {
     
     // Validation
     if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password')
+      setError(t('enterBothFields'))
       return
     }
 
@@ -33,10 +35,10 @@ export default function Login() {
       if (user) {
         navigate('/dashboard')
       } else {
-        setError('Invalid credentials')
+        setError(t('invalidCredentials'))
       }
     } catch (err: any) {
-      setError(err?.message || 'Login failed. Please try again.')
+      setError(err?.message || t('loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -69,7 +71,7 @@ export default function Login() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">BizFlow</h1>
-              <p className="text-white/80 text-sm">Business Management System</p>
+              <p className="text-white/80 text-sm">{t('businessManagementSystem')}</p>
             </div>
           </div>
 
@@ -77,28 +79,28 @@ export default function Login() {
           <div className="space-y-8">
             <div>
               <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
-                Manage Your Business<br />With Confidence
+                {t('manageBusinessConfidence')}
               </h2>
               <p className="text-white/90 text-lg">
-                Professional desktop POS system built for modern retailers
+                {t('professionalPOSSystem')}
               </p>
             </div>
 
             <div className="space-y-4">
               <FeatureItem 
                 icon={<Zap className="w-5 h-5" />}
-                title="Lightning Fast"
-                description="Process sales in seconds with our optimized interface"
+                title={t('lightningFast')}
+                description={t('lightningFastDesc')}
               />
               <FeatureItem 
                 icon={<Shield className="w-5 h-5" />}
-                title="Secure & Reliable"
-                description="Your data is encrypted and stored safely on your device"
+                title={t('secureReliable')}
+                description={t('secureReliableDesc')}
               />
               <FeatureItem 
                 icon={<TrendingUp className="w-5 h-5" />}
-                title="Powerful Analytics"
-                description="Track sales, inventory, and performance in real-time"
+                title={t('powerfulAnalytics')}
+                description={t('powerfulAnalyticsDesc')}
               />
             </div>
           </div>
@@ -126,10 +128,10 @@ export default function Login() {
           {/* Welcome Text */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Welcome Back
+              {t('signInToAccount')}
             </h2>
             <p className="text-slate-600 dark:text-slate-400">
-              Sign in to access your dashboard
+              {t('businessInsights')}
             </p>
           </div>
 
@@ -154,7 +156,7 @@ export default function Login() {
             {/* Username Field */}
             <div>
               <label htmlFor="username" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Username
+                {t('username')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -167,7 +169,7 @@ export default function Login() {
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={loading}
                   className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="Enter your username"
+                  placeholder={t('username')}
                   autoComplete="username"
                 />
               </div>
@@ -176,7 +178,7 @@ export default function Login() {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -189,7 +191,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   className="w-full pl-11 pr-12 py-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="Enter your password"
+                  placeholder={t('password')}
                   autoComplete="current-password"
                 />
                 <button
@@ -238,10 +240,10 @@ export default function Login() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                   </svg>
-                  Signing in...
+                  {t('signingIn')}
                 </span>
               ) : (
-                'Sign In'
+                t('signIn')
               )}
             </button>
           </form>

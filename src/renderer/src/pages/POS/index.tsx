@@ -21,6 +21,7 @@ import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
 import { usePOS } from './usePOS'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
 
 type ViewMode = 'grid' | 'quick'
@@ -85,10 +86,12 @@ export default function POS(): JSX.Element {
     completeSale(selectedCustomer)
   }
 
+  const { t } = useLanguage()
+
   // Quick checkout with cash, no customer
   const handleQuickCheckout = async () => {
     if (cart.length === 0) {
-      alert('Cart is empty. Please add items first.')
+      alert(t('cartIsEmpty'))
       return
     }
     setPaymentMethod('cash')
@@ -123,7 +126,7 @@ export default function POS(): JSX.Element {
               }`}
             >
               <Grid size={18} />
-              Grid View
+              {t('gridView')}
             </button>
             <button
               onClick={() => setViewMode('quick')}
@@ -134,7 +137,7 @@ export default function POS(): JSX.Element {
               }`}
             >
               <Zap size={18} />
-              Quick Sale
+              {t('quickSale')}
             </button>
           </div>
         </div>
@@ -158,7 +161,7 @@ export default function POS(): JSX.Element {
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden"
           onClick={() => setCartOpen(false)}
           onKeyDown={(e) => e.key === 'Escape' && setCartOpen(false)}
-          aria-label="Close cart overlay"
+          aria-label={t('closeCartOverlay')}
         />
       )}
 
@@ -167,7 +170,7 @@ export default function POS(): JSX.Element {
         <button
           onClick={() => setCartOpen(true)}
           className="fixed bottom-6 right-6 z-50 group"
-          aria-label="Open shopping cart"
+          aria-label={t('openShoppingCart')}
         >
           <div className="relative">
             {/* Cart Icon with Badge */}
@@ -190,7 +193,7 @@ export default function POS(): JSX.Element {
           
           {/* Tooltip */}
           <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
-            View Cart ({totalItems} items)
+            {t('viewCart')} ({totalItems} {t('items')})
             <div className="absolute top-full right-4 -mt-1 w-2 h-2 bg-slate-900 transform rotate-45"></div>
           </div>
         </button>
@@ -219,7 +222,7 @@ export default function POS(): JSX.Element {
               </svg>
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Current Order</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">{t('currentOrder')}</h2>
             </div>
           </div>
           
@@ -227,8 +230,8 @@ export default function POS(): JSX.Element {
           <button
             onClick={() => setCartOpen(false)}
             className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group"
-            aria-label="Minimize cart"
-            title="Minimize cart (more space for products)"
+            aria-label={t('minimizeCart')}
+            title={`${t('minimizeCart')} (${t('moreSpaceForProducts')})`}
           >
             <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7" />
@@ -287,7 +290,7 @@ export default function POS(): JSX.Element {
                       onClick={() => setShowCheckoutOptions(false)}
                       className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                     >
-                      ← Back to Quick Checkout
+                      {t('backToQuickCheckout')}
                     </button>
                   </div>
                 </>
@@ -297,15 +300,15 @@ export default function POS(): JSX.Element {
                   {/* Order Summary - Compact */}
                   <div className="space-y-1 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>Subtotal:</span>
+                      <span>{t('subtotal')}:</span>
                       <span className="font-semibold">${subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>Tax ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
+                      <span>{t('tax')} ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
                       <span className="font-semibold">${tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-600">
-                      <span className="text-base font-bold text-slate-900 dark:text-white">Total:</span>
+                      <span className="text-base font-bold text-slate-900 dark:text-white">{t('total')}:</span>
                       <span className="text-2xl font-bold text-primary">${total.toFixed(2)}</span>
                     </div>
                   </div>
@@ -318,7 +321,7 @@ export default function POS(): JSX.Element {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Quick Checkout (Cash)
+                    {t('quickCheckoutCash')}
                   </button>
 
                   {/* More Options Button */}
@@ -329,7 +332,7 @@ export default function POS(): JSX.Element {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    More Options (Customer/Card)
+                    {t('moreOptionsCustomerCard')}
                   </button>
                 </div>
               )}

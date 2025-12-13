@@ -379,7 +379,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
                     <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
                       <span className="text-lg font-bold text-primary">${variant.price.toFixed(2)}</span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        Value: ${(variant.price * variant.stock).toFixed(2)}
+                        {t('value')}: ${(variant.price * variant.stock).toFixed(2)}
                       </span>
                     </div>
                     {canEdit && onAdjustStock && (
@@ -394,7 +394,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
                                  rounded-lg transition-colors flex items-center justify-center gap-1"
                       >
                         <Package size={14} />
-                        Adjust Stock
+                        {t('adjustStock')}
                       </button>
                     )}
                   </div>
@@ -403,7 +403,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
             ) : (
               <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-6 text-center">
                 <Package className="mx-auto mb-2 text-slate-400" size={24} />
-                <p className="text-sm text-slate-500 dark:text-slate-400">No variants configured</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('noVariantsConfigured')}</p>
               </div>
             )}
           </div>
@@ -414,7 +414,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
               <div className="flex items-center gap-2">
                 <History size={18} className="text-slate-600 dark:text-slate-400" />
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Stock Movement History
+                  {t('stockMovementHistory')}
                 </h3>
                 {stockHistory.length > 0 && (
                   <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
@@ -427,7 +427,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
                   onClick={loadStockHistory}
                   className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
-                  Refresh
+                  {t('refresh')}
                 </button>
               )}
             </div>
@@ -435,7 +435,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
             {loadingHistory ? (
               <div className="text-center py-12 bg-slate-50 dark:bg-slate-900 rounded-xl">
                 <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent mx-auto mb-3"></div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Loading movement history...</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{t('loadingMovementHistory')}</p>
               </div>
             ) : stockHistory.length > 0 ? (
               <div className="space-y-3">

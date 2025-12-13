@@ -3,6 +3,7 @@
  */
 
 import { CreditCard, DollarSign, Smartphone, Gift } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { PaymentMethodSettings } from './types'
 
 type Props = {
@@ -11,26 +12,28 @@ type Props = {
 }
 
 export default function PaymentMethodsSettings({ settings, onChange }: Props) {
+  const { t } = useLanguage()
+  
   const handleToggle = (field: keyof PaymentMethodSettings) => {
     onChange({ ...settings, [field]: !settings[field] })
   }
 
   const paymentMethods = [
-    { key: 'cash' as const, label: 'Cash', icon: DollarSign, description: 'Accept cash payments' },
-    { key: 'credit' as const, label: 'Credit Card', icon: CreditCard, description: 'Accept credit card payments' },
-    { key: 'debit' as const, label: 'Debit Card', icon: CreditCard, description: 'Accept debit card payments' },
-    { key: 'mobile' as const, label: 'Mobile Payment', icon: Smartphone, description: 'Apple Pay, Google Pay, etc.' },
-    { key: 'giftCard' as const, label: 'Gift Card', icon: Gift, description: 'Accept store gift cards' },
+    { key: 'cash' as const, label: t('cash'), icon: DollarSign, description: t('acceptCash') },
+    { key: 'credit' as const, label: t('creditCard'), icon: CreditCard, description: t('acceptCredit') },
+    { key: 'debit' as const, label: t('debitCard'), icon: CreditCard, description: t('acceptDebit') },
+    { key: 'mobile' as const, label: t('mobilePayment'), icon: Smartphone, description: t('acceptMobile') },
+    { key: 'giftCard' as const, label: t('giftCard'), icon: Gift, description: t('acceptGiftCard') },
   ]
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Payment Methods
+          {t('paymentMethods')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Enable or disable payment methods accepted in your store
+          {t('paymentMethodsDesc')}
         </p>
       </div>
 
@@ -69,7 +72,7 @@ export default function PaymentMethodsSettings({ settings, onChange }: Props) {
 
       <div className="glass-card p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
         <p className="text-sm text-blue-900 dark:text-blue-200">
-          <strong>Note:</strong> At least one payment method must be enabled. Cash is recommended as a fallback option.
+          <strong>{t('note')}:</strong> {t('paymentMethodNote')}
         </p>
       </div>
     </div>

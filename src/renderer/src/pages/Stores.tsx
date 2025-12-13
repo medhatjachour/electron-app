@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Store, MapPin, Phone, Clock, Settings, ArrowRightLeft, Edit2, Trash2, X } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type StoreType = {
   id: string
@@ -27,6 +28,7 @@ export default function Stores(): JSX.Element {
     manager: '',
     status: 'active'
   })
+  const { t } = useLanguage()
 
   useEffect(() => {
     loadStores()
@@ -65,7 +67,7 @@ export default function Stores(): JSX.Element {
       }
     } catch (error) {
       console.error('Failed to add store:', error)
-      alert('Failed to add store. Please try again.')
+      alert(t('failedToAddStore'))
     }
   }
 
@@ -82,12 +84,12 @@ export default function Stores(): JSX.Element {
       }
     } catch (error) {
       console.error('Failed to update store:', error)
-      alert('Failed to update store. Please try again.')
+      alert(t('failedToUpdateStore'))
     }
   }
 
   const handleDeleteStore = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this store?')) return
+    if (!confirm(t('confirmDeleteStore'))) return
     
     try {
       const result = await ipc.stores.delete(id)
@@ -96,7 +98,7 @@ export default function Stores(): JSX.Element {
       }
     } catch (error) {
       console.error('Failed to delete store:', error)
-      alert('Failed to delete store. Please try again.')
+      alert(t('failedToDeleteStore'))
     }
   }
 
@@ -109,7 +111,7 @@ export default function Stores(): JSX.Element {
       }
     } catch (error) {
       console.error('Failed to toggle store status:', error)
-      alert('Failed to toggle store status. Please try again.')
+      alert(t('failedToToggleStatus'))
     }
   }
 
@@ -130,15 +132,15 @@ export default function Stores(): JSX.Element {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Store Management</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your store locations and settings</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('storeManagement')}</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('storeManagementDesc')}</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} />
-          Add New Store
+          {t('addNewStore')}
         </button>
       </div>
 
@@ -146,12 +148,12 @@ export default function Stores(): JSX.Element {
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-slate-600 dark:text-slate-400">Loading stores...</p>
+            <p className="text-slate-600 dark:text-slate-400">{t('loadingStores')}</p>
           </div>
         ) : stores.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Store size={48} className="mx-auto mb-4 text-slate-400 opacity-50" />
-            <p className="text-slate-600 dark:text-slate-400">No stores yet. Add your first store!</p>
+            <p className="text-slate-600 dark:text-slate-400">{t('noStoresYet')}</p>
           </div>
         ) : (
           stores.map((store) => (
@@ -183,12 +185,12 @@ export default function Stores(): JSX.Element {
               </div>
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Manager: {store.manager}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{t('manager')}: {store.manager}</span>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => openEditModal(store)}
                     className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
-                    title="Edit store"
+                    title={t('editStore')}
                   >
                     <Edit2 size={18} />
                   </button>

@@ -3,6 +3,7 @@ import { Plus, Users, Clock, Award, Mail, Phone, Edit2, Trash2 } from 'lucide-re
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type Employee = {
   id: string
@@ -10,11 +11,10 @@ type Employee = {
   role: string
   email: string
   phone: string
-  status: 'active' | 'inactive'
   salary?: number
   performance?: number
-  address?: string
-  hireDate?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export default function Employees(): JSX.Element {
@@ -24,14 +24,13 @@ export default function Employees(): JSX.Element {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [loading, setLoading] = useState(true)
   const toast = useToast()
+  const { t } = useLanguage()
 
   const [formData, setFormData] = useState({
     name: '',
     role: '',
     email: '',
     phone: '',
-    address: '',
-    status: 'active' as 'active' | 'inactive',
     salary: 0,
     performance: 0
   })
@@ -66,21 +65,21 @@ export default function Employees(): JSX.Element {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      toast.error('Name is required')
+      toast.error(t('employeeNameRequired'))
       return false
     }
     if (!formData.role.trim()) {
-      toast.error('Role is required')
+      toast.error(t('employeeRoleRequired'))
       return false
     }
     if (!formData.email.trim() || !formData.email.includes('@')) {
-      toast.error('Valid email is required')
+      toast.error(t('validEmailRequired'))
       return false
     }
     
     // Phone validation - accepts multiple formats
     if (!formData.phone.trim()) {
-      toast.error('Phone number is required')
+      toast.error(t('phoneRequired'))
       return false
     }
     
@@ -89,19 +88,19 @@ export default function Employees(): JSX.Element {
     
     // Check if we have at least 10 digits (US phone number)
     if (digitsOnly.length < 10) {
-      toast.error('Phone number must be at least 10 digits')
+      toast.error(t('phoneMinDigits'))
       return false
     }
     
     if (digitsOnly.length > 15) {
-      toast.error('Phone number is too long (max 15 digits)')
+      toast.error(t('phoneMaxDigits'))
       return false
     }
     
     // Optional: Validate format (US format check)
     const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/
     if (!phoneRegex.test(formData.phone)) {
-      toast.error('Invalid phone number format. Use formats like: (555) 123-4567, 555-123-4567, or +1-555-123-4567')
+      toast.error(t('invalidPhoneFormat'))
       return false
     }
     
@@ -112,59 +111,19 @@ export default function Employees(): JSX.Element {
     if (!validateForm()) return
 
     try {
-      const employeeData = {
-        ...formData,
-        hireDate: new Date().toISOString()
-      }
-
-      const result = await ipc.employees.create(employeeData)
+      const result = await ipc.employees.create(formData)
       
       if (result && result.success) {
         await loadEmployees()
         setShowAddModal(false)
         resetForm()
-        toast.success('Employee added successfully!')
+        toast.success(t('employeeAddedSuccess'))
       } else {
-        // Fallback to localStorage if database fails
-        console.warn('Database creation failed, using localStorage fallback')
-        const newEmployee = {
-          id: Date.now().toString(),
-          ...employeeData,
-          status: employeeData.status || 'active',
-          performance: employeeData.performance || 0,
-          salary: employeeData.salary || 0
-        }
-        const updatedEmployees = [...employees, newEmployee]
-        setEmployees(updatedEmployees)
-        localStorage.setItem('employees', JSON.stringify(updatedEmployees))
-        
-        setShowAddModal(false)
-        resetForm()
-        toast.warning('Employee saved locally (database unavailable). Will sync when database is available.')
+        toast.error(t('employeeAddFailed'))
       }
     } catch (error) {
       console.error('Error adding employee:', error)
-      
-      // Try localStorage fallback
-      try {
-        const newEmployee = {
-          id: Date.now().toString(),
-          ...formData,
-          hireDate: new Date().toISOString(),
-          status: formData.status || 'active',
-          performance: formData.performance || 0
-        }
-        const updatedEmployees = [...employees, newEmployee]
-        setEmployees(updatedEmployees)
-        localStorage.setItem('employees', JSON.stringify(updatedEmployees))
-        
-        setShowAddModal(false)
-        resetForm()
-        toast.warning('Employee saved locally only (database error). Data will be temporary.')
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError)
-        toast.error('Failed to add employee. Please try again or contact support.')
-      }
+      toast.error(t('employeeAddFailed'))
     }
   }
 
@@ -172,37 +131,37 @@ export default function Employees(): JSX.Element {
     if (!validateForm() || !selectedEmployee) return
 
     try {
-  const result = await ipc.employees.update(selectedEmployee.id, { employeeData: formData })
+      const result = await ipc.employees.update(selectedEmployee.id, { employeeData: formData })
       
       if (result.success) {
         await loadEmployees()
         setShowEditModal(false)
         resetForm()
         setSelectedEmployee(null)
-        toast.success('Employee updated successfully!')
+        toast.success(t('employeeUpdatedSuccess'))
       } else {
-        toast.error('Failed to update employee')
+        toast.error(t('employeeUpdateFailed'))
       }
     } catch (error) {
       console.error('Error updating employee:', error)
-      toast.error('Failed to update employee')
+      toast.error(t('employeeUpdateFailed'))
     }
   }
 
   const handleDeleteEmployee = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this employee?')) return
+    if (!confirm(t('confirmDeleteEmployee'))) return
 
     try {
       const result = await ipc.employees.delete(id)
       if (result.success) {
         await loadEmployees()
-        toast.success('Employee deleted successfully!')
+        toast.success(t('employeeDeletedSuccess'))
       } else {
-        toast.error('Failed to delete employee')
+        toast.error(t('employeeDeleteFailed'))
       }
     } catch (error) {
       console.error('Error deleting employee:', error)
-      toast.error('Failed to delete employee')
+      toast.error(t('employeeDeleteFailed'))
     }
   }
 
@@ -213,8 +172,6 @@ export default function Employees(): JSX.Element {
       role: employee.role,
       email: employee.email,
       phone: employee.phone,
-      address: employee.address || '',
-      status: employee.status,
       salary: employee.salary || 0,
       performance: employee.performance || 0
     })
@@ -227,8 +184,6 @@ export default function Employees(): JSX.Element {
       role: '',
       email: '',
       phone: '',
-      address: '',
-      status: 'active',
       salary: 0,
       performance: 0
     })
@@ -239,32 +194,32 @@ export default function Employees(): JSX.Element {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r  bg-clip-text">
-            Employee Management
+            {t('employeeManagement')}
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your team and track performance</p>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('employeeManagementDesc')}</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} />
-          Add Employee
+          {t('addEmployee')}
         </button>
       </div>
 
       {loading ? (
         <div className="glass-card p-12 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading employees...</p>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">{t('loadingEmployees')}</p>
         </div>
       ) : employees.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Users size={48} className="mx-auto text-slate-400 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">No employees yet</h3>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">Get started by adding your first employee</p>
+          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('noEmployeesYet')}</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">{t('addFirstEmployee')}</p>
           <button onClick={() => setShowAddModal(true)} className="btn-primary">
             <Plus size={20} className="inline mr-2" />
-            Add Employee
+            {t('addEmployee')}
           </button>
         </div>
       ) : (
@@ -292,7 +247,7 @@ export default function Employees(): JSX.Element {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Clock size={16} className="shrink-0" />
-                  <span className="font-medium">Salary:</span>
+                  <span className="font-medium">{t('salary')}:</span>
                   <span className="ml-1">{emp.salary !== undefined ? `$${Number(emp.salary).toFixed(2)}` : '—'}</span>
                 </div>
               </div>
@@ -308,13 +263,7 @@ export default function Employees(): JSX.Element {
                 ) : (
                   <div></div>
                 )}
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  emp.status === 'active' 
-                    ? 'bg-success/10 text-success border border-success/20' 
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                }`}>
-                  {emp.status}
-                </span>
+                <div></div>
               </div>
 
               <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -323,14 +272,14 @@ export default function Employees(): JSX.Element {
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                 >
                   <Edit2 size={16} />
-                  Edit
+                  {t('edit')}
                 </button>
                 <button
                   onClick={() => handleDeleteEmployee(emp.id)}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-error/10 text-error hover:bg-error/20 rounded-lg transition-colors"
                 >
                   <Trash2 size={16} />
-                  Delete
+                  {t('delete')}
                 </button>
               </div>
             </div>
@@ -345,32 +294,32 @@ export default function Employees(): JSX.Element {
           setShowAddModal(false)
           resetForm()
         }}
-        title="Add New Employee"
+        title={t('addNewEmployee')}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Full Name *
+                {t('fullName')} *
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="input-field"
-                placeholder="John Doe"
+                placeholder={t('employeeNamePlaceholder')}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Role / Position *
+                {t('rolePosition')} *
               </label>
               <input
                 type="text"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="input-field"
-                placeholder="e.g., Manager, Cashier, Sales Associate"
+                placeholder={t('rolePlaceholder')}
               />
             </div>
           </div>
@@ -378,26 +327,26 @@ export default function Employees(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email *
+                {t('email')} *
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
-                placeholder="employee@example.com"
+                placeholder={t('emailPlaceholder')}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Phone *
+                {t('phone')} *
               </label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
-                placeholder="(555) 123-4567"
+                placeholder={t('phonePlaceholder')}
               />
             </div>
           </div>
@@ -405,7 +354,7 @@ export default function Employees(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Salary (monthly)
+                {t('salaryMonthly')}
               </label>
               <input
                 type="number"
@@ -417,38 +366,9 @@ export default function Employees(): JSX.Element {
                 placeholder="0.00"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Address
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="input-field"
-              placeholder="123 Main St, City, State"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                className="input-field"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Performance (%)
+                {t('performancePercent')}
               </label>
               <input
                 type="number"
@@ -470,10 +390,10 @@ export default function Employees(): JSX.Element {
               }}
               className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleAddEmployee} className="btn-primary">
-              Add Employee
+              {t('addEmployee')}
             </button>
           </div>
         </div>
@@ -487,13 +407,13 @@ export default function Employees(): JSX.Element {
           resetForm()
           setSelectedEmployee(null)
         }}
-        title="Edit Employee"
+        title={t('editEmployee')}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Full Name *
+                {t('fullName')} *
               </label>
               <input
                 type="text"
@@ -504,14 +424,14 @@ export default function Employees(): JSX.Element {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Role / Position *
+                {t('rolePosition')} *
               </label>
               <input
                 type="text"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="input-field"
-                placeholder="e.g., Manager, Cashier, Sales Associate"
+                placeholder={t('rolePlaceholder')}
               />
             </div>
           </div>
@@ -519,7 +439,7 @@ export default function Employees(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email *
+                {t('email')} *
               </label>
               <input
                 type="email"
@@ -530,7 +450,7 @@ export default function Employees(): JSX.Element {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Phone *
+                {t('phone')} *
               </label>
               <input
                 type="tel"
@@ -544,7 +464,7 @@ export default function Employees(): JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Salary (monthly)
+                {t('salaryMonthly')}
               </label>
               <input
                 type="number"
@@ -556,37 +476,9 @@ export default function Employees(): JSX.Element {
                 placeholder="0.00"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Address
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="input-field"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                className="input-field"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Performance (%)
+                {t('performancePercent')}
               </label>
               <input
                 type="number"
@@ -608,10 +500,10 @@ export default function Employees(): JSX.Element {
               }}
               className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleEditEmployee} className="btn-primary">
-              Update Employee
+              {t('updateEmployee')}
             </button>
           </div>
         </div>

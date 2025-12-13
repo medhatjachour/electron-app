@@ -23,6 +23,7 @@ import {
 import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Download } from 'lucide-react';
 
 interface TodayStats {
@@ -53,6 +54,7 @@ interface ReportFormState {
 const EnhancedReports: React.FC = () => {
   const { error, success } = useToast();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -492,9 +494,9 @@ const EnhancedReports: React.FC = () => {
       {/* Header with Refresh */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports & Analytics</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('reportsAndAnalytics')}</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Generate business reports and monitor today's activity
+            {t('businessInsights')}
           </p>
         </div>
         <button
@@ -503,7 +505,7 @@ const EnhancedReports: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
         >
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
+          {t('refresh')}
         </button>
       </div>
 
@@ -514,8 +516,8 @@ const EnhancedReports: React.FC = () => {
             <FileText className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Generate Business Reports</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Select report type and date range</p>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('generateReport')}</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('reportSelectType')}</p>
           </div>
         </div>
         

@@ -6,8 +6,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { TrendingUp, TrendingDown, Calendar, DollarSign, ShoppingBag, Percent } from 'lucide-react'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 export default function SalesChart() {
+  const { t } = useLanguage()
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'7days' | '30days'>('7days')
@@ -136,7 +138,7 @@ export default function SalesChart() {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <TrendingUp size={20} />
-          Sales Overview
+          {t('salesOverview')}
         </h3>
         <div className="flex items-center gap-2">
           <button
@@ -147,7 +149,7 @@ export default function SalesChart() {
                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
-            7 Days
+            {t('sevenDays')}
           </button>
           <button
             onClick={() => setPeriod('30days')}
@@ -157,7 +159,7 @@ export default function SalesChart() {
                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
-            30 Days
+            {t('thirtyDays')}
           </button>
         </div>
       </div>
@@ -170,7 +172,7 @@ export default function SalesChart() {
               <div className="w-8 h-8 rounded-lg bg-success/20 flex items-center justify-center">
                 <DollarSign size={16} className="text-success" />
               </div>
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Revenue</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('totalRevenue')}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={`$${metrics.totalRevenue.toLocaleString()}`}>
               {formatCurrency(metrics.totalRevenue)}
@@ -178,7 +180,7 @@ export default function SalesChart() {
             <div className={`flex items-center gap-1 text-xs font-medium ${metrics.revenueChange >= 0 ? 'text-success' : 'text-error'}`}>
               {metrics.revenueChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               <span>{Math.abs(metrics.revenueChange).toFixed(1)}%</span>
-              <span className="text-slate-500 dark:text-slate-400">vs prev period</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('vsPrevPeriod')}</span>
             </div>
           </div>
 
@@ -187,7 +189,7 @@ export default function SalesChart() {
               <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
                 <ShoppingBag size={16} className="text-primary" />
               </div>
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Sales</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('totalSales')}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={metrics.totalSales.toLocaleString()}>
               {formatLargeNumber(metrics.totalSales)}
@@ -195,7 +197,7 @@ export default function SalesChart() {
             <div className={`flex items-center gap-1 text-xs font-medium ${metrics.salesChange >= 0 ? 'text-success' : 'text-error'}`}>
               {metrics.salesChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               <span>{Math.abs(metrics.salesChange).toFixed(1)}%</span>
-              <span className="text-slate-500 dark:text-slate-400">vs prev period</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('vsPrevPeriod')}</span>
             </div>
           </div>
 
@@ -204,13 +206,13 @@ export default function SalesChart() {
               <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
                 <Percent size={16} className="text-accent" />
               </div>
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Avg. Sale Value</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('avgSaleValue')}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1" title={`$${metrics.avgSale.toLocaleString()}`}>
               {formatCurrency(metrics.avgSale)}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400">
-              Per transaction
+              {t('perTransaction')}
             </div>
           </div>
         </div>

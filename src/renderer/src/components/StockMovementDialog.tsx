@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type MovementMode = 'add' | 'set' | 'remove'
 
@@ -22,16 +23,16 @@ interface StockMovementDialogProps {
   currentStock: number
 }
 
-const REASON_OPTIONS = [
-  { value: 'supplier_delivery', label: 'Supplier Delivery' },
-  { value: 'customer_return', label: 'Customer Return' },
-  { value: 'inventory_correction', label: 'Inventory Correction' },
-  { value: 'found_stock', label: 'Found Stock' },
-  { value: 'damaged', label: 'Damaged/Spoiled' },
-  { value: 'theft', label: 'Theft/Shrinkage' },
-  { value: 'transfer_in', label: 'Transfer In' },
-  { value: 'transfer_out', label: 'Transfer Out' },
-  { value: 'other', label: 'Other' }
+const getReasonOptions = (t: any) => [
+  { value: 'supplier_delivery', label: t('supplierDelivery') },
+  { value: 'customer_return', label: t('customerReturn') },
+  { value: 'inventory_correction', label: t('inventoryCorrectionReason') },
+  { value: 'found_stock', label: t('foundStock') },
+  { value: 'damaged', label: t('damagedSpoiled') },
+  { value: 'theft', label: t('theftShrinkage') },
+  { value: 'transfer_in', label: t('transferIn') },
+  { value: 'transfer_out', label: t('transferOut') },
+  { value: 'other', label: t('other') }
 ]
 
 export default function StockMovementDialog({
@@ -42,11 +43,14 @@ export default function StockMovementDialog({
   variantLabel,
   currentStock
 }: StockMovementDialogProps) {
+  const { t } = useLanguage()
   const [mode, setMode] = useState<MovementMode>('add')
   const [value, setValue] = useState('')
   const [reason, setReason] = useState('supplier_delivery')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  
+  const REASON_OPTIONS = getReasonOptions(t)
 
   // Calculate new stock based on mode and value
   const calculateNewStock = (): number => {
@@ -118,7 +122,7 @@ export default function StockMovementDialog({
         <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Adjust Stock
+              {t('adjustStock')}
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
               {productName}
@@ -141,10 +145,10 @@ export default function StockMovementDialog({
             {/* Current Stock Display */}
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2.5">
               <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                Current Stock
+                {t('currentStock')}
               </div>
               <div className="text-xl font-bold text-blue-900 dark:text-blue-100 mt-0.5">
-                {currentStock} units
+                {currentStock} {t('units')}
               </div>
             </div>
 
@@ -161,10 +165,10 @@ export default function StockMovementDialog({
                 />
                 <div className="flex-1">
                   <span className="text-sm text-gray-900 dark:text-white font-medium">
-                    Add to stock
+                    {t('addToStock')}
                   </span>
                   <span className="text-gray-500 dark:text-gray-400 text-xs ml-1.5">
-                    (Restock, returns)
+                    {t('restockReturns')}
                   </span>
                 </div>
               </label>
@@ -180,10 +184,10 @@ export default function StockMovementDialog({
                 />
                 <div className="flex-1">
                   <span className="text-sm text-gray-900 dark:text-white font-medium">
-                    Set exact amount
+                    {t('setExactAmount')}
                   </span>
                   <span className="text-gray-500 dark:text-gray-400 text-xs ml-1.5">
-                    (Inventory correction)
+                    {t('inventoryCorrection')}
                   </span>
                 </div>
               </label>
@@ -199,10 +203,10 @@ export default function StockMovementDialog({
                 />
                 <div className="flex-1">
                   <span className="text-sm text-gray-900 dark:text-white font-medium">
-                    Remove from stock
+                    {t('removeFromStock')}
                   </span>
                   <span className="text-gray-500 dark:text-gray-400 text-xs ml-1.5">
-                    (Damage, shrinkage)
+                    {t('damageShrinkage')}
                   </span>
                 </div>
               </label>
@@ -211,16 +215,16 @@ export default function StockMovementDialog({
             {/* Value Input */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {mode === 'add' && 'Quantity to Add'}
-                {mode === 'set' && 'New Stock Amount'}
-                {mode === 'remove' && 'Quantity to Remove'}
+                {mode === 'add' && t('quantityToAdd')}
+                {mode === 'set' && t('newStockAmount')}
+                {mode === 'remove' && t('quantityToRemove')}
               </label>
               <input
                 type="number"
                 min="1"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter amount"
+                placeholder={t('enterAmount')}
                 required
                 className="w-full px-3 py-1.5 text-base border border-gray-300 dark:border-gray-600 rounded 
                          focus:ring-1 focus:ring-blue-500 focus:border-transparent
@@ -265,7 +269,7 @@ export default function StockMovementDialog({
                 </div>
                 {newStock < 0 && (
                   <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
-                    ⚠️ Stock cannot be negative
+                    {t('stockCannotBeNegative')}
                   </p>
                 )}
               </div>
@@ -274,7 +278,7 @@ export default function StockMovementDialog({
             {/* Reason */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Reason
+                {t('reason')}
               </label>
               <select
                 value={reason}
@@ -295,12 +299,12 @@ export default function StockMovementDialog({
             {/* Notes */}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Notes (optional)
+                {t('notesOptional')}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Invoice number, reference..."
+                placeholder={t('invoiceReference')}
                 rows={2}
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded 
                          focus:ring-1 focus:ring-blue-500 focus:border-transparent
@@ -320,7 +324,7 @@ export default function StockMovementDialog({
                        hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors
                        disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -332,10 +336,10 @@ export default function StockMovementDialog({
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Recording...
+                  {t('recording')}
                 </>
               ) : (
-                'Record Movement'
+                t('recordMovement')
               )}
             </button>
           </div>

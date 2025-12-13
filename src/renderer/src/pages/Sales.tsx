@@ -5,6 +5,7 @@ import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type SaleItem = {
   id: string
@@ -49,6 +50,7 @@ type SaleTransaction = {
 }
 
 export default function Sales(): JSX.Element {
+  const { t } = useLanguage()
   const [transactions, setTransactions] = useState<SaleTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState('all')
@@ -380,8 +382,8 @@ export default function Sales(): JSX.Element {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Sales Management</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Track and manage your sales transactions</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('sales')}</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('salesHistory')}</p>
         </div>
         <div className="flex gap-3">
           <button 
@@ -390,14 +392,14 @@ export default function Sales(): JSX.Element {
             className="btn-secondary flex items-center gap-2"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            {t('refresh')}
           </button>
           <button 
             onClick={handleExport}
             className="btn-primary flex items-center gap-2"
           >
             <Download size={20} />
-            Export Report
+            {t('export')}
           </button>
         </div>
       </div>
@@ -406,7 +408,7 @@ export default function Sales(): JSX.Element {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Revenue</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalRevenue')}</span>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-success to-emerald-600 flex items-center justify-center">
               <DollarSign size={20} className="text-white" />
             </div>
@@ -417,16 +419,16 @@ export default function Sales(): JSX.Element {
           {stats.hasData ? (
             <div className={`flex items-center text-sm ${stats.weeklyRevenueChange >= 0 ? 'text-success' : 'text-error'}`}>
               {stats.weeklyRevenueChange >= 0 ? <TrendingUp size={16} className="mr-1" /> : <TrendingUp size={16} className="mr-1 rotate-180" />}
-              {Math.abs(stats.weeklyRevenueChange).toFixed(1)}% from last week
+              {Math.abs(stats.weeklyRevenueChange).toFixed(1)}% {t('fromLastWeek')}
             </div>
           ) : (
-            <div className="text-sm text-slate-400">No sales data yet</div>
+            <div className="text-sm text-slate-400">{t('noSalesData')}</div>
           )}
         </div>
 
         <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Sales</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalSales')}</span>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center">
               <ShoppingBag size={20} className="text-white" />
             </div>
@@ -436,10 +438,10 @@ export default function Sales(): JSX.Element {
           </div>
           {stats.hasData ? (
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              {stats.todayCount} {stats.todayCount === 1 ? 'sale' : 'sales'} today
+              {stats.todayCount} {stats.todayCount === 1 ? t('saleToday') : t('salesToday')}
             </div>
           ) : (
-            <div className="text-sm text-slate-400">Start making sales</div>
+            <div className="text-sm text-slate-400">{t('startMakingSales')}</div>
           )}
         </div>
 
@@ -455,16 +457,16 @@ export default function Sales(): JSX.Element {
           </div>
           {stats.hasData ? (
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              Across all transactions
+              {t('acrossAllTransactions')}
             </div>
           ) : (
-            <div className="text-sm text-slate-400">No items sold</div>
+            <div className="text-sm text-slate-400">{t('noItemsSold')}</div>
           )}
         </div>
 
         <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg. Sale</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('avgSale')}</span>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center">
               <DollarSign size={20} className="text-white" />
             </div>
@@ -474,10 +476,10 @@ export default function Sales(): JSX.Element {
           </div>
           {stats.hasData ? (
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              Per transaction
+              {t('perTransaction')}
             </div>
           ) : (
-            <div className="text-sm text-slate-400">No average yet</div>
+            <div className="text-sm text-slate-400">{t('noSalesData')}</div>
           )}
         </div>
       </div>
@@ -490,17 +492,17 @@ export default function Sales(): JSX.Element {
               <ShoppingBag size={40} className="text-primary" />
             </div>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-              No Sales Yet
+              {t('noSalesYet')}
             </h3>
             <p className="text-slate-600 dark:text-slate-400 mb-6">
-              Start making sales to see your transaction history and analytics here.
+              {t('startMakingSalesToSee')}
             </p>
             <button 
               onClick={() => window.location.href = '/pos'}
               className="btn-primary inline-flex items-center gap-2"
             >
               <ShoppingBag size={20} />
-              Go to Point of Sale
+              {t('goToPointOfSale')}
             </button>
           </div>
         </div>
@@ -513,7 +515,7 @@ export default function Sales(): JSX.Element {
           <div className="flex-1 min-w-[250px] relative">
             <input
               type="text"
-              placeholder="Search by customer name or sale ID..."
+              placeholder={t('searchByCustomerOrSaleId')}
               className="input-field w-full"
               value={searchQuery}
               onChange={(e) => {
@@ -554,24 +556,24 @@ export default function Sales(): JSX.Element {
             <thead className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-800/50 border-b-2 border-primary/20">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider w-12"></th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Transaction ID</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('saleId')}</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <Calendar size={16} />
-                    Date & Time
+                    {t('saleDate')}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <Users size={16} />
-                    Customer
+                    {t('customer')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Payment</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('itemCount')}</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('totalAmount')}</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('payment')}</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('status')}</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -580,7 +582,7 @@ export default function Sales(): JSX.Element {
                   <td colSpan={9} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                      <p className="text-slate-600 dark:text-slate-400">Loading transactions...</p>
+                      <p className="text-slate-600 dark:text-slate-400">{t('loading')}...</p>
                     </div>
                   </td>
                 </tr>
@@ -621,7 +623,7 @@ export default function Sales(): JSX.Element {
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-slate-900 dark:text-white">
-                            {transaction.customerName || 'Walk-in Customer'}
+                            {transaction.customerName || t('walkInCustomer')}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -676,12 +678,12 @@ export default function Sales(): JSX.Element {
                                   <button 
                                     onClick={() => handlePartialRefund(transaction)}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
-                                    title="Process refund"
+                                    title={t('processRefund')}
                                   >
                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
                                     </svg>
-                                    Refund
+                                    {t('refundItems')}
                                   </button>
                                 ) : (
                                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold cursor-not-allowed"

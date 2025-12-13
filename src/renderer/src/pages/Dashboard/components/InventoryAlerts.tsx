@@ -8,10 +8,12 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Package, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../contexts/ToastContext'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 export default function InventoryAlerts() {
   const { user } = useAuth()
   const { warning } = useToast()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const [alerts, setAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,20 +40,20 @@ export default function InventoryAlerts() {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
           <AlertTriangle size={18} className="text-amber-600" />
-          Inventory Alerts
+          {t('inventoryAlerts')}
         </h3>
         <button
           onClick={(e) => {
             e.preventDefault()
             if (!user) {
-              warning('Please log in to view inventory', 4000)
+              warning(t('pleaseLoginToAccess'), 4000)
             } else {
               navigate('/inventory')
             }
           }}
           className="text-xs text-primary hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
         >
-          View All
+          {t('viewAll')}
           <ArrowRight size={12} />
         </button>
       </div>
@@ -80,11 +82,11 @@ export default function InventoryAlerts() {
                   {item.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Stock: {item.totalStock} units • {item.baseSKU}
+                  {t('stock')}: {item.totalStock} {t('units')} • {item.baseSKU}
                 </p>
               </div>
               <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400">
-                Low
+                {t('low')}
               </span>
             </div>
           ))}
@@ -93,7 +95,7 @@ export default function InventoryAlerts() {
         <div className="text-center py-6">
           <Package className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            All inventory levels are healthy
+            {t('allInventoryHealthy')}
           </p>
         </div>
       )}

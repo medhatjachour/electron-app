@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react'
 import { Search, Filter, X, ChevronDown, RefreshCcw } from 'lucide-react'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { useDebounce } from '../../hooks/useDebounce'
 import type { Product, ProductVariant } from './types'
 
@@ -18,6 +19,7 @@ type Props = {
 type SortOption = 'name' | 'price-low' | 'price-high' | 'stock-low' | 'stock-high'
 
 export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonly<Props>) {
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -154,7 +156,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Search products... (Press Enter to add first result)"
+              placeholder={t('searchProductsEnter')}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -172,7 +174,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 onChange={(e) => setSelectedCategoryIds(e.target.value ? [e.target.value] : [])}
                 className="pl-3 pr-8 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer min-w-[140px]"
               >
-                <option value="">📁 All Categories</option>
+                <option value="">📁 {t('allCategories')}</option>
                 {filterOptions.categories.map(cat => (
                   <option key={cat} value={cat}>📁 {cat}</option>
                 ))}
@@ -187,9 +189,9 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 onChange={(e) => setStockFilter(e.target.value as 'all' | 'in-stock' | 'low-stock')}
                 className="pl-3 pr-8 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer min-w-[130px]"
               >
-                <option value="all">📦 All Stock</option>
-                <option value="in-stock">✅ In Stock</option>
-                <option value="low-stock">⚠️ Low Stock</option>
+                <option value="all">📦 {t('allStock')}</option>
+                <option value="in-stock">✅ {t('inStock')}</option>
+                <option value="low-stock">⚠️ {t('lowStock')}</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
@@ -201,11 +203,11 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="pl-3 pr-8 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer min-w-[130px]"
               >
-                <option value="name">🔤 Name</option>
-                <option value="price-low">💰 Price ↓</option>
-                <option value="price-high">💰 Price ↑</option>
-                <option value="stock-low">📊 Stock ↓</option>
-                <option value="stock-high">📊 Stock ↑</option>
+                <option value="name">🔤 {t('nameSortOption')}</option>
+                <option value="price-low">💰 {t('priceLow')}</option>
+                <option value="price-high">💰 {t('priceHigh')}</option>
+                <option value="stock-low">📊 {t('stockLow')}</option>
+                <option value="stock-high">📊 {t('stockHigh')}</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
@@ -213,14 +215,14 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
             {/* More Filters Button */}
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2.5 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${
+              className={
                 showFilters || hasActiveFilters
-                  ? 'bg-primary text-white border-primary shadow-md'
-                  : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-              }`}
+                  ? 'px-4 py-2.5 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium bg-primary text-white border-primary shadow-md'
+                  : 'px-4 py-2.5 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }
             >
               <Filter size={16} />
-              More
+              {t('more')}
               {hasActiveFilters && !showFilters && (
                 <span className="w-2 h-2 bg-white rounded-full"></span>
               )}
@@ -233,7 +235,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 className="px-4 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all flex items-center gap-2 text-sm font-medium"
               >
                 <X size={16} />
-                Clear
+                {t('clear')}
               </button>
             )}
 
@@ -242,7 +244,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
               onClick={() => refetch()}
               disabled={loading}
               className="px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh products"
+              title={t('refreshProducts')}
             >
               <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
               
@@ -258,7 +260,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
               {filterOptions.colors.length > 0 && (
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                    Color
+                    {t('color')}
                   </label>
                   <div className="relative">
                     <select
@@ -266,7 +268,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                       onChange={(e) => setSelectedColors(e.target.value ? [e.target.value] : [])}
                       className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
                     >
-                      <option value="">All Colors</option>
+                      <option value="">{t('allColors')}</option>
                       {filterOptions.colors.map(color => (
                         <option key={color} value={color}>{color}</option>
                       ))}
@@ -280,7 +282,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
               {filterOptions.sizes.length > 0 && (
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                    Size
+                    {t('size')}
                   </label>
                   <div className="relative">
                     <select
@@ -288,7 +290,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                       onChange={(e) => setSelectedSizes(e.target.value ? [e.target.value] : [])}
                       className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
                     >
-                      <option value="">All Sizes</option>
+                      <option value="">{t('allSizes')}</option>
                       {filterOptions.sizes.map(size => (
                         <option key={size} value={size}>{size}</option>
                       ))}
@@ -361,13 +363,11 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
       </div>
 
       {/* Responsive Product Grid - Adapts to cart visibility */}
-      <div className={`
-        grid gap-4
-        ${cartOpen 
-          ? 'grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'  // Cart open: 2 cols default, 3 on XL, 4 on 2XL
-          : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'  // Cart closed: More columns
-        }
-      `}>
+      <div className={
+        cartOpen 
+          ? 'grid gap-4 grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+          : 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
+      }>
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -412,21 +412,21 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                 <button
                   onClick={() => onAddToCart(product)}
                   disabled={product.totalStock === 0}
-                  className={`w-full mt-2 ${
+                  className={
                     product.totalStock === 0 
-                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed' 
-                      : 'btn-primary'
-                  }`}
+                      ? 'w-full mt-2 bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed' 
+                      : 'w-full mt-2 btn-primary'
+                  }
                 >
                   <div className="flex items-center justify-between">
                     <span>${product.basePrice.toFixed(2)}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    <span className={
                       product.totalStock === 0 
-                        ? 'bg-error/20 text-error' 
+                        ? 'text-xs px-2 py-0.5 rounded-full bg-error/20 text-error' 
                         : product.totalStock < 10
-                        ? 'bg-accent/20 text-accent'
-                        : 'bg-white/20'
-                    }`}>
+                        ? 'text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent'
+                        : 'text-xs px-2 py-0.5 rounded-full bg-white/20'
+                    }>
                       {product.totalStock === 0 ? 'Out of Stock' : `${product.totalStock} left`}
                     </span>
                   </div>
@@ -440,25 +440,25 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                       key={variant.id}
                       onClick={() => handleAddToCart(product, variant)}
                       disabled={variant.stock === 0}
-                      className={`w-full px-3 py-2 text-left text-xs rounded-lg transition-all ${
+                      className={
                         variant.stock === 0
-                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
-                          : 'bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border border-primary/20 hover:border-primary/40'
-                      }`}
+                          ? 'w-full px-3 py-2 text-left text-xs rounded-lg transition-all bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
+                          : 'w-full px-3 py-2 text-left text-xs rounded-lg transition-all bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border border-primary/20 hover:border-primary/40'
+                      }
                     >
                       <div className="flex justify-between items-center gap-2">
                         <span className="truncate flex-1 font-medium text-slate-800 dark:text-slate-200">
                           {[variant.color, variant.size].filter(Boolean).join(' • ')}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-primary">${variant.price.toFixed(2)}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">${variant.price.toFixed(2)}</span>
+                          <span className={
                             variant.stock === 0 
-                              ? 'bg-error/20 text-error' 
-                              : variant.stock < 10
-                              ? 'bg-accent/20 text-accent'
-                              : 'bg-success/20 text-success'
-                          }`}>
+                              ? 'text-xs px-2 py-0.5 rounded-full font-medium bg-error/20 text-error' 
+                              : variant.stock < 5
+                              ? 'text-xs px-2 py-0.5 rounded-full font-medium bg-accent/20 text-accent'
+                              : 'text-xs px-2 py-0.5 rounded-full font-medium bg-success/20 text-success'
+                          }>
                             {variant.stock === 0 ? 'Out' : variant.stock}
                           </span>
                         </div>
@@ -510,11 +510,11 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                     key={variant.id}
                     onClick={() => handleAddToCart(selectedProduct, variant)}
                     disabled={variant.stock === 0}
-                    className={`p-4 rounded-xl text-left transition-all ${
+                    className={
                       variant.stock === 0
-                        ? 'bg-slate-100 dark:bg-slate-700/50 opacity-60 cursor-not-allowed'
-                        : 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 hover:from-primary/10 hover:to-secondary/10 border-2 border-transparent hover:border-primary/40 shadow-sm hover:shadow-md'
-                    }`}
+                        ? 'p-4 rounded-xl text-left transition-all bg-slate-100 dark:bg-slate-700/50 opacity-60 cursor-not-allowed'
+                        : 'p-4 rounded-xl text-left transition-all bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 hover:from-primary/10 hover:to-secondary/10 border-2 border-transparent hover:border-primary/40 shadow-sm hover:shadow-md'
+                    }
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -536,13 +536,13 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
                           </p>
                         )}
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      <span className={
                         variant.stock === 0 
-                          ? 'bg-error/20 text-error' 
+                          ? 'px-3 py-1 rounded-full text-xs font-bold bg-error/20 text-error' 
                           : variant.stock < 10
-                          ? 'bg-accent/20 text-accent'
-                          : 'bg-success/20 text-success'
-                      }`}>
+                          ? 'px-3 py-1 rounded-full text-xs font-bold bg-accent/20 text-accent'
+                          : 'px-3 py-1 rounded-full text-xs font-bold bg-success/20 text-success'
+                      }>
                         {variant.stock === 0 ? 'Out of Stock' : `${variant.stock} in stock`}
                       </span>
                     </div>

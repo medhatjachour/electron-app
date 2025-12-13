@@ -1,4 +1,5 @@
 import { X, Plus, Trash2, Package } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type ProductVariant = {
   id: string
@@ -113,12 +114,14 @@ export default function ProductForm({
   onVariantStockChange,
   onOpenStockDialog
 }: Readonly<ProductFormProps>): JSX.Element {
+  const { t } = useLanguage()
+  
   return (
     <div className="space-y-6">
       {/* Product Images */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-          Product Images
+          {t('productImages')}
         </label>
         <div className="grid grid-cols-4 gap-3">
           {formData.images.map((img, idx) => (
@@ -135,7 +138,7 @@ export default function ProductForm({
           {formData.images.length < 4 && (
             <label className="w-full h-24 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
               <Plus size={24} className="text-slate-400" />
-              <span className="text-xs text-slate-500 mt-1">Add Image</span>
+              <span className="text-xs text-slate-500 mt-1">{t('addImage')}</span>
               <input
                 type="file"
                 accept="image/*"
@@ -153,27 +156,27 @@ export default function ProductForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Product Name *
+            {t('productNameRequired')}
           </label>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className={`input-field w-full ${errors.name ? 'border-error' : ''}`}
-            placeholder="E.g., Running Shoes"
+            placeholder={t('productNamePlaceholder')}
           />
           {errors.name && <p className="text-error text-sm mt-1">{errors.name}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Base SKU *
+            {t('baseSKURequired')}
           </label>
           <input
             type="text"
             value={formData.baseSKU}
             onChange={(e) => setFormData({ ...formData, baseSKU: e.target.value.toUpperCase() })}
             className={`input-field w-full ${errors.baseSKU ? 'border-error' : ''}`}
-            placeholder="E.g., SHOE-001"
+            placeholder={t('baseSKUPlaceholder')}
           />
           {errors.baseSKU && <p className="text-error text-sm mt-1">{errors.baseSKU}</p>}
         </div>
@@ -181,28 +184,28 @@ export default function ProductForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Description
+          {t('description')}
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           className="input-field w-full"
           rows={3}
-          placeholder="Product description..."
+          placeholder={t('productDescription')}
         />
       </div>
 
       <div className="grid grid-cols-4 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Category *
+            {t('categoryRequired')}
           </label>
           <select
             value={formData.categoryId}
             onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
             className={`input-field w-full ${errors.categoryId ? 'border-error' : ''}`}
           >
-            <option value="">Select category</option>
+            <option value="">{t('selectCategory')}</option>
             {categories.map(category => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -213,14 +216,14 @@ export default function ProductForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Store Assignment
+            {t('storeAssignment')}
           </label>
           <select
             value={formData.storeId}
             onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
             className="input-field w-full"
           >
-            <option value="">No Store (All Locations)</option>
+            <option value="">{t('noStore')}</option>
             {stores.map(store => (
               <option key={store.id} value={store.id}>
                 {store.name} - {store.location}
@@ -228,12 +231,12 @@ export default function ProductForm({
             ))}
           </select>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Optional: Assign to specific store
+            {t('assignToStore')}
           </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Base Price * ($)
+            {t('basePriceRequired')}
           </label>
           <input
             type="number"
@@ -248,7 +251,7 @@ export default function ProductForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Base Cost * ($)
+            {t('baseCostRequired')}
           </label>
           <input
             type="number"
@@ -264,7 +267,7 @@ export default function ProductForm({
         {!formData.hasVariants && (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Stock * (Units) {isEditMode && <span className="text-xs text-blue-600 dark:text-blue-400">(tracked)</span>}
+              {t('stockRequired')} {isEditMode && <span className="text-xs text-blue-600 dark:text-blue-400">({t('tracked')})</span>}
             </label>
             <div className="flex gap-2">
               <input
@@ -275,7 +278,7 @@ export default function ProductForm({
                 className="input-field flex-1"
                 placeholder="0"
                 min="0"
-                title={isEditMode ? 'Use Adjust Stock button to change' : 'Set initial stock quantity'}
+                title={isEditMode ? t('useAdjustStockButton') : t('setInitialStock')}
               />
               {isEditMode && onOpenStockDialog && formData.variants.length > 0 && (
                 <button
@@ -289,17 +292,17 @@ export default function ProductForm({
                   className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 
                            bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 
                            rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5"
-                  title="Adjust stock with reason tracking"
+                  title={t('adjustStockWithReason')}
                 >
                   <Package size={16} />
-                  Adjust Stock
+                  {t('adjustStock')}
                 </button>
               )}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {isEditMode 
-                ? 'Stock changes are tracked. Click "Adjust Stock" to modify with reason.'
-                : 'Initial stock quantity'}
+                ? t('stockChangesTracked')
+                : t('initialStockQuantity')}
             </p>
           </div>
         )}
@@ -309,8 +312,8 @@ export default function ProductForm({
       <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Product Variants</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Add options like colors, sizes, or configurations</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">{t('productVariants')}</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('addVariantOptions')}</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -335,7 +338,7 @@ export default function ProductForm({
                     : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
                 }`}
               >
-                Single Variant
+                {t('singleVariant')}
               </button>
               <button
                 onClick={() => setBatchMode(true)}
@@ -345,10 +348,10 @@ export default function ProductForm({
                     : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
                 }`}
               >
-                Batch Variants
+                {t('batchVariants')}
               </button>
               <span className="text-sm text-slate-600 dark:text-slate-400">
-                {batchMode ? 'Create multiple variants at once' : 'Add one variant at a time'}
+                {batchMode ? t('createMultipleVariants') : t('addOneVariant')}
               </span>
             </div>
 
@@ -360,28 +363,28 @@ export default function ProductForm({
                   value={newVariant.color}
                   onChange={(e) => setNewVariant({ ...newVariant, color: e.target.value })}
                   className="input-field"
-                  placeholder="Color (optional)"
+                  placeholder={t('colorOptional')}
                 />
                 <input
                   type="text"
                   value={newVariant.size}
                   onChange={(e) => setNewVariant({ ...newVariant, size: e.target.value })}
                   className="input-field"
-                  placeholder="Size (optional)"
+                  placeholder={t('sizeOptional')}
                 />
                 <input
                   type="text"
                   value={newVariant.sku}
                   onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value.toUpperCase() })}
                   className="input-field"
-                  placeholder="SKU"
+                  placeholder={t('sku')}
                 />
                 <input
                   type="number"
                   value={newVariant.price || ''}
                   onChange={(e) => setNewVariant({ ...newVariant, price: parseFloat(e.target.value) || 0 })}
                   className="input-field"
-                  placeholder="Price"
+                  placeholder={t('price')}
                   step="0.01"
                 />
                 <input
@@ -389,14 +392,14 @@ export default function ProductForm({
                   value={newVariant.stock || ''}
                   onChange={(e) => setNewVariant({ ...newVariant, stock: parseInt(e.target.value) || 0 })}
                   className="input-field"
-                  placeholder="Stock"
+                  placeholder={t('stock')}
                 />
                 <button
                   onClick={onAddVariant}
                   className="btn-primary flex items-center justify-center gap-2"
                 >
                   <Plus size={18} />
-                  Add
+                  {t('add')}
                 </button>
               </div>
             )}
@@ -407,7 +410,7 @@ export default function ProductForm({
                 {/* Colors Section */}
                 <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Colors (Optional)
+                    {t('colorsOptional')}
                   </label>
                   <div className="flex gap-2 mb-3">
                     <input
@@ -416,7 +419,7 @@ export default function ProductForm({
                       onChange={(e) => setColorInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && onAddColor()}
                       className="input-field flex-1"
-                      placeholder="Enter color (e.g., Red, Blue)"
+                      placeholder={t('enterColor')}
                     />
                     <button
                       onClick={onAddColor}
@@ -448,7 +451,7 @@ export default function ProductForm({
                 {/* Sizes Section */}
                 <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Sizes (Optional)
+                    {t('sizesOptional')}
                   </label>
                   <div className="flex gap-2 mb-3">
                     <input
@@ -457,7 +460,7 @@ export default function ProductForm({
                       onChange={(e) => setSizeInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && onAddSize()}
                       className="input-field flex-1"
-                      placeholder="Enter size (e.g., S, M, L, XL)"
+                      placeholder={t('enterSize')}
                     />
                     <button
                       onClick={onAddSize}
@@ -489,12 +492,12 @@ export default function ProductForm({
                 {/* Common Fields */}
                 <div className="bg-white dark:bg-slate-700 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Common Settings (Applied to All Variants)
+                    {t('commonSettings')}
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                        Base SKU *
+                        {t('baseSKURequired')}
                       </label>
                       <input
                         type="text"
@@ -503,11 +506,11 @@ export default function ProductForm({
                         className="input-field w-full"
                         placeholder="SKU-BASE"
                       />
-                      <p className="text-xs text-slate-500 mt-1">Will be: {batchVariant.baseSKU || 'SKU'}-1, {batchVariant.baseSKU || 'SKU'}-2, etc.</p>
+                      <p className="text-xs text-slate-500 mt-1">{t('willBe')} {batchVariant.baseSKU || 'SKU'}-1, {batchVariant.baseSKU || 'SKU'}-2, etc.</p>
                     </div>
                     <div>
                       <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                        Price * ($)
+                        {t('price')} * ($)
                       </label>
                       <input
                         type="number"
@@ -520,7 +523,7 @@ export default function ProductForm({
                     </div>
                     <div>
                       <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                        Stock (Units)
+                        {t('stock')} ({t('units')})
                       </label>
                       <input
                         type="number"
@@ -537,18 +540,18 @@ export default function ProductForm({
                 {(batchVariant.colors.length > 0 || batchVariant.sizes.length > 0) && (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                      📦 Will create {
-                        batchVariant.colors.length > 0 && batchVariant.sizes.length > 0
+                      {t('willCreateVariants', {
+                        count: batchVariant.colors.length > 0 && batchVariant.sizes.length > 0
                           ? batchVariant.colors.length * batchVariant.sizes.length
                           : batchVariant.colors.length + batchVariant.sizes.length
-                      } variants
+                      })}
                     </p>
                     <p className="text-xs text-amber-700 dark:text-amber-300">
                       {batchVariant.colors.length > 0 && batchVariant.sizes.length > 0
-                        ? `All combinations of ${batchVariant.colors.length} colors × ${batchVariant.sizes.length} sizes`
+                        ? t('allCombinations', { colors: batchVariant.colors.length, sizes: batchVariant.sizes.length })
                         : batchVariant.colors.length > 0
-                        ? `${batchVariant.colors.length} color variants`
-                        : `${batchVariant.sizes.length} size variants`}
+                        ? t('colorVariants', { count: batchVariant.colors.length })
+                        : t('sizeVariants', { count: batchVariant.sizes.length })}
                     </p>
                   </div>
                 )}
@@ -559,7 +562,7 @@ export default function ProductForm({
                   className="w-full btn-primary flex items-center justify-center gap-2 py-3"
                 >
                   <Plus size={18} />
-                  Generate All Variants
+                  {t('generateAllVariants')}
                 </button>
               </div>
             )}
@@ -595,7 +598,7 @@ export default function ProductForm({
                         <button
                           onClick={() => onRemoveVariant(variant.id)}
                           className="p-1 hover:bg-error/10 text-error rounded transition-colors"
-                          title="Remove variant"
+                          title={t('removeVariant')}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -606,7 +609,7 @@ export default function ProductForm({
                         {/* Price Field */}
                         <div>
                           <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">
-                            Price
+                            {t('price')}
                           </label>
                           <input
                             type="number"
@@ -623,7 +626,7 @@ export default function ProductForm({
                         {/* Stock Field */}
                         <div>
                           <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">
-                            Stock {isExistingVariant && <span className="text-blue-500 dark:text-blue-400">•</span>}
+                            {t('stock')} {isExistingVariant && <span className="text-blue-500 dark:text-blue-400">•</span>}
                           </label>
                           <input
                             type="number"
@@ -635,7 +638,7 @@ export default function ProductForm({
                                      focus:ring-1 focus:ring-primary focus:border-primary transition-shadow
                                      bg-white dark:bg-slate-900 text-slate-900 dark:text-white
                                      disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
-                            title={isExistingVariant ? 'Use Adjust button' : 'Set initial stock'}
+                            title={isExistingVariant ? t('useAdjustButton') : t('setInitialStock')}
                           />
                         </div>
 
@@ -647,10 +650,10 @@ export default function ProductForm({
                             className="px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 
                                      bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 
                                      rounded transition-all flex items-center gap-1 whitespace-nowrap h-[32px]"
-                            title="Adjust stock"
+                            title={t('adjustStockLower')}
                           >
                             <Package size={13} />
-                            Adjust
+                            {t('adjust')}
                           </button>
                         ) : (
                           <div className="w-[68px]"></div>
