@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import * as XLSX from 'xlsx'
 import { Pie, Bar } from 'react-chartjs-2'
 
@@ -62,21 +63,23 @@ type Expense = {
   }
 }
 
+// Note: EXPENSE_CATEGORIES names will be translated dynamically using getCategoryName
 const EXPENSE_CATEGORIES = [
-  { id: 'rent', name: 'Rent & Lease', icon: Building2, color: 'bg-blue-500' },
-  { id: 'utilities', name: 'Utilities', icon: Zap, color: 'bg-yellow-500' },
-  { id: 'supplies', name: 'Office Supplies', icon: Package, color: 'bg-purple-500' },
-  { id: 'inventory', name: 'Inventory/Stock', icon: ShoppingBag, color: 'bg-green-500' },
-  { id: 'marketing', name: 'Marketing', icon: Megaphone, color: 'bg-pink-500' },
-  { id: 'maintenance', name: 'Maintenance', icon: Wrench, color: 'bg-orange-500' },
-  { id: 'fees', name: 'Fees & Charges', icon: CreditCard, color: 'bg-red-500' },
-  { id: 'insurance', name: 'Insurance', icon: Briefcase, color: 'bg-indigo-500' },
-  { id: 'other', name: 'Other', icon: MoreHorizontal, color: 'bg-slate-500' }
+  { id: 'rent', nameKey: 'rentLease', icon: Building2, color: 'bg-blue-500' },
+  { id: 'utilities', nameKey: 'utilities', icon: Zap, color: 'bg-yellow-500' },
+  { id: 'supplies', nameKey: 'officeSupplies', icon: Package, color: 'bg-purple-500' },
+  { id: 'inventory', nameKey: 'inventoryStock', icon: ShoppingBag, color: 'bg-green-500' },
+  { id: 'marketing', nameKey: 'marketing', icon: Megaphone, color: 'bg-pink-500' },
+  { id: 'maintenance', nameKey: 'maintenance', icon: Wrench, color: 'bg-orange-500' },
+  { id: 'fees', nameKey: 'feesCharges', icon: CreditCard, color: 'bg-red-500' },
+  { id: 'insurance', nameKey: 'insurance', icon: Briefcase, color: 'bg-indigo-500' },
+  { id: 'other', nameKey: 'other', icon: MoreHorizontal, color: 'bg-slate-500' }
 ] as const
 
 export default function Expenses() {
   const { user } = useAuth()
   const { success, error } = useToast()
+  const { t } = useLanguage()
   
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
@@ -150,7 +153,7 @@ export default function Expenses() {
       setExpenses(expenseData)
     } catch (err) {
       console.error('Error loading expenses:', err)
-      error('Failed to load expenses')
+      error(t('failedToLoadData'))
     } finally {
       setLoading(false)
     }
@@ -179,17 +182,17 @@ export default function Expenses() {
   const handleSaveExpense = async () => {
     try {
       if (formData.amount <= 0) {
-        error('Please enter a valid amount greater than 0')
+        error(t('expenseAmountRequired'))
         return
       }
 
       if (!formData.description.trim()) {
-        error('Please enter a description')
+        error(t('expenseDescriptionRequired'))
         return
       }
 
       if (!user) {
-        error('You must be logged in to add expenses')
+        error(t('mustBeLoggedIn'))
         return
       }
 
@@ -210,27 +213,27 @@ export default function Expenses() {
         })
       }
 
-      success(editingExpense ? 'Expense updated successfully' : 'Expense added successfully')
+      success(editingExpense ? t('expenseUpdated') : t('expenseAdded'))
       setShowModal(false)
       setEditingExpense(null)
       setFormData({ amount: 0, description: '', category: 'other' })
       loadExpenses()
     } catch (err) {
       console.error('Error saving expense:', err)
-      error('Failed to save expense')
+      error(t('failedToSaveExpense'))
     }
   }
 
   const handleDeleteExpense = async (expenseId: string) => {
-    if (!confirm('Are you sure you want to delete this expense?')) return
+    if (!confirm(t('confirmDeleteExpense'))) return
 
     try {
       await window.api.finance.deleteTransaction(expenseId)
-      success('Expense deleted successfully')
+      success(t('expenseDeleted'))
       loadExpenses()
     } catch (err) {
       console.error('Error deleting expense:', err)
-      error('Failed to delete expense')
+      error(t('failedToDeleteExpense'))
     }
   }
 
@@ -252,10 +255,10 @@ export default function Expenses() {
       const filename = `expenses-${dateRange}-${date}.xlsx`
       XLSX.writeFile(wb, filename)
 
-      success('Expenses exported successfully')
+      success(t('expensesExported'))
     } catch (err) {
       console.error('Export error:', err)
-      error('Failed to export expenses')
+      error(t('failedToExportExpenses'))
     }
   }
 
@@ -295,7 +298,7 @@ export default function Expenses() {
   const categoriesWithSalaries = totalSalaries > 0 
     ? [...expensesByCategory, {
         id: 'salaries' as const,
-        name: 'Employee Salaries',
+        nameKey: 'employeeSalaries',
         icon: Users,
         color: 'bg-purple-500',
         total: totalSalaries
@@ -303,7 +306,8 @@ export default function Expenses() {
     : expensesByCategory
 
   const getCategoryName = (categoryId: ExpenseCategory) => {
-    return EXPENSE_CATEGORIES.find(c => c.id === categoryId)?.name || 'Other'
+    const cat = EXPENSE_CATEGORIES.find(c => c.id === categoryId)
+    return cat ? t(cat.nameKey) : t('other')
   }
 
   const getCategoryIcon = (categoryId: ExpenseCategory) => {
@@ -320,7 +324,7 @@ export default function Expenses() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading expenses...</p>
+          <p className="text-slate-600 dark:text-slate-400">{t('loading')}...</p>
         </div>
       </div>
     )
@@ -331,8 +335,8 @@ export default function Expenses() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Expenses Management</h1>
-          <p className="text-slate-600 dark:text-slate-400">Track and manage all business expenses</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{t('expensesManagement')}</h1>
+          <p className="text-slate-600 dark:text-slate-400">{t('trackBusinessExpenses')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -340,14 +344,14 @@ export default function Expenses() {
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Download size={18} />
-            Export
+            {t('export')}
           </button>
           <button
             onClick={handleAddExpense}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus size={18} />
-            Add Expense
+            {t('add')} {t('expenses')}
           </button>
         </div>
       </div>
@@ -356,7 +360,7 @@ export default function Expenses() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Expenses</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalExpenses')}</h3>
             <div className="p-2 bg-red-500/10 rounded-lg">
               <DollarSign size={20} className="text-red-600 dark:text-red-400" />
             </div>
@@ -364,12 +368,12 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalExpenses.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">{filteredExpenses.length} transactions</p>
+          <p className="text-sm text-slate-500 mt-1">{filteredExpenses.length} {t('expenseTransactions')}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Employee Salaries</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('employeeSalaries')}</h3>
             <div className="p-2 bg-purple-500/10 rounded-lg">
               <Users size={20} className="text-purple-600 dark:text-purple-400" />
             </div>
@@ -377,12 +381,12 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalSalaries.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">{employeeCount} employees</p>
+          <p className="text-sm text-slate-500 mt-1">{employeeCount} {t('expenseEmployees')}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Total with Salaries</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalWithSalaries')}</h3>
             <div className="p-2 bg-orange-500/10 rounded-lg">
               <TrendingUp size={20} className="text-orange-600 dark:text-orange-400" />
             </div>
@@ -390,12 +394,12 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalWithSalaries.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">Complete overview</p>
+          <p className="text-sm text-slate-500 mt-1">{t('completeOverview')}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Categories</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('categories')}</h3>
             <div className="p-2 bg-blue-500/10 rounded-lg">
               <Filter size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
@@ -403,7 +407,7 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             {categoriesWithSalaries.length}
           </p>
-          <p className="text-sm text-slate-500 mt-1">Active categories</p>
+          <p className="text-sm text-slate-500 mt-1">{t('activeCategories')}</p>
         </div>
       </div>
 
@@ -415,7 +419,7 @@ export default function Expenses() {
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search expenses..."
+              placeholder={t('searchExpenses')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -428,9 +432,9 @@ export default function Expenses() {
             onChange={(e) => setFilterCategory(e.target.value as any)}
             className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="all">All Categories</option>
+            <option value="all">{t('expenseAllCategories')}</option>
             {EXPENSE_CATEGORIES.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option key={cat.id} value={cat.id}>{t(cat.nameKey)}</option>
             ))}
           </select>
 
@@ -440,10 +444,10 @@ export default function Expenses() {
             onChange={(e) => setDateRange(e.target.value as any)}
             className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="7days">Last 7 Days</option>
-            <option value="30days">Last 30 Days</option>
-            <option value="90days">Last 90 Days</option>
-            <option value="all">All Time</option>
+            <option value="7days">{t('expenseLast7Days')}</option>
+            <option value="30days">{t('expenseLast30Days')}</option>
+            <option value="90days">{t('expenseLast90Days')}</option>
+            <option value="all">{t('expenseAllTime')}</option>
           </select>
         </div>
       </div>
@@ -453,11 +457,11 @@ export default function Expenses() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Pie Chart */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Expenses by Category (Including Salaries)</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">{t('expensesByCategoryIncludingSalaries')}</h3>
             <div className="h-64">
               <Pie
                 data={{
-                  labels: categoriesWithSalaries.map(c => c.name),
+                  labels: categoriesWithSalaries.map(c => t(c.nameKey)),
                   datasets: [{
                     data: categoriesWithSalaries.map(c => c.total),
                     backgroundColor: [
@@ -498,11 +502,11 @@ export default function Expenses() {
 
           {/* Bar Chart */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Category Breakdown</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">{t('categoryBreakdown')}</h3>
             <div className="h-64">
               <Bar
                 data={{
-                  labels: categoriesWithSalaries.map(c => c.name),
+                  labels: categoriesWithSalaries.map(c => t(c.nameKey)),
                   datasets: [{
                     label: 'Amount ($)',
                     data: categoriesWithSalaries.map(c => c.total),
@@ -547,7 +551,7 @@ export default function Expenses() {
       {/* Expense List */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Expense History</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{t('expenseHistory')}</h3>
         </div>
         
         <div className="overflow-x-auto">
@@ -556,22 +560,22 @@ export default function Expenses() {
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Date
+                    {t('date')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Category
+                    {t('category')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Description
+                    {t('description')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Amount
+                    {t('amount')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Added By
+                    {t('recordedBy')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Actions
+                    {t('actions')}
                   </th>
                 </tr>
               </thead>
@@ -602,21 +606,21 @@ export default function Expenses() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
-                      {expense.user?.username || 'Unknown'}
+                      {expense.user?.username || t('unknown')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEditExpense(expense)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                          title="Edit"
+                          title={t('edit')}
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteExpense(expense.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                          title="Delete"
+                          title={t('delete')}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -629,8 +633,8 @@ export default function Expenses() {
           ) : (
             <div className="text-center py-12">
               <Receipt size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-slate-600 dark:text-slate-400">No expenses found</p>
-              <p className="text-sm text-slate-500 mt-1">Add your first expense to get started</p>
+              <p className="text-slate-600 dark:text-slate-400">{t('noExpensesFound')}</p>
+              <p className="text-sm text-slate-500 mt-1">{t('addFirstExpense')}</p>
             </div>
           )}
         </div>
@@ -642,7 +646,7 @@ export default function Expenses() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+                {editingExpense ? `${t('edit')} ${t('expenses')}` : `${t('add')} ${t('expenses')}`}
               </h3>
               <button
                 onClick={() => {
@@ -660,7 +664,7 @@ export default function Expenses() {
               {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Category
+                  {t('category')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {EXPENSE_CATEGORIES.map((cat) => {
@@ -676,7 +680,7 @@ export default function Expenses() {
                         }`}
                       >
                         <Icon size={20} className="mx-auto mb-1" />
-                        <p className="text-xs font-medium text-center">{cat.name.split(' ')[0]}</p>
+                        <p className="text-xs font-medium text-center">{t(cat.nameKey).split(' ')[0]}</p>
                       </button>
                     )
                   })}
@@ -686,7 +690,7 @@ export default function Expenses() {
               {/* Amount */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Amount ($)
+                  {t('amount')} ($)
                 </label>
                 <input
                   type="number"
@@ -702,13 +706,13 @@ export default function Expenses() {
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Description
+                  {t('description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter expense details..."
+                  placeholder={t('expenseDetails')}
                   rows={3}
                 />
               </div>
@@ -724,14 +728,14 @@ export default function Expenses() {
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSaveExpense}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Save size={18} />
-                {editingExpense ? 'Update' : 'Add'} Expense
+                {editingExpense ? `${t('edit')} ${t('expenses')}` : `${t('add')} ${t('expenses')}`}
               </button>
             </div>
           </div>

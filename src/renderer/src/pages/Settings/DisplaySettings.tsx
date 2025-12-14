@@ -4,6 +4,7 @@
  */
 
 import { Image, ShoppingCart, Package } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface DisplaySettingsProps {
   settings: {
@@ -15,6 +16,8 @@ interface DisplaySettingsProps {
 }
 
 export default function DisplaySettings({ settings, onChange }: Readonly<DisplaySettingsProps>) {
+  const { t } = useLanguage()
+  
   const handleToggle = (field: keyof typeof settings) => {
     onChange({
       ...settings,
@@ -26,10 +29,10 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-          Image Display
+          {t('imageDisplay')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Control where product images are displayed. Hiding images can improve performance with large inventories.
+          {t('imageDisplayDesc')}
         </p>
       </div>
 
@@ -41,11 +44,10 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Show Images in Product Cards
+              {t('showImagesInProductCards')}
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Display product images as thumbnails in the Products page grid. 
-              Disabling can speed up loading when browsing thousands of products.
+              {t('showImagesInProductCardsDesc')}
             </p>
           </div>
         </div>
@@ -71,11 +73,10 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Show Images in POS Cards
+              {t('showImagesInPOSCards')}
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Display product images in the Point of Sale product selection grid.
-              Disabling can improve POS performance during busy sales periods.
+              {t('showImagesInPOSCardsDesc')}
             </p>
           </div>
         </div>
@@ -101,11 +102,10 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Show Images in Inventory Table
+              {t('showImagesInInventory')}
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Display product thumbnails in the Inventory page table.
-              Disabling can speed up loading when browsing large inventories.
+              {t('showImagesInInventoryDesc')}
             </p>
           </div>
         </div>
@@ -128,12 +128,10 @@ export default function DisplaySettings({ settings, onChange }: Readonly<Display
         <Image className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div className="flex-1 text-sm">
           <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-            Performance Tip
+            {t('performanceTip')}
           </p>
           <p className="text-amber-700 dark:text-amber-300">
-            Images are always available in product detail views and edit forms. 
-            These settings only affect grid/list displays. Recommended to disable 
-            if you have more than 2,000 products for optimal performance.
+            {t('performanceTipDesc')}
           </p>
         </div>
       </div>

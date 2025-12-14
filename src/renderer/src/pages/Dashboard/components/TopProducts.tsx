@@ -5,8 +5,10 @@
 
 import { useState, useEffect } from 'react'
 import { TrendingUp, Package } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 export default function TopProducts() {
+  const { t } = useLanguage()
   const [topProducts, setTopProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -65,7 +67,7 @@ export default function TopProducts() {
     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
       <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
         <TrendingUp size={18} />
-        Top Selling Products
+        {t('topSellingProducts')}
       </h3>
 
       {loading ? (
@@ -95,7 +97,7 @@ export default function TopProducts() {
                   {product.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {product.quantity} units sold
+                  {product.quantity} {t('unitsSold')}
                 </p>
               </div>
               <div className="text-right">
@@ -110,7 +112,10 @@ export default function TopProducts() {
         <div className="text-center py-8">
           <Package className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            No sales data available
+            {t('noProductsSold')}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+            {t('startSelling')}
           </p>
         </div>
       )}

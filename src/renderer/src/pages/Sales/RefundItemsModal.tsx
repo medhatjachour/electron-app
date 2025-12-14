@@ -5,6 +5,7 @@
 
 import { useState, useMemo } from 'react'
 import { X, Package, AlertCircle } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 type SaleItem = {
   id: string
@@ -40,6 +41,7 @@ type RefundItemsModalProps = {
 }
 
 export default function RefundItemsModal({ show, transaction, onClose, onRefund }: RefundItemsModalProps) {
+  const { t } = useLanguage()
   const [refundQuantities, setRefundQuantities] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +80,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
       .map(([saleItemId, quantityToRefund]) => ({ saleItemId, quantityToRefund }))
 
     if (itemsToRefund.length === 0) {
-      setError('Please select at least one item to refund')
+      setError(t('selectAtLeastOneItem'))
       return
     }
 
@@ -88,7 +90,10 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
       const availableQty = item.quantity - (item.refundedQuantity || 0)
       
       if (requestedQty > availableQty) {
-        setError(`Cannot refund ${requestedQty} units of "${item.product?.name}". Only ${availableQty} available.`)
+        setError(t('cannotRefundExceeds')
+          .replace('{requested}', requestedQty.toString())
+          .replace('{product}', item.product?.name || '')
+          .replace('{available}', availableQty.toString()))
         return
       }
     }
@@ -131,10 +136,10 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Refund Items
+              {t('refundItemsTitle')}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Transaction: {transaction.id}
+              {t('transactionLabel')}: {transaction.id}
             </p>
           </div>
           <button
@@ -151,10 +156,10 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
             <div className="text-center py-12">
               <Package className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
               <p className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                No Items Available for Refund
+                {t('noItemsAvailableForRefund')}
               </p>
               <p className="text-slate-500 dark:text-slate-400">
-                All items in this transaction have been fully refunded.
+                {t('allItemsRefundedMessage')}
               </p>
             </div>
           ) : (
@@ -182,7 +187,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900 dark:text-white">
-                            {item.product?.name || 'Unknown Product'}
+                            {item.product?.name || t('unknownProduct')}
                           </h4>
                           <div className="flex items-center gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
                             <span>SKU: {item.product?.baseSKU}</span>
@@ -194,7 +199,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                           <p className="text-lg font-bold text-slate-900 dark:text-white">
                             ${item.price.toFixed(2)}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">per unit</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t('perUnit')}</p>
                         </div>
                       </div>
 
@@ -202,16 +207,16 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                         <div className="flex items-center gap-4 flex-1">
                           <div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                              Available to refund
+                              {t('availableToRefund')}
                             </p>
                             <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                              {availableQty} of {item.quantity} units
+                              {availableQty} {t('ofLabel')} {item.quantity} {t('unitsLabel')}
                             </p>
                           </div>
 
                           <div className="flex-1 max-w-xs">
                             <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                              Quantity to refund
+                              {t('quantityToRefund')}
                             </label>
                             <div className="flex items-center gap-2">
                               <button
@@ -240,7 +245,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                                 onClick={() => handleQuantityChange(item.id, availableQty)}
                                 className="px-3 py-1 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors"
                               >
-                                All
+                                {t('allButton')}
                               </button>
                             </div>
                           </div>
@@ -249,7 +254,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                         {refundQty > 0 && (
                           <div className="text-right">
                             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                              Refund amount
+                              {t('refundAmount')}
                             </p>
                             <p className="text-lg font-bold text-red-600 dark:text-red-400">
                               ${itemRefundTotal.toFixed(2)}
@@ -270,7 +275,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
           <div className="border-t border-slate-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total Refund Amount</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('totalRefundAmount')}</p>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                   ${refundTotal.toFixed(2)}
                 </p>
@@ -281,7 +286,7 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                   disabled={loading}
                   className="px-6 py-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Cancel
+                  {t('cancelButton')}
                 </button>
                 <button
                   onClick={handleSubmit}
@@ -291,10 +296,10 @@ export default function RefundItemsModal({ show, transaction, onClose, onRefund 
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Processing...
+                      {t('processingButton')}
                     </>
                   ) : (
-                    <>Process Refund</>
+                    <>{t('processRefund')}</>
                   )}
                 </button>
               </div>

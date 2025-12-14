@@ -8,6 +8,7 @@ import { User, Mail, Phone } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import { ipc } from '../../utils/ipc'
 import { useToast } from '../../contexts/ToastContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
 
 export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Props) {
   const toast = useToast()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -31,15 +33,15 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
 
     // Validation
     if (!formData.name.trim()) {
-      toast.error('Name is required')
+      toast.error(t('nameIsRequired'))
       return
     }
     if (formData.email.trim() && !formData.email.includes('@')) {
-      toast.error('Please enter a valid email address')
+      toast.error(t('pleaseEnterValidEmail'))
       return
     }
     if (!formData.phone.trim()) {
-      toast.error('Phone number is required')
+      toast.error(t('phoneNumberIsRequired'))
       return
     }
 
@@ -51,18 +53,18 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
       })
 
       if (result.success) {
-        toast.success('Customer added successfully!')
+        toast.success(t('customerAddedSuccessfully'))
         onCustomerAdded(result.customer)
         handleClose()
       } else {
-        toast.error(result.message || 'Failed to add customer')
+        toast.error(result.message || t('failedToAddCustomer'))
         if (result.existingCustomer) {
-          toast.info(`Existing customer: ${result.existingCustomer.name}`)
+          toast.info(`${t('existingCustomer')}: ${result.existingCustomer.name}`)
         }
       }
     } catch (error: any) {
       console.error('Failed to add customer:', error)
-      toast.error(error?.message || 'Failed to add customer')
+      toast.error(error?.message || t('failedToAddCustomer'))
     } finally {
       setLoading(false)
     }
@@ -79,20 +81,20 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
   }
 
   return (
-    <Modal isOpen={show} onClose={handleClose} title="Add New Customer" size="md">
+    <Modal isOpen={show} onClose={handleClose} title={t('addNewCustomer')} size="md">
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               <User className="inline mr-1" size={16} />
-              Customer Name *
+              {t('customerNameRequired')}
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              placeholder="Enter customer name"
+              placeholder={t('enterCustomerName')}
               required
             />
           </div>
@@ -101,7 +103,7 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               <Mail className="inline mr-1" size={16} />
-              Email Address <span className="text-slate-400 text-xs">(optional)</span>
+              {t('emailAddress')} <span className="text-slate-400 text-xs">({t('optional')})</span>
             </label>
             <input
               type="email"
@@ -116,7 +118,7 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               <Phone className="inline mr-1" size={16} />
-              Phone Number *
+              {t('phoneNumberRequired')}
             </label>
             <input
               type="tel"
@@ -131,7 +133,7 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
           {/* Loyalty Tier */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Loyalty Tier
+              {t('loyaltyTier')}
             </label>
             <select
               value={formData.loyaltyTier}
@@ -153,14 +155,14 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
               className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               disabled={loading}
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? 'Adding...' : 'Add Customer'}
+              {loading ? t('addingCustomer') : t('addCustomerButton')}
             </button>
           </div>
         </form>

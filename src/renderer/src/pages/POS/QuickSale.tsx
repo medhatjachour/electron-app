@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, ShoppingCart, Trash2, X, User, DollarSign, UserPlus, Percent } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
 
@@ -65,6 +66,7 @@ type QuickSaleProps = {
 export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
   const { showToast } = useToast()
   const { user } = useAuth()
+  const { t } = useLanguage()
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -609,7 +611,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-            placeholder="Search products... (Press '/' to focus)"
+            placeholder={t('searchProductsPlaceholder')}
             className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             autoComplete="off"
           />
@@ -682,7 +684,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                             {inCart && (
                               <>
                                 <span className="text-xs text-slate-400">•</span>
-                                <span className="text-xs font-medium text-primary">In cart</span>
+                                <span className="text-xs font-medium text-primary">{t('inCart')}</span>
                               </>
                             )}
                           </div>
@@ -803,7 +805,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 flex items-center gap-1"
             >
               <Trash2 size={14} />
-              Clear
+              {t('clear')}
             </button>
           )}
         </div>
@@ -814,24 +816,24 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mb-4">
                 <ShoppingCart size={32} className="text-slate-400" />
               </div>
-              <p className="text-slate-600 dark:text-slate-400 font-medium mb-2">Your cart is empty</p>
+              <p className="text-slate-600 dark:text-slate-400 font-medium mb-2">{t('yourCartIsEmpty')}</p>
               <p className="text-sm text-slate-500 dark:text-slate-500 mb-4">
-                Search for products above to start adding items
+                {t('searchForProducts')}
               </p>
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-lg text-xs text-slate-600 dark:text-slate-400">
                   <kbd className="px-2 py-0.5 bg-white dark:bg-slate-600 rounded border border-slate-300 dark:border-slate-500 font-mono">/</kbd>
-                  <span>to focus search</span>
+                  <span>{t('toFocusSearch')}</span>
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-500 space-y-1">
                   <div className="flex items-center gap-2 justify-center">
                     <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] border border-slate-300 dark:border-slate-500">↑</kbd>
                     <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] border border-slate-300 dark:border-slate-500">↓</kbd>
-                    <span>navigate</span>
+                    <span>{t('navigate')}</span>
                     <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] border border-slate-300 dark:border-slate-500">→</kbd>
-                    <span>expand</span>
+                    <span>{t('expand')}</span>
                     <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] border border-slate-300 dark:border-slate-500">←</kbd>
-                    <span>collapse</span>
+                    <span>{t('collapse')}</span>
                   </div>
                 </div>
               </div>
@@ -840,10 +842,10 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-700/50 sticky top-0">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Product</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Qty</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Price</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{t('product')}</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{t('qty')}</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{t('price')}</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{t('total')}</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-16"></th>
                 </tr>
               </thead>
@@ -866,7 +868,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                                   ? 'text-amber-600 dark:text-amber-400' 
                                   : 'text-green-600 dark:text-green-400'
                               }`}>
-                                {item.availableStock} in stock
+                                {item.availableStock} {t('inStock')}
                               </span>
                             </>
                           )}
@@ -972,7 +974,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                Customer
+                {t('customer')}
               </label>
               <button
                 type="button"
@@ -980,7 +982,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                 className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 <UserPlus size={14} />
-                Add New
+                {t('addNew')}
               </button>
             </div>
           <div className="relative">
@@ -999,7 +1001,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                   : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary/50'
               }`}
             >
-              <option value="">🚶 Walk-in Customer</option>
+              <option value="">🚶 {t('walkInCustomer')}</option>
               {customers.map(customer => (
                 <option key={customer.id} value={customer.id}>
                   👤 {customer.name}
@@ -1017,11 +1019,11 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
           {/* Totals - Compact */}
           <div className="space-y-1 py-2 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-              <span>Subtotal:</span>
+              <span>{t('subtotal')}:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white pt-1">
-              <span>Total:</span>
+              <span>{t('total')}:</span>
               <span>${total.toFixed(2)}</span>
             </div>
           </div>
@@ -1033,7 +1035,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               disabled={cartItems.length === 0}
               className="flex-1 px-4 py-2 text-sm bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Clear
+              {t('clear')}
             </button>
             <button
               onClick={completeSale}
@@ -1041,7 +1043,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               className="flex-1 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-1.5"
             >
               <DollarSign size={18} />
-              Complete Sale
+              {t('completeSale')}
             </button>
           </div>
         </div>
@@ -1055,7 +1057,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedProduct.name}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Select a variant to add to cart</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('selectAVariant')}</p>
               </div>
               <button
                 onClick={() => {
@@ -1112,7 +1114,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                             : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                         }`}>
-                          {variant.stock === 0 ? 'Out of stock' : `${variant.stock} in stock`}
+                          {variant.stock === 0 ? t('outOfStock') : `${variant.stock} ${t('inStock')}`}
                         </span>
                       </div>
                     </button>
@@ -1130,7 +1132,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
                 }}
                 className="w-full px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-medium"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>

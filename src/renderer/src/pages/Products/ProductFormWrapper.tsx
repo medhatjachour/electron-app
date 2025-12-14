@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { ipc } from '../../utils/ipc'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../../hooks/useAuth'
+import { useLanguage } from '../../contexts/LanguageContext'
 import ProductForm from '../../components/ProductForm'
 import StockMovementDialog from '../../components/StockMovementDialog'
 import type { Product } from './types'
@@ -62,6 +63,7 @@ interface ProductFormWrapperProps {
 export default function ProductFormWrapper({ product, onSuccess, onCancel }: ProductFormWrapperProps) {
   const toast = useToast()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -665,7 +667,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           disabled={loading}
           className="px-6 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
         >
-          Cancel
+          {t('cancel')}
         </button>
         <button
           onClick={handleSubmit}
@@ -675,10 +677,10 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Saving...
+              {t('loading')}...
             </>
           ) : (
-            product ? 'Update Product' : 'Create Product'
+            product ? t('edit') + ' ' + t('productName') : t('add') + ' ' + t('productName')
           )}
         </button>
       </div>

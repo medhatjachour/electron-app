@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { Activity, TrendingUp, Package, DollarSign, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type FinancialHealth = {
   score: number
@@ -23,6 +24,7 @@ type FinancialHealth = {
 }
 
 export default function FinancialHealthDashboard() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [health, setHealth] = useState<FinancialHealth | null>(null)
 
@@ -80,13 +82,13 @@ export default function FinancialHealthDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'good':
-        return 'Healthy'
+        return t('healthHealthy')
       case 'fair':
-        return 'Moderate'
+        return t('healthModerate')
       case 'poor':
-        return 'Needs Attention'
+        return t('healthNeedsAttention')
       default:
-        return 'Unknown'
+        return t('healthUnknown')
     }
   }
 
@@ -96,8 +98,8 @@ export default function FinancialHealthDashboard() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Activity size={20} className="text-primary" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">Financial Health</h3>
-          <Tooltip text="Comprehensive business health assessment based on profit margin, inventory turnover, growth rate, and cash position. Score of 80+ is excellent, 60-79 is good, below 60 needs attention.">
+          <h3 className="font-semibold text-slate-900 dark:text-white">{t('healthFinancialHealth')}</h3>
+          <Tooltip text={t('healthTooltip')}>
             <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
           </Tooltip>
         </div>
@@ -106,7 +108,7 @@ export default function FinancialHealthDashboard() {
           onClick={loadHealth}
           className="text-sm text-primary hover:text-primary/80 transition-colors"
         >
-          Refresh
+          {t('insightsRefresh')}
         </button>
       </div>
 
@@ -114,7 +116,7 @@ export default function FinancialHealthDashboard() {
       <div className={`relative mb-8 rounded-2xl bg-gradient-to-br ${getScoreBgColor(health.score)} p-10 text-white overflow-hidden`}>
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <p className="text-white/80 text-sm mb-2 font-medium">Overall Health Score</p>
+            <p className="text-white/80 text-sm mb-2 font-medium">{t('healthOverallScore')}</p>
             <div className="flex items-end gap-3 mb-4">
               <span className="text-7xl font-bold tracking-tight">{health.score}</span>
               <span className="text-4xl font-medium mb-3 opacity-80">/100</span>
@@ -129,10 +131,10 @@ export default function FinancialHealthDashboard() {
               )}
               <p className="text-white/90 text-lg font-medium">
                 {health.score >= 80 
-                  ? 'Excellent! Your business is thriving.'
+                  ? t('healthExcellent')
                   : health.score >= 60
-                  ? 'Good! Room for improvement.'
-                  : 'Action needed for better health.'}
+                  ? t('healthGood')
+                  : t('healthActionNeeded')}
               </p>
             </div>
           </div>
@@ -182,8 +184,8 @@ export default function FinancialHealthDashboard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <DollarSign size={18} className="text-slate-600 dark:text-slate-400" />
-              <h4 className="font-medium text-slate-900 dark:text-white">Profit Margin</h4>
-              <Tooltip text="Net profit as % of revenue after all costs (COGS + expenses). Industry benchmark: 20%+ is excellent, 10-20% is good, <10% needs improvement. This shows how efficiently you convert sales into profit.">
+              <h4 className="font-medium text-slate-900 dark:text-white">{t('healthProfitMargin')}</h4>
+              <Tooltip text={t('healthProfitMarginTooltip')}>
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -202,9 +204,9 @@ export default function FinancialHealthDashboard() {
               {health.indicators.profitMargin.value.toFixed(1)}%
             </span>
             <span className="text-sm text-slate-500 mb-1">
-              {health.indicators.profitMargin.value >= 20 ? 'Excellent' : 
-               health.indicators.profitMargin.value >= 10 ? 'Target: 20%' : 
-               'Target: 10%+'}
+              {health.indicators.profitMargin.value >= 20 ? t('healthExcellentLabel') : 
+               health.indicators.profitMargin.value >= 10 ? t('healthTarget20') : 
+               t('healthTarget10')}
             </span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
@@ -227,8 +229,8 @@ export default function FinancialHealthDashboard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-slate-600 dark:text-slate-400" />
-              <h4 className="font-medium text-slate-900 dark:text-white">Inventory Turnover</h4>
-              <Tooltip text="How many times inventory is sold and replaced annually. Retail average: 6-8x. Higher = faster-moving inventory = less cash tied up. Lower = slow sales or overstocking. Formula: (Units Sold / Avg Inventory) × 12.">
+              <h4 className="font-medium text-slate-900 dark:text-white">{t('healthInventoryTurnover')}</h4>
+              <Tooltip text={t('healthInventoryTurnoverTooltip')}>
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -247,7 +249,7 @@ export default function FinancialHealthDashboard() {
               {health.indicators.inventoryTurnover.value.toFixed(1)}x
             </span>
             <span className="text-sm text-slate-500 mb-1">
-              per year
+              {t('healthPerYear')}
             </span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
@@ -270,8 +272,8 @@ export default function FinancialHealthDashboard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <TrendingUp size={18} className="text-slate-600 dark:text-slate-400" />
-              <h4 className="font-medium text-slate-900 dark:text-white">Growth Rate</h4>
-              <Tooltip text="Revenue growth trend based on historical data and forecasting. Small business target: 15%+ is strong growth, 5-15% is steady, <5% is stagnant. Negative means declining revenue.">
+              <h4 className="font-medium text-slate-900 dark:text-white">{t('healthGrowthRate')}</h4>
+              <Tooltip text={t('healthGrowthRateTooltip')}>
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -291,7 +293,7 @@ export default function FinancialHealthDashboard() {
               {health.indicators.growthRate.value.toFixed(1)}%
             </span>
             <span className="text-sm text-slate-500 mb-1">
-              {health.indicators.growthRate.value >= 0 ? 'growing' : 'declining'}
+              {health.indicators.growthRate.value >= 0 ? t('healthGrowing') : t('healthDeclining')}
             </span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
@@ -315,8 +317,8 @@ export default function FinancialHealthDashboard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Activity size={18} className="text-slate-600 dark:text-slate-400" />
-              <h4 className="font-medium text-slate-900 dark:text-white">Cash Position</h4>
-              <Tooltip text="Net profit (operating cash) from last 30 days. Best practice: maintain 2-3 months of expenses as buffer. This shows your ability to handle unexpected costs or slow periods.">
+              <h4 className="font-medium text-slate-900 dark:text-white">{t('healthCashPosition')}</h4>
+              <Tooltip text={t('healthCashPositionTooltip')}>
                 <HelpCircle size={14} className="text-slate-400 opacity-60 cursor-help" />
               </Tooltip>
             </div>
@@ -335,7 +337,7 @@ export default function FinancialHealthDashboard() {
               ${health.indicators.cashPosition.value.toFixed(0)}
             </span>
             <span className="text-sm text-slate-500 mb-1">
-              available
+              {t('healthAvailable')}
             </span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
@@ -363,7 +365,7 @@ export default function FinancialHealthDashboard() {
               <div className="flex items-center gap-2 mb-3">
                 <AlertCircle size={20} className="text-red-600" />
                 <h4 className="font-semibold text-slate-900 dark:text-white">
-                  Action Required ({health.alerts.length})
+                  {t('healthActionRequired')} ({health.alerts.length})
                 </h4>
               </div>
               <div className="space-y-2">
@@ -403,7 +405,7 @@ export default function FinancialHealthDashboard() {
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle size={20} className="text-blue-600" />
                 <h4 className="font-semibold text-slate-900 dark:text-white">
-                  Recommendations ({health.recommendations.length})
+                  {t('healthRecommendations')} ({health.recommendations.length})
                 </h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -5,6 +5,7 @@ import SmartDeleteDialog from '../components/SmartDeleteDialog'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
 import { formatCurrency } from '@renderer/utils/formatNumber'
+import { useLanguage } from '../contexts/LanguageContext'
 
 type Customer = {
   id: string
@@ -19,6 +20,8 @@ type Customer = {
 }
 
 export default function Customers(): JSX.Element {
+  const { t } = useLanguage()
+  const toast = useToast()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -30,7 +33,6 @@ export default function Customers(): JSX.Element {
   const [pageSize, setPageSize] = useState(100)
   const [totalCount, setTotalCount] = useState(0)
   const [hasMore, setHasMore] = useState(false)
-  const toast = useToast()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -92,7 +94,7 @@ export default function Customers(): JSX.Element {
         const parsed = JSON.parse(localCustomers)
         setCustomers(parsed)
         setTotalCount(parsed.length)
-        toast.warning('Using local backup data')
+        toast.warning(t('usingLocalBackup'))
       }
     } finally {
       setLoading(false)
@@ -101,15 +103,15 @@ export default function Customers(): JSX.Element {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      toast.error('Name is required')
+      toast.error(t('nameRequired'))
       return false
     }
     if (formData.email.trim() && !formData.email.includes('@')) {
-      toast.error('Please enter a valid email address')
+      toast.error(t('validEmailRequired'))
       return false
     }
     if (!formData.phone.trim()) {
-      toast.error('Phone is required')
+      toast.error(t('phoneRequired'))
       return false
     }
     return true
@@ -135,16 +137,16 @@ export default function Customers(): JSX.Element {
         
         setShowAddModal(false)
         resetForm()
-        toast.success('Customer added successfully!')
+        toast.success(t('customerAddedSuccess'))
       } else {
-        toast.error(result.message || 'Failed to add customer')
+        toast.error(result.message || t('failedToAddCustomer'))
         if (result.existingCustomer) {
-          toast.info(`Existing customer: ${result.existingCustomer.name}`)
+          toast.info(`${t('existingCustomer')}: ${result.existingCustomer.name}`)
         }
       }
     } catch (error: any) {
       console.error('Error adding customer:', error)
-      toast.error(error?.message || 'Failed to add customer')
+      toast.error(error?.message || t('failedToAddCustomer'))
     }
   }
 
@@ -159,16 +161,16 @@ export default function Customers(): JSX.Element {
         setShowEditModal(false)
         resetForm()
         setSelectedCustomer(null)
-        toast.success('Customer updated successfully!')
+        toast.success(t('customerUpdatedSuccess'))
       } else {
-        toast.error(result.message || 'Failed to update customer')
+        toast.error(result.message || t('failedToUpdateCustomer'))
         if (result.existingCustomer) {
-          toast.info(`Phone already used by: ${result.existingCustomer.name}`)
+          toast.info(`${t('phoneAlreadyUsed')}: ${result.existingCustomer.name}`)
         }
       }
     } catch (error: any) {
       console.error('Error updating customer:', error)
-      toast.error(error?.message || 'Failed to update customer')
+      toast.error(error?.message || t('failedToUpdateCustomer'))
     }
   }
 
@@ -184,11 +186,11 @@ export default function Customers(): JSX.Element {
         setDeleteCheckResult(result.data)
         setShowDeleteDialog(true)
       } else {
-        toast.error('Failed to check customer dependencies')
+        toast.error(t('failedToCheckDependencies'))
       }
     } catch (error) {
       console.error('Failed to check customer:', error)
-      toast.error('Failed to check customer')
+      toast.error(t('failedToCheckCustomer'))
     }
   }
   
@@ -201,14 +203,14 @@ export default function Customers(): JSX.Element {
       })
       
       if (result.success) {
-        toast.success('Customer deleted successfully')
+        toast.success(t('customerDeletedSuccess'))
         await loadCustomers()
       } else {
-        toast.error(result.error || 'Failed to delete customer')
+        toast.error(result.error || t('failedToDeleteCustomer'))
       }
     } catch (error) {
       console.error('Failed to delete customer:', error)
-      toast.error('Failed to delete customer')
+      toast.error(t('failedToDeleteCustomer'))
     }
   }
   
@@ -223,14 +225,14 @@ export default function Customers(): JSX.Element {
       })
       
       if (result.success) {
-        toast.success('Customer archived successfully')
+        toast.success(t('customerArchivedSuccess'))
         await loadCustomers()
       } else {
-        toast.error('Failed to archive customer')
+        toast.error(t('failedToArchiveCustomer'))
       }
     } catch (error) {
       console.error('Failed to archive customer:', error)
-      toast.error('Failed to archive customer')
+      toast.error(t('failedToArchiveCustomer'))
     }
   }
 
@@ -255,7 +257,7 @@ export default function Customers(): JSX.Element {
       setSelectedCustomerHistory(history)
     } catch (error) {
       console.error('Failed to load purchase history:', error)
-      toast.error('Failed to load purchase history')
+      toast.error(t('failedToLoadPurchaseHistory'))
     } finally {
       setLoadingHistory(false)
     }
@@ -335,9 +337,9 @@ export default function Customers(): JSX.Element {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r bg-clip-text">
-            Customer Management
+            {t('customerManagement')}
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Manage customer relationships and loyalty</p>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('manageCustomerRelationships')}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Export Dropdown - Accessible with keyboard and screen readers */}
@@ -355,7 +357,7 @@ export default function Customers(): JSX.Element {
               aria-haspopup="true"
             >
               <Download size={20} />
-              Export
+              {t('export')}
             </button>
             {showExportDropdown && (
               <div 
@@ -374,7 +376,7 @@ export default function Customers(): JSX.Element {
                   role="menuitem"
                 >
                   <FileSpreadsheet size={18} className="text-green-600" />
-                  <span>Excel (.xlsx)</span>
+                  <span>{t('excel')} (.xlsx)</span>
                 </button>
                 <button
                   onClick={() => {
@@ -388,7 +390,7 @@ export default function Customers(): JSX.Element {
                   role="menuitem"
                 >
                   <FileText size={18} className="text-blue-600" />
-                  <span>CSV (.csv)</span>
+                  <span>{t('csv')} (.csv)</span>
                 </button>
                 <button
                   onClick={() => {
@@ -402,7 +404,7 @@ export default function Customers(): JSX.Element {
                   role="menuitem"
                 >
                   <User size={18} className="text-purple-600" />
-                  <span>vCard (.vcf)</span>
+                  <span>{t('vcard')} (.vcf)</span>
                 </button>
               </div>
             )}
@@ -413,7 +415,7 @@ export default function Customers(): JSX.Element {
             className="btn-primary flex items-center gap-2"
           >
             <Plus size={20} />
-            Add Customer
+            {t('addNewCustomer')}
           </button>
         </div>
       </div>
@@ -423,7 +425,7 @@ export default function Customers(): JSX.Element {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Total Customers</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('totalCustomers')}</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{totalCount}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -435,7 +437,7 @@ export default function Customers(): JSX.Element {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('totalRevenue')}</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${totalRevenue.toFixed(2)}`}>
                 {formatCurrency(totalRevenue)}
               </p>
@@ -449,7 +451,7 @@ export default function Customers(): JSX.Element {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Average Spent</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('averageSpent')}</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1" title={`$${averageSpent.toFixed(2)}`}>
                 {formatCurrency(averageSpent)}
               </p>
@@ -468,14 +470,14 @@ export default function Customers(): JSX.Element {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
             <input
               type="text"
-              placeholder="Search customers by name, email, or phone..."
+              placeholder={t('searchCustomers')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input-field w-full pl-10"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-600 dark:text-slate-400">Per page:</label>
+            <label className="text-sm text-slate-600 dark:text-slate-400">{t('perPage')}:</label>
             <select
               value={pageSize}
               onChange={(e) => {
@@ -496,7 +498,7 @@ export default function Customers(): JSX.Element {
         {totalCount > 0 && (
           <div className="mt-3 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
             <span>
-              Showing {startIndex} to {endIndex} of {totalCount} customers
+              {t('showingCustomers')} {startIndex} - {endIndex} / {totalCount}
             </span>
             <div className="flex gap-2">
               <button
@@ -504,31 +506,31 @@ export default function Customers(): JSX.Element {
                 disabled={page === 0}
                 className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                First
+                {t('first')}
               </button>
               <button
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 disabled={page === 0}
                 className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                Previous
+                {t('previous')}
               </button>
               <span className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-medium">
-                Page {page + 1} of {totalPages}
+                {t('page')} {page + 1} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={!hasMore}
                 className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                Next
+                {t('next')}
               </button>
               <button
                 onClick={() => setPage(totalPages - 1)}
                 disabled={!hasMore}
                 className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                Last
+                {t('last')}
               </button>
             </div>
           </div>
@@ -539,21 +541,21 @@ export default function Customers(): JSX.Element {
       {loading ? (
         <div className="glass-card p-12 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading customers...</p>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">{t('loadingCustomers')}</p>
         </div>
       ) : customers.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Heart size={48} className="mx-auto text-slate-400 mb-4" />
           <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            {debouncedSearch ? 'No customers found' : 'No customers yet'}
+            {debouncedSearch ? t('noCustomersFound') : t('noCustomersYet')}
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {debouncedSearch ? 'Try a different search term' : 'Get started by adding your first customer'}
+            {debouncedSearch ? t('tryDifferentSearch') : t('addFirstCustomer')}
           </p>
           {!debouncedSearch && (
             <button onClick={() => setShowAddModal(true)} className="btn-primary">
               <Plus size={20} className="inline mr-2" />
-              Add Customer
+              {t('addNewCustomer')}
             </button>
           )}
         </div>
@@ -588,13 +590,13 @@ export default function Customers(): JSX.Element {
                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Total Spent</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{t('totalSpent')}</p>
                       <p className="text-2xl font-bold text-primary" title={`$${customer.totalSpent.toFixed(2)}`}>
                         {formatCurrency(customer.totalSpent)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Purchases</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{t('purchases')}</p>
                       <p className="text-2xl font-bold text-success">{customer.purchaseCount || 0}</p>
                     </div>
                   </div>
@@ -607,14 +609,14 @@ export default function Customers(): JSX.Element {
                     title="View purchase history"
                   >
                     <TrendingUp size={16} />
-                    <span className="text-xs">History</span>
+                    <span className="text-xs">{t('history')}</span>
                   </button>
                   <button
                     onClick={() => openEditModal(customer)}
                     className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                   >
                     <Edit2 size={16} />
-                    <span className="text-xs">Edit</span>
+                    <span className="text-xs">{t('edit')}</span>
                   </button>
                   <button
                     onClick={() => handleDeleteCustomer(customer.id, customer)}
@@ -622,7 +624,7 @@ export default function Customers(): JSX.Element {
                     title="Delete customer"
                   >
                     <Trash2 size={16} />
-                    <span className="text-xs">Delete</span>
+                    <span className="text-xs">{t('delete')}</span>
                   </button>
                 </div>
               </div>
@@ -638,52 +640,52 @@ export default function Customers(): JSX.Element {
           setShowAddModal(false)
           resetForm()
         }}
-        title="Add New Customer"
+        title={t('addNewCustomer')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Full Name *
+              {t('fullName')} *
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field"
-              placeholder="John Doe"
+              placeholder={t('name')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email <span className="text-slate-400 text-xs">(optional)</span>
+                {t('email')} <span className="text-slate-400 text-xs">({t('emailOptional')})</span>
               </label>
               <input
                 type="email"
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
-                placeholder="customer@example.com"
+                placeholder={t('email')}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Phone *
+                {t('phone')} *
               </label>
               <input
                 type="tel"
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
-                placeholder="(555) 123-4567"
+                placeholder={t('phone')}
               />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Loyalty Tier
+              {t('loyaltyTier')}
             </label>
             <select
               value={formData.loyaltyTier}
@@ -696,7 +698,7 @@ export default function Customers(): JSX.Element {
               <option value="Platinum">💎 Platinum</option>
             </select>
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-              Tier can be upgraded based on total purchases
+              {t('loyaltyTierUpgrade')}
             </p>
           </div>
 
@@ -708,10 +710,10 @@ export default function Customers(): JSX.Element {
               }}
               className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleAddCustomer} className="btn-primary">
-              Add Customer
+              {t('add')}
             </button>
           </div>
         </div>
@@ -725,49 +727,52 @@ export default function Customers(): JSX.Element {
           resetForm()
           setSelectedCustomer(null)
         }}
-        title="Edit Customer"
+        title={t('updateCustomer')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Full Name *
+              {t('fullName')} *
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field"
+              placeholder={t('name')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email <span className="text-slate-400 text-xs">(optional)</span>
+                {t('email')} <span className="text-slate-400 text-xs">({t('emailOptional')})</span>
               </label>
               <input
                 type="email"
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
+                placeholder={t('email')}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Phone *
+                {t('phone')} *
               </label>
               <input
                 type="tel"
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
+                placeholder={t('phone')}
               />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Loyalty Tier
+              {t('loyaltyTier')}
             </label>
             <select
               value={formData.loyaltyTier}
@@ -780,7 +785,7 @@ export default function Customers(): JSX.Element {
               <option value="Platinum">💎 Platinum</option>
             </select>
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-              Note: Total Spent is automatically calculated from purchases
+              {t('totalSpentAutoCalculated')}
             </p>
           </div>
 
@@ -793,10 +798,10 @@ export default function Customers(): JSX.Element {
               }}
               className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleEditCustomer} className="btn-primary">
-              Update Customer
+              {t('save')}
             </button>
           </div>
         </div>
@@ -810,18 +815,18 @@ export default function Customers(): JSX.Element {
           setSelectedCustomer(null)
           setSelectedCustomerHistory([])
         }}
-        title={`Purchase History - ${selectedCustomer?.name}`}
+        title={`${t('purchaseHistory')} - ${selectedCustomer?.name}`}
       >
         <div className="space-y-4">
           {loadingHistory ? (
             <div className="py-12 text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
-              <p className="text-slate-600 dark:text-slate-400">Loading purchase history...</p>
+              <p className="text-slate-600 dark:text-slate-400">{t('loadingPurchaseHistory')}</p>
             </div>
           ) : selectedCustomerHistory.length === 0 ? (
             <div className="py-12 text-center">
               <ShoppingCart size={48} className="mx-auto text-slate-400 mb-4" />
-              <p className="text-slate-600 dark:text-slate-400">No purchases yet</p>
+              <p className="text-slate-600 dark:text-slate-400">{t('noPurchasesYet')}</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -868,7 +873,7 @@ export default function Customers(): JSX.Element {
           
           <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Total Purchases</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('totalPurchases')}</p>
               <p className="text-2xl font-bold text-primary" title={`$${selectedCustomer?.totalSpent.toFixed(2) || '0.00'}`}>
                 {selectedCustomer ? formatCurrency(selectedCustomer.totalSpent) : '$0.00'}
               </p>
@@ -881,7 +886,7 @@ export default function Customers(): JSX.Element {
               }}
               className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             >
-              Close
+              {t('close')}
             </button>
           </div>
         </div>

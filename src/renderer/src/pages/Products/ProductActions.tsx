@@ -5,6 +5,7 @@
 
 import { memo } from 'react'
 import { Plus, Upload, Download, Barcode, RefreshCcw } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface ProductActionsProps {
   onAdd: () => void
@@ -23,14 +24,16 @@ function ProductActions({
   onRefresh,
   productsCount
 }: Readonly<ProductActionsProps>) {
+  const { t } = useLanguage()
+  
   return (
     <div className="w-full flex items-center justify-between mb-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-          Product Catalog
+          {t('productCatalog')}
         </h1>
         <p className="text-slate-600 dark:text-slate-400">
-          Manage your inventory • {productsCount} products
+          {t('manageInventory')} • {productsCount} {t('productsCount')}
         </p>
       </div>
 
@@ -38,7 +41,7 @@ function ProductActions({
         <button
           onClick={onRefresh}
           className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-          title="Refresh products"
+          title={t('refreshProducts')}
         >
           <RefreshCcw className="w-4 h-4" />
         </button>
@@ -46,28 +49,28 @@ function ProductActions({
         <button
           onClick={onScan}
           className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-          title="Scan barcode"
+          title={t('scanBarcode')}
         >
           <Barcode className="w-4 h-4" />
-          <span className="hidden md:inline">Scan</span>
+          <span className="hidden md:inline">{t('scan')}</span>
         </button>
 
         <button
           onClick={onImport}
           className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-          title="Import products"
+          title={t('importProducts')}
         >
           <Upload className="w-4 h-4" />
-          <span className="hidden md:inline">Import</span>
+          <span className="hidden md:inline">{t('import')}</span>
         </button>
 
         <button
           onClick={onExport}
           className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-          title="Export products"
+          title={t('exportProducts')}
         >
           <Download className="w-4 h-4" />
-          <span className="hidden md:inline">Export</span>
+          <span className="hidden md:inline">{t('export')}</span>
         </button>
 
         <button
@@ -75,7 +78,7 @@ function ProductActions({
           className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
-          <span>Add Product</span>
+          <span>{t('addProduct')}</span>
         </button>
       </div>
     </div>

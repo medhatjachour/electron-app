@@ -6,6 +6,7 @@
 import { memo } from 'react'
 import { ShoppingCart as CartIcon, Trash2, AlertCircle, Percent } from 'lucide-react'
 import type { CartItem } from './types'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 type Props = {
   cart: CartItem[]
@@ -26,13 +27,15 @@ function ShoppingCart({
   canApplyDiscount,
   onApplyDiscount
 }: Props) {
+  const { t } = useLanguage()
+  
   return (
     <div className="flex flex-col h-full">
       {/* Compact Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-300 dark:border-slate-600">
         <div className="flex items-center gap-2">
           <CartIcon size={16} className="text-primary" />
-          <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Items</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">{t('items')}</span>
           <span className="text-xs bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">
             {cart.length}
           </span>
@@ -41,10 +44,10 @@ function ShoppingCart({
           <button
             onClick={onClearCart}
             className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-0.5 rounded font-semibold transition-colors flex items-center gap-1"
-            title="Clear all items"
+            title={t('clearAllItems')}
           >
             <Trash2 size={12} />
-            CLEAR
+            {t('clear').toUpperCase()}
           </button>
         )}
       </div>
@@ -52,17 +55,17 @@ function ShoppingCart({
       {cart.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 px-4 py-8">
           <CartIcon size={48} className="mb-2 opacity-20" />
-          <p className="text-base font-semibold mb-1">No Items</p>
-          <p className="text-xs text-center">Add products to start order</p>
+          <p className="text-base font-semibold mb-1">{t('noItems')}</p>
+          <p className="text-xs text-center">{t('addProductsToStart')}</p>
         </div>
       ) : (
         <>
           {/* Compact Table Header */}
           <div className="grid grid-cols-12 gap-1 px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-            <div className="col-span-4">Product</div>
-            <div className="col-span-3 text-center">Qty</div>
-            <div className="col-span-2 text-right">Price</div>
-            <div className="col-span-2 text-right">Total</div>
+            <div className="col-span-4">{t('product')}</div>
+            <div className="col-span-3 text-center">{t('qty')}</div>
+            <div className="col-span-2 text-right">{t('price')}</div>
+            <div className="col-span-2 text-right">{t('total')}</div>
             <div className="col-span-1"></div>
           </div>
 
@@ -91,7 +94,7 @@ function ShoppingCart({
                   {item.quantity >= item.stock * 0.9 && (
                     <div className="flex items-center gap-0.5 mt-0.5 text-[9px] text-orange-600 dark:text-orange-400 font-semibold">
                       <AlertCircle size={9} />
-                      <span>{item.stock} left</span>
+                      <span>{item.stock} {t('left')}</span>
                     </div>
                   )}
                 </div>

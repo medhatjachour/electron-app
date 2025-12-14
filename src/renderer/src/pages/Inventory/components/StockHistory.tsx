@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { Package, TrendingUp, TrendingDown, AlertTriangle, RotateCcw, Activity } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type StockMovement = {
   id: string
@@ -26,14 +27,15 @@ type StockMovement = {
 }
 
 const MOVEMENT_TYPES = {
-  RESTOCK: { label: 'Restock', icon: TrendingUp, color: 'text-green-600 bg-green-50' },
-  SALE: { label: 'Sale', icon: TrendingDown, color: 'text-blue-600 bg-blue-50' },
-  ADJUSTMENT: { label: 'Adjustment', icon: Activity, color: 'text-purple-600 bg-purple-50' },
-  SHRINKAGE: { label: 'Shrinkage', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
-  RETURN: { label: 'Return', icon: RotateCcw, color: 'text-amber-600 bg-amber-50' }
+  RESTOCK: { key: 'restock', icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+  SALE: { key: 'saleType', icon: TrendingDown, color: 'text-blue-600 bg-blue-50' },
+  ADJUSTMENT: { key: 'adjustmentType', icon: Activity, color: 'text-purple-600 bg-purple-50' },
+  SHRINKAGE: { key: 'shrinkageType', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
+  RETURN: { key: 'returnType', icon: RotateCcw, color: 'text-amber-600 bg-amber-50' }
 }
 
 export default function StockHistory() {
+  const { t } = useLanguage()
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<string>('all')
@@ -102,9 +104,9 @@ export default function StockHistory() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Stock Movement History</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('stockMovementHistory')}</h2>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Track all inventory changes across your products
+            {t('trackAllInventoryChanges')}
           </p>
         </div>
         <button
@@ -112,7 +114,7 @@ export default function StockHistory() {
           className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
         >
           <RotateCcw size={16} />
-          Refresh
+          {t('refreshButton')}
         </button>
       </div>
 
@@ -123,7 +125,7 @@ export default function StockHistory() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search by product name or SKU..."
+              placeholder={t('searchByProductNameOrSKU')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
@@ -136,9 +138,9 @@ export default function StockHistory() {
             onChange={(e) => setFilter(e.target.value)}
             className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
           >
-            <option value="all">All Types</option>
+            <option value="all">{t('allTypes')}</option>
             {Object.entries(MOVEMENT_TYPES).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
+              <option key={key} value={key}>{t(config.key)}</option>
             ))}
           </select>
 
@@ -148,7 +150,7 @@ export default function StockHistory() {
             disabled={loading}
             className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
           >
-            {loading ? 'Loading...' : 'Apply Filter'}
+            {loading ? t('loading') : t('applyFilterButton')}
           </button>
         </div>
       </div>
@@ -157,16 +159,16 @@ export default function StockHistory() {
       {loading ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading movements...</p>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">{t('loadingMovements')}</p>
         </div>
       ) : filteredMovements.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center shadow-sm border border-slate-200 dark:border-slate-700">
           <Package size={48} className="mx-auto text-slate-400 mb-4" />
           <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-            No Stock Movements Yet
+            {t('noStockMovementsYet')}
           </h3>
           <p className="text-slate-600 dark:text-slate-400">
-            Stock movements will appear here as you restock, sell, or adjust inventory
+            {t('stockMovementsWillAppear')}
           </p>
         </div>
       ) : (
@@ -176,25 +178,25 @@ export default function StockHistory() {
               <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Date & Time
+                    {t('dateTimeColumn')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Product
+                    {t('productColumn')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Type
+                    {t('typeColumn')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Quantity
+                    {t('quantityColumn')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Stock Change
+                    {t('stockChangeColumn')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    By
+                    {t('byColumn')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Notes
+                    {t('notesColumn')}
                   </th>
                 </tr>
               </thead>
@@ -212,13 +214,13 @@ export default function StockHistory() {
                         {movement.product.name}
                       </div>
                       <div className="text-slate-500 dark:text-slate-400 text-xs">
-                        SKU: {movement.product.sku}
+                        {t('sku')}: {movement.product.sku}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getMovementColor(movement.type)}`}>
                         {getMovementIcon(movement.type)}
-                        {MOVEMENT_TYPES[movement.type as keyof typeof MOVEMENT_TYPES]?.label || movement.type}
+                        {t(MOVEMENT_TYPES[movement.type as keyof typeof MOVEMENT_TYPES]?.key || 'adjustmentType')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -232,7 +234,7 @@ export default function StockHistory() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
-                      {movement.user?.fullName || movement.user?.username || 'System'}
+                      {movement.user?.fullName || movement.user?.username || t('systemUser')}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                       {movement.notes || movement.reason || '—'}
@@ -260,9 +262,9 @@ export default function StockHistory() {
                 <config.icon size={20} />
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-white">{count}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">{config.label}s</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{t(config.key)}</div>
               <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                {total} units total
+                {total} {t('unitsTotal')}
               </div>
             </div>
           )

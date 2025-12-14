@@ -34,7 +34,7 @@ import type { SettingsTab } from './types'
 
 export default function Settings() {
   const { theme, setTheme, actualTheme } = useTheme()
-  const { language, setLanguage } = useLanguage()
+  const { language, setLanguage, t } = useLanguage()
   const { updateSettings: updateDisplaySettingsContext } = useDisplaySettingsContext()
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -60,15 +60,15 @@ export default function Settings() {
   }
 
   const tabs = [
-    { id: 'general' as SettingsTab, name: 'General', icon: SettingsIcon },
-    { id: 'display' as SettingsTab, name: 'Display', icon: Monitor },
-    { id: 'categories' as SettingsTab, name: 'Categories', icon: Tag },
-    { id: 'users' as SettingsTab, name: 'User Management', icon: Users },
-    { id: 'payments' as SettingsTab, name: 'Payments', icon: CreditCard },
-    { id: 'tax' as SettingsTab, name: 'Tax & Receipt', icon: Receipt },
-    { id: 'notifications' as SettingsTab, name: 'Notifications', icon: Bell },
-    { id: 'backup' as SettingsTab, name: 'Backup', icon: Database },
-    { id: 'archive' as SettingsTab, name: 'Archive', icon: Archive },
+    { id: 'general' as SettingsTab, name: t('general'), icon: SettingsIcon },
+    { id: 'display' as SettingsTab, name: t('display'), icon: Monitor },
+    { id: 'categories' as SettingsTab, name: t('categories'), icon: Tag },
+    { id: 'users' as SettingsTab, name: t('userManagement'), icon: Users },
+    { id: 'payments' as SettingsTab, name: t('payments'), icon: CreditCard },
+    { id: 'tax' as SettingsTab, name: t('taxReceipt'), icon: Receipt },
+    { id: 'notifications' as SettingsTab, name: t('notifications'), icon: Bell },
+    { id: 'backup' as SettingsTab, name: t('backup'), icon: Database },
+    { id: 'archive' as SettingsTab, name: t('archive'), icon: Archive },
   ]
 
   const handleSave = () => {
@@ -85,10 +85,10 @@ export default function Settings() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Settings
+            {t('settings')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Manage your application preferences and configuration
+            {t('manageAppPreferences')}
           </p>
         </div>
         <button
@@ -96,7 +96,7 @@ export default function Settings() {
           className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
         >
           <Save className="w-5 h-5" />
-          Save Changes
+          {t('saveChanges')}
         </button>
       </div>
 
@@ -104,7 +104,7 @@ export default function Settings() {
       {saveSuccess && (
         <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
           <p className="text-emerald-600 dark:text-emerald-400 font-medium">
-            Settings saved successfully!
+            {t('settingsSavedSuccess')}
           </p>
         </div>
       )}

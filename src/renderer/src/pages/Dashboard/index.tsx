@@ -175,11 +175,11 @@ export default function Dashboard() {
                 onClick={handleRefresh}
                 disabled={loading || refreshing}
                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
-                title="Refresh Dashboard"
+                title={t('refresh')}
               >
                 <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                 <span className="text-sm font-medium hidden sm:inline">
-                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                  {refreshing ? t('refreshing') : t('refresh')}
                 </span>
               </button>
               

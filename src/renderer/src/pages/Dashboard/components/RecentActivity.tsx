@@ -5,8 +5,10 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, DollarSign, ShoppingCart } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 export default function RecentActivity() {
+  const { t } = useLanguage()
   const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -47,10 +49,10 @@ export default function RecentActivity() {
   const getTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
     
-    if (seconds < 60) return 'Just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    return `${Math.floor(seconds / 86400)}d ago`
+    if (seconds < 60) return t('justNow')
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} ${t('minutesAgo')}`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} ${t('hoursAgo')}`
+    return `${Math.floor(seconds / 86400)} ${t('daysAgo')}`
   }
 
   return (
@@ -58,7 +60,7 @@ export default function RecentActivity() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
           <Clock size={18} />
-          Recent Activity
+          {t('recentActivity')}
         </h3>
       </div>
 
@@ -86,7 +88,7 @@ export default function RecentActivity() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                  New Sale
+                  {t('newSale')}
                   {activity.customerName && ` - ${activity.customerName}`}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../contexts/ToastContext'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 interface Props {
   userRole: string
@@ -24,59 +25,60 @@ interface Props {
 export default function QuickActions({ userRole }: Props) {
   const { user } = useAuth()
   const { warning } = useToast()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const allActions = [
     {
-      label: 'New Sale',
+      label: t('newSale'),
       icon: ShoppingCart,
       href: '/pos',
       color: 'primary',
       roles: ['admin', 'manager', 'sales'],
     },
     {
-      label: 'Add Product',
+      label: t('addProduct'),
       icon: Plus,
       href: '/products',
       color: 'blue',
       roles: ['admin', 'manager', 'inventory'],
     },
     {
-      label: 'Check Inventory',
+      label: t('checkInventory'),
       icon: ClipboardList,
       href: '/inventory',
       color: 'purple',
       roles: ['admin', 'manager', 'inventory'],
     },
     {
-      label: 'View Reports',
+      label: t('viewReports'),
       icon: BarChart3,
       href: '/finance',
       color: 'emerald',
       roles: ['admin', 'manager', 'finance'],
     },
     {
-      label: 'Manage Customers',
+      label: t('manageCustomers'),
       icon: Users,
       href: '/customers',
       color: 'amber',
       roles: ['admin', 'manager', 'sales'],
     },
     {
-      label: 'Manage Stores',
+      label: t('manageStores'),
       icon: Store,
       href: '/stores',
       color: 'indigo',
       roles: ['admin', 'manager'],
     },
     {
-      label: 'Manage Employees',
+      label: t('manageEmployees'),
       icon: UserCog,
       href: '/employees',
       color: 'pink',
       roles: ['admin', 'manager'],
     },
     {
-      label: 'Settings',
+      label: t('settings'),
       icon: Settings,
       href: '/settings',
       color: 'slate',
@@ -102,7 +104,7 @@ export default function QuickActions({ userRole }: Props) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
       <h3 className="font-semibold text-slate-900 dark:text-white mb-3">
-        Quick Actions
+        {t('quickActions')}
       </h3>
       <div className="grid grid-cols-2 gap-2">
         {availableActions.slice(0, 6).map((action, index) => {

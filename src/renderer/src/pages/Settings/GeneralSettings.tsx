@@ -4,6 +4,7 @@
  */
 
 import { Sun, Moon, Monitor, Globe, Check } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface GeneralSettingsProps {
   theme: string
@@ -20,10 +21,12 @@ export default function GeneralSettings({
   language,
   onLanguageChange
 }: Readonly<GeneralSettingsProps>) {
+  const { t } = useLanguage()
+  
   const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor }
+    { value: 'light', label: t('light'), icon: Sun },
+    { value: 'dark', label: t('dark'), icon: Moon },
+    { value: 'system', label: t('system'), icon: Monitor }
   ]
 
   const languages = [
@@ -36,7 +39,7 @@ export default function GeneralSettings({
       {/* Theme Selection */}
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Appearance
+          {t('appearance')}
         </h3>
         <div className="grid grid-cols-3 gap-4">
           {themeOptions.map((option) => {
@@ -68,7 +71,7 @@ export default function GeneralSettings({
         </div>
         {theme === 'system' && (
           <p className="text-sm text-slate-500 mt-2">
-            Currently using: {actualTheme === 'dark' ? 'Dark' : 'Light'}
+            {t('currentlyUsing')}: {actualTheme === 'dark' ? t('dark') : t('light')}
           </p>
         )}
       </div>
@@ -77,7 +80,7 @@ export default function GeneralSettings({
       <div>
         <label className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white mb-4">
           <Globe className="w-5 h-5" />
-          Language / اللغة
+          {t('language')} / اللغة
         </label>
         <div className="grid grid-cols-2 gap-4">
           {languages.map((lang) => {
@@ -106,10 +109,7 @@ export default function GeneralSettings({
           })}
         </div>
         <p className="text-sm text-slate-500 mt-3">
-          {language === 'ar' 
-            ? 'سيتم تطبيق اللغة على جميع أجزاء التطبيق'
-            : 'The language will be applied across the entire application'
-          }
+          {t('languageWillApply')}
         </p>
       </div>
     </div>

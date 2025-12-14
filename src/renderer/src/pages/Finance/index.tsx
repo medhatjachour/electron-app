@@ -14,6 +14,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { RefreshCcw, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Percent, Calendar, BarChart3, Waves, Sparkles, Activity, HelpCircle, Calculator } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { Line, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -94,6 +95,7 @@ type TabType = 'overview' | 'forecasting' | 'cashflow' | 'insights' | 'health' |
 
 export default function Finance() {
   const toast = useToast()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -224,10 +226,10 @@ export default function Finance() {
       const filename = `finance-report-${dateRange}-${date}.xlsx`
       XLSX.writeFile(wb, filename)
 
-      toast.success('Export completed', `Finance report exported to ${filename}`)
+      toast.success(t('financeExportSuccess'), `${t('financeReportExported')} ${filename}`)
     } catch (error) {
       console.error('Export error:', error)
-      toast.error('Export failed', error instanceof Error ? error.message : 'Unknown error')
+      toast.error(t('financeExportFailed'), error instanceof Error ? error.message : t('financeUnknownError'))
     } finally {
       setExporting(false)
     }
@@ -238,7 +240,7 @@ export default function Finance() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading financial data...</p>
+          <p className="text-slate-600 dark:text-slate-400">{t('financeLoadingMetrics')}</p>
         </div>
       </div>
     )
@@ -249,8 +251,8 @@ export default function Finance() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Financial Dashboard</h1>
-          <p className="text-slate-600 dark:text-slate-400">Comprehensive financial analytics and AI-powered insights</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{t('financeTitle')}</h1>
+          <p className="text-slate-600 dark:text-slate-400">{t('financeSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -259,7 +261,7 @@ export default function Finance() {
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
           >
             <Download className={`w-4 h-4 ${exporting ? 'animate-bounce' : ''}`} />
-            {exporting ? 'Exporting...' : 'Export'}
+            {exporting ? t('financeExporting') : t('financeExportData')}
           </button>
           <button
             onClick={handleRefresh}
@@ -267,7 +269,7 @@ export default function Finance() {
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             <RefreshCcw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('financeRefreshData')}
           </button>
         </div>
       </div>
@@ -279,39 +281,39 @@ export default function Finance() {
             active={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
             icon={<BarChart3 size={18} />}
-            label="Overview"
+            label={t('financeOverview')}
           />
           <TabButton
             active={activeTab === 'forecasting'}
             onClick={() => setActiveTab('forecasting')}
             icon={<TrendingUp size={18} />}
-            label="Revenue Forecasting"
+            label={t('financeForecasting')}
             badge="AI"
           />
           <TabButton
             active={activeTab === 'cashflow'}
             onClick={() => setActiveTab('cashflow')}
             icon={<Waves size={18} />}
-            label="Cash Flow"
+            label={t('financeCashFlow')}
           />
           <TabButton
             active={activeTab === 'insights'}
             onClick={() => setActiveTab('insights')}
             icon={<Sparkles size={18} />}
-            label="Product Insights"
+            label={t('financeInsights')}
             badge="AI"
           />
           <TabButton
             active={activeTab === 'health'}
             onClick={() => setActiveTab('health')}
             icon={<Activity size={18} />}
-            label="Financial Health"
+            label={t('financeHealth')}
           />
           <TabButton
             active={activeTab === 'pricing'}
             onClick={() => setActiveTab('pricing')}
             icon={<Calculator size={18} />}
-            label="Pricing Calculator"
+            label={t('financePricing')}
             badge="NEW"
           />
         </div>
@@ -324,7 +326,7 @@ export default function Finance() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2 mb-3">
               <Calendar size={18} className="text-slate-600 dark:text-slate-400" />
-              <h3 className="font-semibold text-slate-900 dark:text-white">Date Range</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{t('financeDateRange')}</h3>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(['today', '7days', '30days', '90days', 'custom'] as DateRangeType[]).map((range) => (
@@ -337,11 +339,11 @@ export default function Finance() {
                       : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
-                  {range === 'today' && 'Today'}
-                  {range === '7days' && 'Last 7 Days'}
-                  {range === '30days' && 'Last 30 Days'}
-                  {range === '90days' && 'Last 90 Days'}
-                  {range === 'custom' && 'Custom Range'}
+                  {range === 'today' && t('financeToday')}
+                  {range === '7days' && t('financeLast7Days')}
+                  {range === '30days' && t('financeLast30Days')}
+                  {range === '90days' && t('financeLast90Days')}
+                  {range === 'custom' && t('financeCustomRange')}
                 </button>
               ))}
               {dateRange === 'custom' && (
@@ -367,55 +369,55 @@ export default function Finance() {
           {/* KPI Cards - Improved Layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <KPICard
-              title="Total Revenue"
+              title={t('financeRevenue')}
               value={`$${currentMetrics?.revenue.toFixed(2) || '0.00'}`}
               change={currentMetrics?.revenueChange || 0}
               icon={<DollarSign size={24} />}
               color="blue"
-              subtitle={`${currentMetrics?.transactions || 0} transactions`}
-              tooltip="Total income from all sales before deducting costs. This represents the gross amount received from customers."
+              subtitle={`${currentMetrics?.transactions || 0} ${t('financeTransactions')}`}
+              tooltip={t('financeTooltipRevenue')}
             />
             <KPICard
-              title="Total Profit"
+              title={t('financeGrossProfit')}
               value={`$${currentMetrics?.totalProfit.toFixed(2) || '0.00'}`}
               change={currentMetrics?.profitChange || 0}
               icon={<TrendingUp size={24} />}
               color="green"
               subtitle={currentMetrics?.totalExpenses 
                 ? `COGS: $${currentMetrics.totalCost.toFixed(0)} | Expenses: $${currentMetrics.totalExpenses.toFixed(0)}`
-                : `Cost: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`
+                : `${t('financeTotalCost')}: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`
               }
               showChange={currentMetrics?.profitChange !== undefined}
-              tooltip="Net profit after deducting costs of goods sold (COGS) and operational expenses. Formula: Revenue - COGS - Expenses = Profit"
+              tooltip={t('financeTooltipProfit')}
             />
             <KPICard
-              title="Refunds"
+              title={t('financeRefunds')}
               value={`$${currentMetrics?.totalRefunded?.toFixed(2) || '0.00'}`}
               change={-(currentMetrics?.refundRate || 0)}
               icon={<TrendingDown size={24} />}
               color="red"
-              subtitle={`${currentMetrics?.refundedTransactions || 0} transactions | ${currentMetrics?.refundedItems || 0} items`}
+              subtitle={`${currentMetrics?.refundedTransactions || 0} ${t('financeTransactions')} | ${currentMetrics?.refundedItems || 0} ${t('financeItems')}`}
               showChange={true}
-              tooltip={`Total refunded amount and refund rate. ${currentMetrics?.refundRate?.toFixed(1) || 0}% of transactions had refunds. All revenue figures in this dashboard are NET values after deducting refunds.`}
+              tooltip={`${t('financeTooltipRefunds')} ${currentMetrics?.refundRate?.toFixed(1) || 0}% ${t('financeOf')} ${t('financeTransactions')} ${t('financeHadRefunds')}.`}
             />
             <KPICard
-              title="Profit Margin"
+              title={t('financeProfitMargin')}
               value={`${currentMetrics?.profitMargin.toFixed(2) || '0.00'}%`}
               change={0}
               icon={<Percent size={24} />}
               color="purple"
-              subtitle="Average margin"
+              subtitle={t('financeAverage')}
               showChange={false}
-              tooltip="Percentage of revenue that becomes profit, calculated as (Profit ÷ Revenue) × 100. Higher percentages indicate better profitability."
+              tooltip={t('financeTooltipMargin')}
             />
             <KPICard
-              title="Avg Order Value"
+              title={t('financeAvgOrder')}
               value={`$${currentMetrics?.avgOrderValue.toFixed(2) || '0.00'}`}
               change={currentMetrics?.avgOrderValueChange || 0}
               icon={<ShoppingCart size={24} />}
               color="orange"
-              subtitle="Per transaction"
-              tooltip="Average amount spent per sale, calculated as Total Revenue ÷ Number of Transactions. Track this to measure customer spending patterns."
+              subtitle={t('financePerTransaction')}
+              tooltip={t('financeTooltipAvgOrder')}
             />
           </div>
 
@@ -427,15 +429,15 @@ export default function Finance() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <BarChart3 size={20} className="text-primary" />
-                    Sales Trend
+                    {t('financeSalesTrend')}
                   </h3>
-                  <Tooltip text="Daily revenue over the selected period. Hover over data points to see exact amounts and percentage changes from the previous day.">
+                  <Tooltip text={t('financeTooltipSalesTrend')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
                 {salesByDay.length > 0 && (
                   <span className="text-sm text-slate-500">
-                    Last {Math.min(salesByDay.length, 14)} days
+                    {t('financeLast')} {Math.min(salesByDay.length, 14)} {t('financeDays')}
                   </span>
                 )}
               </div>
@@ -451,7 +453,7 @@ export default function Finance() {
                       ),
                       datasets: [
                         {
-                          label: 'Revenue',
+                          label: t('financeRevenue'),
                           data: salesByDay.slice(-14).map(day => day.revenue),
                           borderColor: 'rgb(59, 130, 246)',
                           backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -487,8 +489,8 @@ export default function Finance() {
                                 ? ((value - prevValue) / prevValue * 100).toFixed(1)
                                 : '0.0'
                               return [
-                                `Revenue: $${value.toFixed(2)}`,
-                                `Change: ${Number.parseFloat(change) >= 0 ? '+' : ''}${change}%`
+                                `${t('financeRevenue')}: $${value.toFixed(2)}`,
+                                `${t('financeChange')}: ${Number.parseFloat(change) >= 0 ? '+' : ''}${change}%`
                               ]
                             }
                           }
@@ -513,8 +515,8 @@ export default function Finance() {
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
                       <BarChart3 size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                      <p className="text-slate-500">No sales data available</p>
-                      <p className="text-sm text-slate-400 mt-1">Sales will appear here once transactions are made</p>
+                      <p className="text-slate-500">{t('financeNoData')}</p>
+                      <p className="text-sm text-slate-400 mt-1">{t('financeNoSalesYet')}</p>
                     </div>
                   </div>
                 )}
@@ -527,15 +529,15 @@ export default function Finance() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Sparkles size={20} className="text-primary" />
-                    Top Products
+                    {t('financeTopProducts')}
                   </h3>
-                  <Tooltip text="Products ranked by total revenue. Margin colors: Green (≥50%), Blue (25-49%), Orange (<25%)">
+                  <Tooltip text={t('financeTooltipTopProducts')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
                 {topProducts.length > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                    Top {topProducts.length}
+                    {t('financeTopLabel')} {topProducts.length}
                   </span>
                 )}
               </div>
@@ -560,14 +562,14 @@ export default function Finance() {
                           </p>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs text-slate-500">
-                              {product.quantity} units
+                              {product.quantity} {t('financeUnits')}
                             </span>
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                               product.profitMargin >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                               product.profitMargin >= 25 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                               'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>
-                              {product.profitMargin.toFixed(1)}% margin
+                              {product.profitMargin.toFixed(1)}% {t('financeMargin')}
                             </span>
                           </div>
                         </div>
@@ -585,8 +587,8 @@ export default function Finance() {
                 ) : (
                   <div className="text-center py-12">
                     <ShoppingCart size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                    <p className="text-slate-500">No product sales yet</p>
-                    <p className="text-sm text-slate-400 mt-1">Top products will appear here</p>
+                    <p className="text-slate-500">{t('financeNoProductSales')}</p>
+                    <p className="text-sm text-slate-400 mt-1">{t('financeTopProductsHere')}</p>
                   </div>
                 )}
               </div>
@@ -596,13 +598,13 @@ export default function Finance() {
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
+                      <p className="text-xs text-slate-500 mb-1">{t('financeTotalRevenue')}</p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
                         ${topProducts.reduce((sum, p) => sum + p.revenue, 0).toFixed(2)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Total Profit</p>
+                      <p className="text-xs text-slate-500 mb-1">{t('financeTotalProfit')}</p>
                       <p className="text-sm font-semibold text-green-600 dark:text-green-400">
                         ${topProducts.reduce((sum, p) => sum + p.profit, 0).toFixed(2)}
                       </p>
@@ -620,14 +622,14 @@ export default function Finance() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Activity size={20} className="text-primary" />
-                    Sales by Category
+                    {t('financeSalesBy')}
                   </h3>
-                  <Tooltip text="Revenue distribution across product categories. Hover over segments to see exact amounts and percentages.">
+                  <Tooltip text={t('financeTooltipCategoryBreakdown')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
                 <span className="text-sm text-slate-500">
-                  {salesByCategory.length} {salesByCategory.length === 1 ? 'category' : 'categories'}
+                  {salesByCategory.length} {salesByCategory.length === 1 ? t('financeCategoryLabel') : t('financeCategoriesLabel')}
                 </span>
               </div>
               
@@ -639,10 +641,10 @@ export default function Finance() {
                     <p className="text-4xl font-bold text-slate-900 dark:text-white">
                       ${salesByCategory.reduce((sum, c) => sum + c.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Total Revenue</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('financeTotalRevenue')}</p>
                     <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
                       <p className="text-xs font-semibold text-primary">
-                        {salesByCategory.length} {salesByCategory.length === 1 ? 'Category' : 'Categories'}
+                        {salesByCategory.length} {salesByCategory.length === 1 ? t('financeCategoryLabel') : t('financeCategoriesLabel')}
                       </p>
                     </div>
                   </div>
@@ -698,8 +700,8 @@ export default function Finance() {
                               const percentage = ((value / total) * 100).toFixed(1)
                               return [
                                 `${context.label}`,
-                                `Revenue: $${value.toFixed(2)}`,
-                                `Share: ${percentage}%`
+                                `${t('financeRevenue')}: $${value.toFixed(2)}`,
+                                `${t('financeShare')}: ${percentage}%`
                               ]
                             }
                           }
@@ -750,19 +752,19 @@ export default function Finance() {
               {/* Category Summary */}
               <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Top Category</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeTopCategory')}</p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {salesByCategory[0]?.name || 'N/A'}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeTotalRevenue')}</p>
                   <p className="text-sm font-semibold text-primary">
                     ${salesByCategory.reduce((sum, c) => sum + c.revenue, 0).toFixed(2)}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Avg per Category</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeAvgPerCategory')}</p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
                     ${(salesByCategory.reduce((sum, c) => sum + c.revenue, 0) / salesByCategory.length).toFixed(2)}
                   </p>

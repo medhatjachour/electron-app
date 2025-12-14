@@ -3,6 +3,7 @@
  */
 
 import { Database, Download, Upload, HardDrive } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { BackupSettings } from './types'
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export default function BackupSettingsPanel({ settings, onChange }: Props) {
+  const { t } = useLanguage()
   const handleChange = (field: keyof BackupSettings, value: boolean | string | number) => {
     onChange({ ...settings, [field]: value })
   }
@@ -34,10 +36,10 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Backup & Restore
+          {t('backupAndRestore')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Manage database backups and restore options
+          {t('manageBackupRestore')}
         </p>
       </div>
 
@@ -47,21 +49,21 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
           <div className="w-10 h-10 bg-primary/20 text-primary rounded-lg flex items-center justify-center">
             <Database size={20} />
           </div>
-          <h4 className="font-semibold text-slate-900 dark:text-white">Manual Backup</h4>
+          <h4 className="font-semibold text-slate-900 dark:text-white">{t('manualBackup')}</h4>
         </div>
 
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Create a backup of your database at any time to protect your data
+          {t('createBackupProtect')}
         </p>
 
         <div className="flex gap-3">
           <button onClick={handleBackup} className="btn-primary flex items-center gap-2">
             <Download size={18} />
-            Create Backup Now
+            {t('createBackupNow')}
           </button>
           <button onClick={handleRestore} className="btn-secondary flex items-center gap-2">
             <Upload size={18} />
-            Restore from Backup
+            {t('restoreFromBackup')}
           </button>
         </div>
       </div>
@@ -74,9 +76,9 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
               <HardDrive size={20} />
             </div>
             <div>
-              <h4 className="font-semibold text-slate-900 dark:text-white">Automatic Backup</h4>
+              <h4 className="font-semibold text-slate-900 dark:text-white">{t('automaticBackup')}</h4>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Schedule regular database backups
+                {t('scheduleRegularBackups')}
               </p>
             </div>
           </div>
@@ -99,35 +101,35 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
             {/* Backup Frequency */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Backup Frequency
+                {t('backupFrequency')}
               </label>
               <select
                 className="input-field"
                 value={settings.backupFrequency}
                 onChange={(e) => handleChange('backupFrequency', e.target.value)}
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{t('daily')}</option>
+                <option value="weekly">{t('weekly')}</option>
+                <option value="monthly">{t('monthly')}</option>
               </select>
             </div>
 
             {/* Backup Location */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Backup Location
+                {t('backupLocation')}
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   className="input-field flex-1"
-                  value={settings.backupLocation || 'Default location'}
+                  value={settings.backupLocation || t('defaultLocation')}
                   onChange={(e) => handleChange('backupLocation', e.target.value)}
-                  placeholder="Select backup folder..."
+                  placeholder={t('selectBackupFolder')}
                   readOnly
                 />
                 <button onClick={handleSelectLocation} className="btn-secondary px-4">
-                  Browse
+                  {t('browse')}
                 </button>
               </div>
             </div>
@@ -135,7 +137,7 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
             {/* Keep Backups */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Number of Backups to Keep
+                {t('numberOfBackupsToKeep')}
               </label>
               <input
                 type="number"
@@ -146,7 +148,7 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
                 max="30"
               />
               <p className="text-xs text-slate-500">
-                Older backups will be automatically deleted (1-30 backups)
+                {t('olderBackupsDeleted')}
               </p>
             </div>
           </div>
@@ -155,12 +157,12 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
 
       {/* Info Box */}
       <div className="glass-card p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-        <h5 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Important Notes</h5>
+        <h5 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">{t('importantNotes')}</h5>
         <ul className="text-sm text-blue-900 dark:text-blue-200 space-y-1 list-disc list-inside">
-          <li>Backups include all data: products, sales, customers, and settings</li>
-          <li>Store backups in a safe location separate from your computer</li>
-          <li>Test your backups regularly to ensure they can be restored</li>
-          <li>Database is locked during backup (may take a few seconds)</li>
+          <li>{t('backupsIncludeAllData')}</li>
+          <li>{t('storeBackupsSafely')}</li>
+          <li>{t('testBackupsRegularly')}</li>
+          <li>{t('databaseLockedDuringBackup')}</li>
         </ul>
       </div>
     </div>

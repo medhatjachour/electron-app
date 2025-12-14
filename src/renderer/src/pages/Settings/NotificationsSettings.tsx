@@ -3,6 +3,7 @@
  */
 
 import { Bell, Package, ShoppingCart, Mail } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { NotificationSettings } from './types'
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export default function NotificationsSettings({ settings, onChange }: Props) {
+  const { t } = useLanguage()
   const handleChange = (field: keyof NotificationSettings, value: boolean | number | string) => {
     onChange({ ...settings, [field]: value })
   }
@@ -19,10 +21,10 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Notifications
+          {t('notificationsSettings')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Configure notification preferences and alerts
+          {t('configureNotificationPreferences')}
         </p>
       </div>
 
@@ -33,8 +35,8 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
             <Bell size={24} />
           </div>
           <div>
-            <div className="font-semibold text-slate-900 dark:text-white">Enable Notifications</div>
-            <div className="text-sm text-slate-600 dark:text-slate-400">Master toggle for all notifications</div>
+            <div className="font-semibold text-slate-900 dark:text-white">{t('enableNotifications')}</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">{t('masterToggleNotifications')}</div>
           </div>
         </div>
         <button
@@ -54,7 +56,7 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
       {/* Notification Types */}
       <div className="space-y-4">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-          Notification Types
+          {t('notificationTypes')}
         </h4>
 
         {/* Low Stock Alert */}
@@ -65,9 +67,9 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
                 <Package size={20} />
               </div>
               <div>
-                <div className="font-medium text-slate-900 dark:text-white">Low Stock Alerts</div>
+                <div className="font-medium text-slate-900 dark:text-white">{t('notificationLowStockAlerts')}</div>
                 <div className="text-sm text-slate-600 dark:text-slate-400">
-                  Get notified when product stock is low
+                  {t('notificationLowStockAlertsDesc')}
                 </div>
               </div>
             </div>
@@ -83,7 +85,7 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
           {settings.lowStockAlert && (
             <div className="mt-4 pl-14 space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Low Stock Threshold
+                {t('notificationLowStockThreshold')}
               </label>
               <input
                 type="number"
@@ -95,7 +97,7 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
                 disabled={!settings.notifications}
               />
               <p className="text-xs text-slate-500">
-                Alert when stock falls below this number
+                {t('notificationAlertWhenStockBelow')}
               </p>
             </div>
           )}
@@ -109,9 +111,9 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
                 <ShoppingCart size={20} />
               </div>
               <div>
-                <div className="font-medium text-slate-900 dark:text-white">Sales Notifications</div>
+                <div className="font-medium text-slate-900 dark:text-white">{t('notificationSalesAlerts')}</div>
                 <div className="text-sm text-slate-600 dark:text-slate-400">
-                  Get notified for each completed sale
+                  {t('notificationSalesAlertsDesc')}
                 </div>
               </div>
             </div>
@@ -133,9 +135,9 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
                 <Mail size={20} />
               </div>
               <div>
-                <div className="font-medium text-slate-900 dark:text-white">Email Notifications</div>
+                <div className="font-medium text-slate-900 dark:text-white">{t('notificationEmailAlerts')}</div>
                 <div className="text-sm text-slate-600 dark:text-slate-400">
-                  Send notifications via email
+                  {t('notificationEmailAlertsDesc')}
                 </div>
               </div>
             </div>
@@ -151,14 +153,14 @@ export default function NotificationsSettings({ settings, onChange }: Props) {
           {settings.emailNotifications && (
             <div className="mt-4 pl-14 space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Email Address
+                {t('notificationEmailAddress')}
               </label>
               <input
                 type="email"
                 className="input-field"
                 value={settings.emailAddress || ''}
                 onChange={(e) => handleChange('emailAddress', e.target.value)}
-                placeholder="your.email@example.com"
+                placeholder={t('notificationEmailPlaceholder')}
                 disabled={!settings.notifications}
               />
             </div>
