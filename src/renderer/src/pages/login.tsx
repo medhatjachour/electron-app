@@ -47,8 +47,21 @@ export default function Login() {
   const handleSetupLogin = async () => {
     setUsername('setup')
     setPassword('setup123')
-    // Small delay to show the credentials being filled
-    setTimeout(() => handleLogin(), 100)
+    // Directly call login with the setup credentials
+    try {
+      setError(null)
+      setLoading(true)
+      const user = await auth.login('setup', 'setup123')
+      if (user) {
+        navigate('/dashboard')
+      } else {
+        setError(t('invalidCredentials'))
+      }
+    } catch (err: any) {
+      setError(err?.message || t('loginFailed'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -258,10 +271,10 @@ export default function Login() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
-                  First Time Setup
+                  {t('firstTimeSetupTitle')}
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  If this is your first login, use the setup account below to create your permanent admin user.
+                  {t('firstTimeSetupDesc')}
                 </p>
               </div>
             </div>
@@ -274,7 +287,7 @@ export default function Login() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-medium">
-                Quick Access
+                {t('quickAccess')}
               </span>
             </div>
           </div>
@@ -289,7 +302,7 @@ export default function Login() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Use Setup Account (setup / setup123)
+              {t('useSetupAccount')}
             </span>
           </button>
 

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, SyntheticEvent } from 'react'
-import { X, Edit, Trash2, Copy, Package, DollarSign, Calendar, History, Image as ImageIcon, AlertCircle } from 'lucide-react'
+import { X, Edit, RefreshCw, Package, DollarSign, Calendar, History, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useLanguage } from '../../../contexts/LanguageContext'
 import { InventoryItem, StockMovement } from '@/shared/types'
@@ -105,43 +105,11 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
     onClose()
   }
 
-  const handleDelete = async () => {
-    const confirmMessage = `⚠️ Delete Product: ${item.name}?\n\nThis will permanently delete:\n- Product information\n- All ${item.variantCount} variants\n- ${item.images.length} images\n\nThis action CANNOT be undone!`
-    
-    if (!confirm(confirmMessage)) return
-    
-    // Use the optimistic delete callback if provided
-    if (onDelete) {
-      await onDelete(item.id)
-      onClose() // Close drawer immediately after delete
-      return
-    }
-    
-    // Fallback to direct API call (legacy)
-    try {
-      // @ts-ignore
-      const result = await (globalThis as any).api?.products?.delete(item.id)
-      
-      if (result?.success) {
-        logger.success(`Successfully deleted "${item.name}"`)
-        alert(`✅ Successfully deleted "${item.name}"`)
-        onRefresh()
-        onClose()
-      } else {
-        logger.error('Failed to delete product:', result?.message)
-        alert(`❌ Failed to delete product:\n${result?.message || 'Unknown error'}`)
-      }
-    } catch (error) {
-      logger.error('Error deleting item:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      alert(`❌ Error deleting product:\n${errorMessage}`)
-    }
-  }
-
-  const handleDuplicate = () => {
-    // Navigate to products page with duplicate mode
-    window.location.hash = `/products?duplicate=${item.id}`
-    onClose()
+  const handleRefresh = async () => {
+    // Refresh inventory list
+    onRefresh()
+    // Reload stock movement history for this item
+    await loadStockHistory()
   }
 
   return (
@@ -182,41 +150,27 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
 
           {/* Actions */}
           <div className="flex gap-2" role="toolbar" aria-label="Item actions">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
+              aria-label={`Refresh ${item.name}`}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              {t('refresh')}
+            </button>
             {canEdit && (
-              <>
-                <button
-                  onClick={handleEdit}
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
-                  aria-label={`Edit ${item.name}`}
-                >
-                  <Edit size={16} aria-hidden="true" />
-                  Edit
-                </button>
-                <button
-                  onClick={handleDuplicate}
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
-                  aria-label={`Duplicate ${item.name}`}
-                >
-                  <Copy size={16} aria-hidden="true" />
-                  Duplicate
-                </button>
-              </>
-            )}
-            {canDelete && (
               <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors flex items-center gap-2 text-sm ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label={isDeleting ? `Deleting ${item.name}` : `Delete ${item.name}`}
-                aria-busy={isDeleting}
+                onClick={handleEdit}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                aria-label={`Edit ${item.name}`}
               >
-                <Trash2 size={16} className={isDeleting ? 'animate-pulse' : ''} aria-hidden="true" />
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                <Edit size={16} aria-hidden="true" />
+                {t('edit')}
               </button>
             )}
-            {!canEdit && !canDelete && (
+            {!canEdit && (
               <output className="px-4 py-2 bg-white/10 rounded-lg text-sm text-white/60 italic">
-                View Only • No Edit Permissions
+                {t('viewOnly')} • {t('noEditPermissions')}
               </output>
             )}
           </div>

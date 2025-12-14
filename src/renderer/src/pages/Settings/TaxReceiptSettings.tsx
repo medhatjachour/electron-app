@@ -2,6 +2,7 @@
  * Tax & Receipt Settings Panel
  */
 
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { TaxReceiptSettings } from './types'
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export default function TaxReceiptSettings({ settings, onChange }: Props) {
+  const { t } = useLanguage()
   const handleChange = (field: keyof TaxReceiptSettings, value: string | number | boolean) => {
     onChange({ ...settings, [field]: value })
   }
@@ -18,17 +20,17 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Tax & Receipt Settings
+          {t('taxReceiptSettings')}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Configure tax rates and receipt printing options
+          {t('configureTaxReceipt')}
         </p>
       </div>
 
       {/* Tax Rate */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Sales Tax Rate (%) *
+          {t('salesTaxRate')} *
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -45,18 +47,18 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
         </div>
         <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
           <p className="text-sm text-slate-700 dark:text-slate-300">
-            <span className="font-semibold">Example:</span> ${settings.taxRate.toFixed(2)} tax on a $100.00 sale
+            <span className="font-semibold">{t('example')}:</span> ${settings.taxRate.toFixed(2)} {t('taxOnSale')} $100.00 {t('taxSaleExample')}
           </p>
         </div>
         <p className="text-xs text-slate-500">
-          This tax rate will be applied to all sales in the POS system.
+          {t('taxRateApplied')}
         </p>
       </div>
 
       {/* Refund Period */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Refund/Return Period (Days) *
+          {t('refundReturnPeriod')} *
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -68,58 +70,58 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
             min="0"
             max="365"
           />
-          <span className="text-slate-600 dark:text-slate-400 font-medium">days</span>
+          <span className="text-slate-600 dark:text-slate-400 font-medium">{t('days')}</span>
         </div>
         <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
           <p className="text-sm text-slate-700 dark:text-slate-300">
-            <span className="font-semibold">Notice:</span> Refunds/returns will only be allowed within {settings.refundPeriodDays} days after purchase
+            <span className="font-semibold">{t('notice')}:</span> {t('refundsAllowedWithin')} {settings.refundPeriodDays} {t('daysAfterPurchase')}
           </p>
         </div>
         <p className="text-xs text-slate-500">
-          Set to 0 to completely disable refunds. Customers will not be able to return or refund items.
+          {t('setToZeroDisable')}
         </p>
       </div>
 
       {/* Receipt Header */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Receipt Header
+          {t('receiptHeader')}
         </label>
         <textarea
           className="input-field resize-none"
           rows={3}
           value={settings.receiptHeader}
           onChange={(e) => handleChange('receiptHeader', e.target.value)}
-          placeholder="Thank you for shopping with us!"
+          placeholder={t('receiptHeaderPlaceholder')}
           maxLength={200}
         />
         <p className="text-xs text-slate-500">
-          Text displayed at the top of receipts (max 200 characters)
+          {t('receiptHeaderDesc')}
         </p>
       </div>
 
       {/* Receipt Footer */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Receipt Footer
+          {t('receiptFooter')}
         </label>
         <textarea
           className="input-field resize-none"
           rows={3}
           value={settings.receiptFooter}
           onChange={(e) => handleChange('receiptFooter', e.target.value)}
-          placeholder="Please visit us again!"
+          placeholder={t('receiptFooterPlaceholder')}
           maxLength={200}
         />
         <p className="text-xs text-slate-500">
-          Text displayed at the bottom of receipts (max 200 characters)
+          {t('receiptFooterDesc')}
         </p>
       </div>
 
       {/* Options */}
       <div className="space-y-4">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-          Receipt Options
+          {t('receiptOptions')}
         </h4>
 
         <label className="flex items-center gap-3 cursor-pointer">
@@ -131,10 +133,10 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           />
           <div>
             <div className="text-sm font-medium text-slate-900 dark:text-white">
-              Auto-print receipts
+              {t('autoPrintReceipts')}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Automatically print receipt after each sale
+              {t('autoPrintReceiptsDesc')}
             </div>
           </div>
         </label>
@@ -148,10 +150,10 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           />
           <div>
             <div className="text-sm font-medium text-slate-900 dark:text-white">
-              Include store logo
+              {t('includeStoreLogo')}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Display your store logo on receipts
+              {t('includeStoreLogoDesc')}
             </div>
           </div>
         </label>
@@ -161,10 +163,10 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
       <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
         <div>
           <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
-            Discount Settings
+            {t('discountSettings')}
           </h4>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Configure discount permissions and limits (Admin/Manager only)
+            {t('configureDiscountPermissions')}
           </p>
         </div>
 
@@ -177,10 +179,10 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           />
           <div>
             <div className="text-sm font-medium text-slate-900 dark:text-white">
-              Allow discounts
+              {t('allowDiscounts')}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Enable discount functionality at checkout
+              {t('allowDiscountsDesc')}
             </div>
           </div>
         </label>
@@ -189,7 +191,7 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           <>
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Maximum Discount (%)
+                {t('maximumDiscountPercent')}
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -207,13 +209,13 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
                 <span className="text-slate-600 dark:text-slate-400 font-medium">%</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Maximum percentage discount allowed per item (0-100%)
+                {t('maxDiscountPercentDesc')}
               </p>
             </div>
 
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Maximum Discount Amount ($)
+                {t('maximumDiscountAmount')}
               </label>
               <div className="flex items-center gap-3">
                 <span className="text-slate-600 dark:text-slate-400 font-medium">$</span>
@@ -230,7 +232,7 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
                 />
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Maximum fixed dollar amount discount allowed per item
+                {t('maxDiscountAmountDesc')}
               </p>
             </div>
 
@@ -242,10 +244,10 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    Discount Reason Required
+                    {t('discountReasonRequired')}
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                    All discount applications must include a reason for audit purposes
+                    {t('discountReasonRequiredDesc')}
                   </p>
                 </div>
               </div>

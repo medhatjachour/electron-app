@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Archive, RefreshCw, Trash2, Search, Package, Users, User } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 type ArchiveTab = 'products' | 'customers' | 'users'
 
@@ -16,6 +17,7 @@ interface ArchivedItem {
 }
 
 export default function ArchiveManagementSettings() {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<ArchiveTab>('products')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,9 +25,9 @@ export default function ArchiveManagementSettings() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const tabs = [
-    { id: 'products' as const, name: 'Archived Products', icon: Package },
-    { id: 'customers' as const, name: 'Archived Customers', icon: Users },
-    { id: 'users' as const, name: 'Deactivated Users', icon: User }
+    { id: 'products' as const, name: t('archivedProducts'), icon: Package },
+    { id: 'customers' as const, name: t('archivedCustomers'), icon: Users },
+    { id: 'users' as const, name: t('deactivatedUsers'), icon: User }
   ]
 
   // Load archived items when tab changes
@@ -91,9 +93,9 @@ export default function ArchiveManagementSettings() {
         // Remove from list
         setItems(items.filter(item => item.id !== itemId))
         // Show success message
-        alert(`"${itemName}" restored successfully!`)
+        alert(`"${itemName}" ${t('restore')}d successfully!`)
       } else {
-        alert(`Failed to restore: ${result.error || 'Unknown error'}`)
+        alert(`Failed to ${t('restore').toLowerCase()}: ${result.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Restore failed:', error)
@@ -104,7 +106,7 @@ export default function ArchiveManagementSettings() {
   }
 
   const handlePermanentDelete = async (itemId: string, itemName: string) => {
-    if (!confirm(`⚠️ Are you absolutely sure you want to permanently delete "${itemName}"?\n\nThis action cannot be undone and may fail if dependencies still exist.`)) {
+    if (!confirm(`⚠️ ${t('permanentlyDelete')} "${itemName}"?\n\n${t('cannotBeUndone')}`)) {
       return
     }
 
@@ -123,13 +125,13 @@ export default function ArchiveManagementSettings() {
       if (result.success) {
         // Remove from list
         setItems(items.filter(item => item.id !== itemId))
-        alert(`"${itemName}" permanently deleted`)
+        alert(`"${itemName}" ${t('permanentlyDeleted')}`)
       } else {
-        alert(`Cannot permanently delete: ${result.error}\n\nTip: This item may still have dependencies in the system.`)
+        alert(`${t('cannotPermanentlyDelete')}: ${result.error}\n\nTip: ${t('mayHaveDependencies')}`)
       }
     } catch (error: any) {
       console.error('Permanent delete failed:', error)
-      alert(`Delete failed: ${error.message || 'Unknown error'}`)
+      alert(`${t('deleteFailed')}: ${error.message || 'Unknown error'}`)
     } finally {
       setActionLoading(null)
     }
@@ -163,10 +165,10 @@ export default function ArchiveManagementSettings() {
       <div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
           <Archive className="w-7 h-7 text-amber-600" />
-          Archive Management
+          {t('archiveManagement')}
         </h2>
         <p className="mt-2 text-slate-600 dark:text-slate-400">
-          View and manage archived items. Restore them to make them active again, or permanently delete them.
+          {t('viewManageArchived')}
         </p>
       </div>
 
@@ -205,7 +207,7 @@ export default function ArchiveManagementSettings() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search archived ${activeTab}...`}
+            placeholder={`${t('searchArchived')} ${activeTab}...`}
             className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
           />
         </div>
@@ -216,7 +218,7 @@ export default function ArchiveManagementSettings() {
           className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 flex items-center gap-2 font-medium transition-colors"
         >
           <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('refresh')}
         </button>
       </div>
 
@@ -229,12 +231,12 @@ export default function ArchiveManagementSettings() {
         <div className="text-center py-12">
           <Archive className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            {searchQuery ? 'No results found' : `No archived ${activeTab}`}
+            {searchQuery ? t('noResultsFound') : `${t('noArchived')} ${activeTab}`}
           </h3>
           <p className="text-slate-600 dark:text-slate-400">
             {searchQuery 
-              ? 'Try adjusting your search query' 
-              : `${activeTab === 'users' ? 'Deactivated' : 'Archived'} ${activeTab} will appear here`
+              ? t('tryAdjustingSearch') 
+              : `${activeTab === 'users' ? t('deactivatedWillAppearHere') : t('archivedWillAppearHere')} ${activeTab}`
             }
           </p>
         </div>
@@ -268,11 +270,11 @@ export default function ArchiveManagementSettings() {
                   
                   <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
                     <div>
-                      {activeTab === 'users' ? 'Deactivated' : 'Archived'} on {formatDate(item.archivedAt)} by {item.archivedBy}
+                      {activeTab === 'users' ? t('deactivated') : t('archived')} {t('archiveOn')} {formatDate(item.archivedAt)} {t('archiveBy')} {item.archivedBy}
                     </div>
                     {item.archiveReason && (
                       <div className="italic">
-                        Reason: {item.archiveReason}
+                        {t('archiveReason')}: {item.archiveReason}
                       </div>
                     )}
                   </div>
@@ -290,7 +292,7 @@ export default function ArchiveManagementSettings() {
                     ) : (
                       <RefreshCw className="w-4 h-4" />
                     )}
-                    {activeTab === 'users' ? 'Reactivate' : 'Restore'}
+                    {activeTab === 'users' ? t('reactivate') : t('restore')}
                   </button>
                   
                   <button
@@ -299,7 +301,7 @@ export default function ArchiveManagementSettings() {
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 font-medium transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Delete
+                    {t('delete')}
                   </button>
                 </div>
               </div>
