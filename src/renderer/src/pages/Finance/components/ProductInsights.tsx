@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from 'react'
 import { Lightbulb, TrendingUp, TrendingDown, Minus, AlertTriangle, Sparkles, HelpCircle } from 'lucide-react'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type ProductInsight = {
   productId: string
@@ -27,6 +28,7 @@ type ProductInsight = {
 }
 
 export default function ProductInsights() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [insights, setInsights] = useState<ProductInsight[]>([])
   const [filter, setFilter] = useState<'all' | 'opportunity' | 'warning' | 'success'>('all')
@@ -115,11 +117,11 @@ export default function ProductInsights() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <Lightbulb size={20} className="text-primary" />
-            <h3 className="font-semibold text-slate-900 dark:text-white">Product Insights</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white">{t('insightsProductInsights')}</h3>
             <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
-              AI-Powered
+              {t('insightsAIPowered')}
             </span>
-            <Tooltip text="AI analyzes sales velocity, profit margins, and trends over 30-day and 60-day periods to identify opportunities, warnings, and successful products. Each insight includes specific, actionable recommendations.">
+            <Tooltip text={t('insightsTooltip')}>
               <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
             </Tooltip>
           </div>
@@ -128,7 +130,7 @@ export default function ProductInsights() {
             onClick={loadInsights}
             className="text-sm text-primary hover:text-primary/80 transition-colors"
           >
-            Refresh
+            {t('insightsRefresh')}
           </button>
         </div>
         
@@ -138,20 +140,20 @@ export default function ProductInsights() {
             <Sparkles size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
-                <strong>How to use:</strong> Warnings require immediate action, Opportunities show untapped potential, Successes highlight what's working well.
+                <strong>{t('insightsHowToUse')}:</strong> {t('insightsHowToUseDescription')}
               </p>
               <div className="grid grid-cols-3 gap-3 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">⭐</span>
-                  <span className="text-slate-600 dark:text-slate-400">Keep doing what works</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t('insightsSuccessDescription')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600">💎</span>
-                  <span className="text-slate-600 dark:text-slate-400">Boost these for more profit</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t('insightsOpportunityDescription')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-amber-600">⚠️</span>
-                  <span className="text-slate-600 dark:text-slate-400">Fix or clear out quickly</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t('insightsWarningDescription')}</span>
                 </div>
               </div>
             </div>
@@ -171,7 +173,10 @@ export default function ProductInsights() {
                 : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
-            {f}
+            {f === 'all' && t('insightsAll')}
+            {f === 'success' && t('insightsSuccess')}
+            {f === 'opportunity' && t('insightsOpportunity')}
+            {f === 'warning' && t('insightsWarning')}
             {f === 'all' && ` (${insights.length})`}
             {f !== 'all' && ` (${insights.filter(i => i.type === f).length})`}
           </button>
@@ -182,11 +187,11 @@ export default function ProductInsights() {
       {filteredInsights.length === 0 ? (
         <div className="text-center py-12">
           <Lightbulb className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">No insights available</p>
+          <p className="text-slate-600 dark:text-slate-400">{t('insightsNoInsights')}</p>
           <p className="text-sm text-slate-500 mt-2">
             {filter === 'all' 
-              ? 'Need more sales data to generate insights' 
-              : `No ${filter} insights found`}
+              ? t('insightsNeedMoreData') 
+              : t('insightsNoInsightsFound', { type: filter })}
           </p>
         </div>
       ) : (
@@ -211,9 +216,9 @@ export default function ProductInsights() {
                     ? 'bg-blue-500 text-white' 
                     : 'bg-amber-500 text-white'
                 }`}>
-                  {insight.type === 'success' ? '⭐ Winner' : 
-                   insight.type === 'opportunity' ? '💎 Opportunity' : 
-                   '⚠️ Needs Action'}
+                  {insight.type === 'success' ? `⭐ ${t('insightsWinner')}` : 
+                   insight.type === 'opportunity' ? `💎 ${t('insightsOpportunity')}` : 
+                   `⚠️ ${t('insightsNeedsAction')}`}
                 </div>
               </div>
               {/* Header */}
@@ -235,7 +240,7 @@ export default function ProductInsights() {
                 {/* Velocity Score */}
                 <div className="flex flex-col items-end gap-1">
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-slate-600 dark:text-slate-400">Velocity</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">{t('insightsVelocity')}</span>
                     <div className={`w-2 h-2 rounded-full ${getVelocityColor(insight.metrics.velocityScore)}`}></div>
                   </div>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -248,8 +253,8 @@ export default function ProductInsights() {
               <div className="grid grid-cols-5 gap-3 mb-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg">
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Units Sold</p>
-                    <Tooltip text="Number of units sold in last 30 days">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t('insightsUnitsSold')}</p>
+                    <Tooltip text={t('insightsUnitsSoldTooltip')}>
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -262,8 +267,8 @@ export default function ProductInsights() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Revenue</p>
-                    <Tooltip text="Total sales value generated in last 30 days">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t('insightsRevenue')}</p>
+                    <Tooltip text={t('insightsRevenueTooltip')}>
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -273,8 +278,8 @@ export default function ProductInsights() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Margin</p>
-                    <Tooltip text="Profit margin: High (>30%) = green, Medium (15-30%) = yellow, Low (<15%) = red">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t('insightsMargin')}</p>
+                    <Tooltip text={t('insightsMarginTooltip')}>
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -292,8 +297,8 @@ export default function ProductInsights() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Velocity</p>
-                    <Tooltip text="Sales speed: High (70+) = fast seller, Medium (40-70) = moderate, Low (<40) = slow mover">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t('insightsVelocity')}</p>
+                    <Tooltip text={t('insightsVelocityTooltip')}>
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -306,8 +311,8 @@ export default function ProductInsights() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Trend</p>
-                    <Tooltip text="Sales trend: Up (>15% growth), Down (<-15% decline), Stable (-15% to +15%)">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{t('insightsTrend')}</p>
+                    <Tooltip text={t('insightsTrendTooltip')}>
                       <HelpCircle size={10} className="text-slate-400 opacity-60" />
                     </Tooltip>
                   </div>
@@ -316,9 +321,9 @@ export default function ProductInsights() {
                     insight.metrics.trend === 'down' ? 'text-red-600' :
                     'text-slate-600'
                   }`}>
-                    {insight.metrics.trend === 'up' ? '↗️ Up' :
-                     insight.metrics.trend === 'down' ? '↘️ Down' :
-                     '→ Stable'}
+                    {insight.metrics.trend === 'up' ? `↗️ ${t('insightsTrendUp')}` :
+                     insight.metrics.trend === 'down' ? `↘️ ${t('insightsTrendDown')}` :
+                     `→ ${t('insightsTrendStable')}`}
                   </p>
                 </div>
               </div>
@@ -327,7 +332,7 @@ export default function ProductInsights() {
               {insight.recommendations.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Recommendations:
+                    {t('insightsRecommendations')}:
                   </p>
                   {insight.recommendations.map((rec, i) => (
                     <div key={i} className="flex items-start gap-2">
@@ -350,7 +355,7 @@ export default function ProductInsights() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Sparkles size={16} className="text-green-600" />
-              <p className="text-sm text-slate-600 dark:text-slate-400">Success</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('insightsSuccess')}</p>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
               {insights.filter(i => i.type === 'success').length}
@@ -359,7 +364,7 @@ export default function ProductInsights() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Lightbulb size={16} className="text-blue-600" />
-              <p className="text-sm text-slate-600 dark:text-slate-400">Opportunities</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('insightsOpportunities')}</p>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
               {insights.filter(i => i.type === 'opportunity').length}
@@ -368,7 +373,7 @@ export default function ProductInsights() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <AlertTriangle size={16} className="text-amber-600" />
-              <p className="text-sm text-slate-600 dark:text-slate-400">Warnings</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('insightsWarnings')}</p>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
               {insights.filter(i => i.type === 'warning').length}

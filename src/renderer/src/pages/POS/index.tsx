@@ -86,7 +86,7 @@ export default function POS(): JSX.Element {
     completeSale(selectedCustomer)
   }
 
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // Quick checkout with cash, no customer
   const handleQuickCheckout = async () => {
@@ -169,7 +169,7 @@ export default function POS(): JSX.Element {
       {!cartOpen && viewMode === 'grid' && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group"
+          className={`fixed bottom-6 z-50 group ${language === 'ar' ? 'left-6' : 'right-6'}`}
           aria-label={t('openShoppingCart')}
         >
           <div className="relative">
@@ -192,9 +192,9 @@ export default function POS(): JSX.Element {
           </div>
           
           {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+          <div className={`absolute bottom-full mb-2 px-3 py-1.5 bg-slate-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl ${language === 'ar' ? 'left-0' : 'right-0'}`}>
             {t('viewCart')} ({totalItems} {t('items')})
-            <div className="absolute top-full right-4 -mt-1 w-2 h-2 bg-slate-900 transform rotate-45"></div>
+            <div className={`absolute top-full -mt-1 w-2 h-2 bg-slate-900 transform rotate-45 ${language === 'ar' ? 'left-4' : 'right-4'}`}></div>
           </div>
         </button>
       )}
@@ -203,14 +203,22 @@ export default function POS(): JSX.Element {
       {viewMode === 'grid' && (
         <div 
           className={`
-            fixed lg:relative right-0 top-0 h-full z-10
+            fixed lg:relative top-0 h-full z-10
             w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
             bg-white dark:bg-slate-800 
-            border-l border-slate-200 dark:border-slate-700
             shadow-2xl lg:shadow-none
             transform transition-all duration-300 ease-out
-            ${cartOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'}
             flex flex-col
+            ${language === 'ar' 
+              ? 'left-0 border-r border-slate-200 dark:border-slate-700' 
+              : 'right-0 border-l border-slate-200 dark:border-slate-700'
+            }
+            ${cartOpen 
+              ? 'translate-x-0' 
+              : language === 'ar' 
+                ? '-translate-x-full lg:hidden' 
+                : 'translate-x-full lg:hidden'
+            }
           `}
         >
         {/* Compact Header with Close/Minimize Button */}
@@ -234,7 +242,7 @@ export default function POS(): JSX.Element {
             title={`${t('minimizeCart')} (${t('moreSpaceForProducts')})`}
           >
             <svg className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={language === 'ar' ? "M11 19l-7-7 7-7" : "M13 5l7 7-7 7"} />
             </svg>
           </button>
         </div>

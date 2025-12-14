@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, DollarSign, Package, ShoppingCart, Calendar } from 'lucide-react'
 import { formatLargeNumber, formatCurrency } from '@renderer/utils/formatNumber'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type TopProduct = {
   productId: string
@@ -28,6 +29,7 @@ type OverallStats = {
 }
 
 export default function ProductAnalytics() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
   const [overallStats, setOverallStats] = useState<OverallStats>({
@@ -114,9 +116,9 @@ export default function ProductAnalytics() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sales Analytics</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('salesAnalytics')}</h2>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Performance insights and top-selling products
+            {t('performanceInsights')}
           </p>
         </div>
 
@@ -132,7 +134,7 @@ export default function ProductAnalytics() {
                   : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
             >
-              {days === '365' ? '1 Year' : `${days} Days`}
+              {days === '365' ? t('oneYear') : `${days} ${t('sevenDays').replace('7', '').trim()}`}
             </button>
           ))}
         </div>
@@ -142,7 +144,7 @@ export default function ProductAnalytics() {
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-slate-600 dark:text-slate-400">Loading analytics...</p>
+            <p className="text-slate-600 dark:text-slate-400">{t('loadingAnalytics')}</p>
           </div>
         </div>
       )}
@@ -151,10 +153,10 @@ export default function ProductAnalytics() {
         <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
           <TrendingUp size={64} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
           <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-            No Sales Data Available
+            {t('noSalesDataAvailable')}
           </h3>
           <p className="text-slate-600 dark:text-slate-400">
-            Sales analytics will appear here once you have transactions in the selected time period
+            {t('salesAnalyticsWillAppear')}
           </p>
         </div>
       )}
@@ -171,7 +173,7 @@ export default function ProductAnalytics() {
               <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={`$${overallStats.totalRevenue.toLocaleString()}`}>
                 {formatCurrency(overallStats.totalRevenue)}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{t('totalRevenueLabel')}</div>
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10 rounded-xl p-6 border border-green-200 dark:border-green-800">
@@ -183,7 +185,7 @@ export default function ProductAnalytics() {
               <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={overallStats.totalUnitsSold.toLocaleString()}>
                 {formatLargeNumber(overallStats.totalUnitsSold)}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Units Sold</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{t('unitsSoldLabel')}</div>
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
@@ -195,7 +197,7 @@ export default function ProductAnalytics() {
               <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={overallStats.totalTransactions.toLocaleString()}>
                 {formatLargeNumber(overallStats.totalTransactions)}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Transactions</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{t('transactionsLabel')}</div>
             </div>
 
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/10 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
@@ -207,15 +209,15 @@ export default function ProductAnalytics() {
               <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1" title={`$${overallStats.avgOrderValue.toLocaleString()}`}>
                 {formatCurrency(overallStats.avgOrderValue)}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Avg Order Value</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{t('avgOrderValueLabel')}</div>
             </div>
           </div>
 
           {categoryPerformance.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Category Performance</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Revenue distribution by category</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('categoryPerformance')}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{t('revenueDistributionByCategory')}</p>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
@@ -255,20 +257,20 @@ export default function ProductAnalytics() {
 
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Top Selling Products</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Best performers in the selected period</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('topSellingProducts')}</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{t('bestPerformersInPeriod')}</p>
             </div>
             
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 dark:bg-slate-700/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rank</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Product</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Units Sold</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Revenue</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Transactions</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Units/Order</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('rankColumn')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('productColumn')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('unitsSoldColumn')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('revenueColumn')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('transactionsColumn')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('avgUnitsPerOrder')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -278,7 +280,7 @@ export default function ProductAnalytics() {
                         <div className="flex items-center gap-2">
                           <span className="text-2xl font-bold text-slate-300 dark:text-slate-600">#{index + 1}</span>
                           {index === 0 && (
-                            <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold rounded-full">TOP</span>
+                            <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold rounded-full">{t('topBadge')}</span>
                           )}
                         </div>
                       </td>

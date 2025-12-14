@@ -229,7 +229,7 @@ export default function InventoryPage() {
   }) => {
     try {
       if (!stockMovementDialog.variantId) {
-        showToast('error', 'No variant selected')
+        toast.error('No variant selected')
         return
       }
 
@@ -243,15 +243,15 @@ export default function InventoryPage() {
       })
 
       if (result?.success) {
-        showToast('success', `Stock ${data.mode === 'add' ? 'added' : data.mode === 'remove' ? 'removed' : 'updated'} successfully`)
+        toast.success(`Stock ${data.mode === 'add' ? 'added' : data.mode === 'remove' ? 'removed' : 'updated'} successfully`)
         refetch() // Refresh inventory list
         setStockMovementDialog(prev => ({ ...prev, isOpen: false }))
       } else {
-        showToast('error', result?.error || 'Failed to record stock movement')
+        toast.error(result?.error || 'Failed to record stock movement')
       }
     } catch (error) {
       logger.error('Error recording stock movement:', error)
-      showToast('error', 'Failed to record stock movement')
+      toast.error('Failed to record stock movement')
     }
   }
 

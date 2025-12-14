@@ -649,7 +649,7 @@ export default function Customers(): JSX.Element {
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field"
               placeholder={t('name')}
@@ -663,7 +663,7 @@ export default function Customers(): JSX.Element {
               </label>
               <input
                 type="email"
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
                 placeholder={t('email')}
@@ -675,7 +675,7 @@ export default function Customers(): JSX.Element {
               </label>
               <input
                 type="tel"
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
                 placeholder={t('phone')}
@@ -736,7 +736,7 @@ export default function Customers(): JSX.Element {
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field"
               placeholder={t('name')}
@@ -750,7 +750,7 @@ export default function Customers(): JSX.Element {
               </label>
               <input
                 type="email"
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
                 placeholder={t('email')}
@@ -762,7 +762,7 @@ export default function Customers(): JSX.Element {
               </label>
               <input
                 type="tel"
-                value={formData.phone}
+                value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="input-field"
                 placeholder={t('phone')}

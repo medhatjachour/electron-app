@@ -201,14 +201,14 @@ export default function Stores(): JSX.Element {
                         ? 'hover:bg-error/10 text-error' 
                         : 'hover:bg-success/10 text-success'
                     }`}
-                    title={store.status === 'active' ? 'Deactivate store' : 'Activate store'}
+                    title={store.status === 'active' ? t('deactivateStore') : t('activateStore')}
                   >
                     <ArrowRightLeft size={18} />
                   </button>
                   <button 
                     onClick={() => handleDeleteStore(store.id)}
                     className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
-                    title="Delete store"
+                    title={t('deleteStore')}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -226,36 +226,36 @@ export default function Stores(): JSX.Element {
           setShowAddModal(false)
           resetForm()
         }} 
-        title="Add New Store"
+        title={t('addNewStore')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Store Name
+              {t('storeName')}
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field w-full"
-              placeholder="Enter store name"
+              placeholder={t('enterStoreName')}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Location
+              {t('storeLocation')}
             </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="input-field w-full"
-              placeholder="Enter address"
+              placeholder={t('enterAddress')}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Phone
+              {t('phone')}
             </label>
             <input
               type="tel"
@@ -267,7 +267,7 @@ export default function Stores(): JSX.Element {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Hours
+              {t('hours')}
             </label>
             <input
               type="text"
@@ -279,14 +279,14 @@ export default function Stores(): JSX.Element {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Manager
+              {t('manager')}
             </label>
             <input
               type="text"
               value={formData.manager}
               onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
               className="input-field w-full"
-              placeholder="Manager name"
+              placeholder={t('managerName')}
             />
           </div>
           <div className="flex gap-3 pt-4">
@@ -294,7 +294,7 @@ export default function Stores(): JSX.Element {
               onClick={handleAddStore}
               className="btn-primary flex-1"
             >
-              Add Store
+              {t('addStore')}
             </button>
             <button
               onClick={() => {
@@ -303,7 +303,7 @@ export default function Stores(): JSX.Element {
               }}
               className="btn-secondary flex-1"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </div>
@@ -317,36 +317,36 @@ export default function Stores(): JSX.Element {
           setSelectedStore(null)
           resetForm()
         }} 
-        title="Edit Store"
+        title={t('editStore')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Store Name
+              {t('storeName')}
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input-field w-full"
-              placeholder="Enter store name"
+              placeholder={t('enterStoreName')}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Location
+              {t('storeLocation')}
             </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="input-field w-full"
-              placeholder="Enter address"
+              placeholder={t('enterAddress')}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Phone
+              {t('phone')}
             </label>
             <input
               type="tel"
@@ -358,7 +358,7 @@ export default function Stores(): JSX.Element {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Hours
+              {t('hours')}
             </label>
             <input
               type="text"
@@ -370,14 +370,14 @@ export default function Stores(): JSX.Element {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Manager
+              {t('manager')}
             </label>
             <input
               type="text"
               value={formData.manager}
               onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
               className="input-field w-full"
-              placeholder="Manager name"
+              placeholder={t('managerName')}
             />
           </div>
           <div className="flex gap-3 pt-4">
@@ -385,7 +385,7 @@ export default function Stores(): JSX.Element {
               onClick={handleEditStore}
               className="btn-primary flex-1"
             >
-              Save Changes
+              {t('save')}
             </button>
             <button
               onClick={() => {
@@ -395,7 +395,7 @@ export default function Stores(): JSX.Element {
               }}
               className="btn-secondary flex-1"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </div>

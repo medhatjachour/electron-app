@@ -7,6 +7,7 @@
 import { useState, useEffect, SyntheticEvent } from 'react'
 import { X, Edit, Trash2, Copy, Package, DollarSign, Calendar, History, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useLanguage } from '../../../contexts/LanguageContext'
 import { InventoryItem, StockMovement } from '@/shared/types'
 import logger from '../../../../../shared/utils/logger'
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, isDeleting = false, onAdjustStock }: Props) {
+  const { t } = useLanguage()
   const { canEdit, canDelete } = useAuth()
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)

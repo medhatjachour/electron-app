@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react'
 import { Calculator, TrendingUp, TrendingDown, DollarSign, Percent, Users, Zap, AlertCircle, CheckCircle, Download, HelpCircle, Search } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
 type Product = {
   id: string
@@ -46,6 +47,7 @@ type PricingResult = {
 const PAGE_SIZE = 50
 
 export default function PricingCalculator() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [calculating, setCalculating] = useState(false)
   const [pagedProducts, setPagedProducts] = useState<Product[]>([])
@@ -331,7 +333,7 @@ export default function PricingCalculator() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading pricing data...</p>
+          <p className="text-slate-600 dark:text-slate-400">{t('loading')}...</p>
         </div>
       </div>
     )
@@ -349,7 +351,7 @@ export default function PricingCalculator() {
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-2">
           <Calculator size={28} />
-          <h2 className="text-2xl font-bold">Smart Pricing Calculator</h2>
+          <h2 className="text-2xl font-bold">{t('pricingSmartCalculator')}</h2>
           
           {/* Info Button with Tooltip */}
           <div className="relative group ml-auto">
@@ -362,27 +364,27 @@ export default function PricingCalculator() {
               <div className="flex items-start gap-3">
                 <AlertCircle size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-3">How the Calculation Works</h3>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-3">{t('pricingHowItWorks')}</h3>
                   <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
                     <div className="flex items-start gap-2">
                       <span className="font-semibold min-w-[20px]">1.</span>
-                      <span><strong>Base Cost:</strong> Starts with the product's cost price</span>
+                      <span><strong>{t('pricingBaseCost')}:</strong> {t('pricingBaseCostDesc')}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-semibold min-w-[20px]">2.</span>
-                      <span><strong>Allocated Expenses:</strong> Operating expenses are distributed across products based on sales volume</span>
+                      <span><strong>{t('pricingAllocatedExpenses')}:</strong> {t('pricingExpensesAllocationDesc')}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-semibold min-w-[20px]">3.</span>
-                      <span><strong>Inflation Adjustment:</strong> Adds the inflation rate percentage</span>
+                      <span><strong>{t('pricingInflationAdjustment')}:</strong> {t('pricingInflationAdjustmentDesc')}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-semibold min-w-[20px]">4.</span>
-                      <span><strong>Profit Margin:</strong> Adds your desired profit margin</span>
+                      <span><strong>{t('pricingMargin')}:</strong> {t('pricingDesiredMarginDesc')}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-semibold min-w-[20px]">5.</span>
-                      <span><strong>Tax:</strong> Applies the tax rate on the final price</span>
+                      <span><strong>{t('pricingTaxes')}:</strong> {t('pricingTaxesDesc')}</span>
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
@@ -396,7 +398,7 @@ export default function PricingCalculator() {
           </div>
         </div>
         <p className="text-blue-100">
-          Calculate optimal product prices based on costs, expenses, inflation, taxes, and desired profit margins
+          {t('pricingDescription')}
         </p>
       </div>
 
@@ -407,13 +409,13 @@ export default function PricingCalculator() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2 mb-4">
               <DollarSign size={20} className="text-blue-600" />
-              <h3 className="font-semibold text-slate-900 dark:text-white">Operating Expenses</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{t('pricingOperatingExpenses')}</h3>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Monthly Bills (Rent, Utilities, etc.)
+                  {t('pricingMonthlyBills')}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
@@ -430,7 +432,7 @@ export default function PricingCalculator() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Total Salaries
+                  {t('pricingTotalSalaries')}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
@@ -447,7 +449,7 @@ export default function PricingCalculator() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Other Expenses
+                  {t('pricingOtherExpenses')}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
@@ -465,13 +467,13 @@ export default function PricingCalculator() {
               <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Include in Pricing</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('pricingIncludeInPricing')}</span>
                     <div className="relative group">
                       <HelpCircle size={14} className="text-slate-400 hover:text-slate-600 cursor-help" />
                       <div className="absolute bottom-full left-0 mb-2 w-80 bg-slate-800 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div className="text-left">
-                          <strong>Operating Expenses in Pricing:</strong><br />
-                          When enabled, expenses are allocated proportionally across products based on their sales volume. Higher-selling products carry more of the expense burden.
+                          <strong>{t('pricingOperatingExpenses')}:</strong><br />
+                          {t('pricingExpensesAllocationTooltip')}
                         </div>
                       </div>
                     </div>
@@ -488,12 +490,12 @@ export default function PricingCalculator() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-bold text-slate-900 dark:text-white">
-                    Total: ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {t('total')}: ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </p>
                   {includeExpenses && (
                     <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
                       <CheckCircle size={12} />
-                      Included in calculations
+                      {t('pricingIncludedInCalculations')}
                     </span>
                   )}
                 </div>
@@ -505,13 +507,13 @@ export default function PricingCalculator() {
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2 mb-4">
               <Percent size={20} className="text-purple-600" />
-              <h3 className="font-semibold text-slate-900 dark:text-white">Pricing Parameters</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{t('pricingParameters')}</h3>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Inflation Rate
+                  {t('pricingInflationRate')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -531,7 +533,7 @@ export default function PricingCalculator() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Tax Rate
+                  {t('pricingTaxRate')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -551,7 +553,7 @@ export default function PricingCalculator() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Desired Profit Margin
+                  {t('pricingDesiredMargin')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -580,12 +582,12 @@ export default function PricingCalculator() {
             {calculating ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Calculating...
+                {t('calculating')}...
               </>
             ) : (
               <>
                 <Calculator size={20} />
-                Calculate Pricing
+                {t('pricingCalculate')}
               </>
             )}
           </button>
@@ -598,9 +600,9 @@ export default function PricingCalculator() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Users size={20} className="text-green-600" />
-                <h3 className="font-semibold text-slate-900 dark:text-white">Select Products</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white">{t('pricingSelectProducts')}</h3>
                 <span className="text-sm text-slate-500">
-                  ({selectedProducts.size} selected of {totalProductsCount || pagedProducts.length})
+                  ({selectedProducts.size} {t('pricingSelected')} {t('of')} {totalProductsCount || pagedProducts.length})
                 </span>
               </div>
               <div className="flex gap-2">
@@ -608,13 +610,13 @@ export default function PricingCalculator() {
                   onClick={selectAllProducts}
                   className="text-sm px-3 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                 >
-                  Select Page
+                  {t('pricingSelectPage')}
                 </button>
                 <button
                   onClick={deselectAllProducts}
                   className="text-sm px-3 py-1 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
                 >
-                  Clear All
+                  {t('pricingClearAll')}
                 </button>
               </div>
             </div>
@@ -626,7 +628,7 @@ export default function PricingCalculator() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search products..."
+                placeholder={t('pricingSearchProducts')}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {searchQuery && (
@@ -642,26 +644,26 @@ export default function PricingCalculator() {
             {totalProductsCount === 0 ? (
               <div className="text-center py-8">
                 <AlertCircle size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                <p className="text-slate-500">No products found</p>
-                <p className="text-sm text-slate-400 mt-1">Add products to your inventory to start calculating prices</p>
+                <p className="text-slate-500">{t('pricingNoProducts')}</p>
+                <p className="text-sm text-slate-400 mt-1">{t('pricingNoProductsDesc')}</p>
               </div>
             ) : pagedProducts.length === 0 ? (
               <div className="text-center py-8">
                 <Search size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
                 <p className="text-slate-500">
-                  {searchQuery ? `No products match "${searchQuery}"` : 'No products available on this page'}
+                  {searchQuery ? `${t('noResultsFor')} "${searchQuery}"` : t('pricingNoProductsOnPage')}
                 </p>
                 <p className="text-sm text-slate-400 mt-1">
-                  {searchQuery ? 'Try a different search term' : 'Adjust filters or return to a previous page'}
+                  {searchQuery ? t('tryDifferentSearch') : t('pricingAdjustFilters')}
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>
-                    Showing {startIndex}-{endIndex} of {totalProductsCount} products
+                    {t('showing')} {startIndex}-{endIndex} {t('of')} {totalProductsCount} {t('products')}
                   </span>
-                  <span>Page {currentPage} of {totalPages}</span>
+                  <span>{t('page')} {currentPage} {t('of')} {totalPages}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
                   {pagedProducts.map(product => (
@@ -701,14 +703,14 @@ export default function PricingCalculator() {
                     disabled={currentPage <= 1}
                     className="px-3 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                    {t('previous')}
                   </button>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage >= totalPages}
                     className="px-3 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {t('next')}
                   </button>
                 </div>
               </div>
@@ -723,14 +725,13 @@ export default function PricingCalculator() {
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-4 shadow-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign size={18} />
-                    <span className="text-sm font-medium opacity-90">Monthly Revenue</span>
+                    <span className="text-sm font-medium opacity-90">{t('pricingMonthlyRevenue')}</span>
                     <div className="relative group">
                       <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div className="text-center">
-                          <strong>Monthly Revenue Calculation:</strong><br />
-                          Recommended Price × Monthly Sales Volume<br />
-                          <em>(for all selected products)</em>
+                          <strong>{t('pricingMonthlyRevenue')}:</strong><br />
+                          {t('pricingMonthlyRevenueTooltip')}
                         </div>
                       </div>
                     </div>
@@ -743,14 +744,13 @@ export default function PricingCalculator() {
                 <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-4 shadow-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp size={18} />
-                    <span className="text-sm font-medium opacity-90">Monthly Profit</span>
+                    <span className="text-sm font-medium opacity-90">{t('pricingMonthlyProfit')}</span>
                     <div className="relative group">
                       <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div className="text-center">
-                          <strong>Monthly Profit Calculation:</strong><br />
-                          (Recommended Price - Cost - Expenses - Tax) × Monthly Sales<br />
-                          <em>(for all selected products)</em>
+                          <strong>{t('pricingMonthlyProfit')}:</strong><br />
+                          {t('pricingMonthlyProfitTooltip')}
                         </div>
                       </div>
                     </div>
@@ -763,14 +763,13 @@ export default function PricingCalculator() {
                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-4 shadow-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Percent size={18} />
-                    <span className="text-sm font-medium opacity-90">Avg Margin</span>
+                    <span className="text-sm font-medium opacity-90">{t('pricingAvgMargin')}</span>
                     <div className="relative group">
                       <HelpCircle size={14} className="opacity-70 hover:opacity-100 cursor-help" />
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-black/90 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div className="text-center">
-                          <strong>Average Margin:</strong><br />
-                          Mean of each product's profit margin where<br />
-                          (Recommended − Cost − Expenses − Tax) ÷ Recommended Price.
+                          <strong>{t('pricingAvgMargin')}:</strong><br />
+                          {t('pricingAvgMarginTooltip')}
                         </div>
                       </div>
                     </div>
@@ -784,25 +783,25 @@ export default function PricingCalculator() {
               {/* Results Table */}
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Pricing Results</h3>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">{t('pricingResults')}</h3>
                   <button
                     onClick={exportResults}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Download size={16} />
-                    Export
+                    {t('pricingExportExcel')}
                   </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-slate-50 dark:bg-slate-900">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Product</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Current</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Recommended</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Change</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Margin</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Monthly Profit</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('pricingProduct')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('pricingCurrent')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('pricingRecommended')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('change')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('pricingMargin')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">{t('pricingMonthlyProfit')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -815,7 +814,7 @@ export default function PricingCalculator() {
                             <td className="px-4 py-3">
                               <div>
                                 <p className="font-medium text-slate-900 dark:text-white">{result.productName}</p>
-                                <p className="text-xs text-slate-500">{result.monthlySales} sales/month</p>
+                                <p className="text-xs text-slate-500">{result.monthlySales} {t('pricingSalesPerMonth')}</p>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white">
@@ -861,17 +860,17 @@ export default function PricingCalculator() {
                 <div className="flex items-start gap-3">
                   <CheckCircle size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How Pricing is Calculated</h4>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">{t('pricingHowCalculated')}</h4>
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>• <strong>Base:</strong> Product cost + {includeExpenses ? 'allocated operating expenses' : 'no operating expenses'} (proportional to sales volume)</li>
-                      <li>• <strong>Inflation:</strong> {inflationRate.toFixed(1)}% adjustment added to cover rising costs</li>
-                      <li>• <strong>Profit Margin:</strong> {desiredProfitMargin.toFixed(0)}% added for business profitability</li>
-                      <li>• <strong>Tax:</strong> {taxRate.toFixed(1)}% added on final selling price</li>
+                      <li>• <strong>{t('pricingBase')}:</strong> {t('pricingBaseCost')} + {includeExpenses ? t('pricingAllocatedExpensesLower') : t('pricingNoExpenses')} ({t('pricingProportionalToSales')})</li>
+                      <li>• <strong>{t('pricingInflationAdjustment')}:</strong> {inflationRate.toFixed(1)}% {t('pricingAdjustmentAdded')}</li>
+                      <li>• <strong>{t('pricingMargin')}:</strong> {desiredProfitMargin.toFixed(0)}% {t('pricingAddedForProfit')}</li>
+                      <li>• <strong>{t('pricingTaxes')}:</strong> {taxRate.toFixed(1)}% {t('pricingAddedOnFinalPrice')}</li>
                     </ul>
                     {includeExpenses && totalExpenses > 0 && (
                       <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          <strong>💡 Operating Expenses Allocation:</strong> ${totalExpenses.toLocaleString()} total expenses distributed across products based on sales volume ratio.
+                          <strong>💡 {t('pricingExpensesAllocation')}:</strong> ${totalExpenses.toLocaleString()} {t('pricingTotalExpensesDistributed')}
                         </p>
                       </div>
                     )}

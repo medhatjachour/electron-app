@@ -483,10 +483,10 @@ const EnhancedReports: React.FC = () => {
   };
 
   const reportTypes = [
-    { id: 'sales', title: 'Sales', icon: TrendingUp, color: 'text-blue-600' },
-    { id: 'inventory', title: 'Inventory', icon: Package, color: 'text-green-600' },
-    { id: 'financial', title: 'Financial', icon: DollarSign, color: 'text-purple-600' },
-    { id: 'customer', title: 'Customer', icon: Users, color: 'text-orange-600' }
+    { id: 'sales', title: t('sales'), icon: TrendingUp, color: 'text-blue-600' },
+    { id: 'inventory', title: t('inventory'), icon: Package, color: 'text-green-600' },
+    { id: 'financial', title: t('financial'), icon: DollarSign, color: 'text-purple-600' },
+    { id: 'customer', title: t('customer'), icon: Users, color: 'text-orange-600' }
   ];
 
   return (
@@ -548,7 +548,7 @@ const EnhancedReports: React.FC = () => {
           <div className="flex flex-wrap items-end gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-600">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                📅 Start Date
+                📅 {t('startDate')}
               </label>
               <input
                 type="date"
@@ -559,7 +559,7 @@ const EnhancedReports: React.FC = () => {
             </div>
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                📅 End Date
+                📅 {t('endDate')}
               </label>
               <input
                 type="date"
@@ -574,7 +574,7 @@ const EnhancedReports: React.FC = () => {
               className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
             >
               <BarChart3 size={20} />
-              {loading ? 'Generating...' : 'Generate Report'}
+              {loading ? t('generating') : t('generateReportButton')}
             </button>
           </div>
         )}
@@ -584,10 +584,10 @@ const EnhancedReports: React.FC = () => {
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-6 rounded-xl border border-primary/20">
         <div className="flex items-center gap-2 mb-4">
           <Activity size={24} className="text-primary" />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Activity</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('todaysActivity')}</h2>
           <span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            LIVE
+            {t('live')}
           </span>
         </div>
 
@@ -595,7 +595,7 @@ const EnhancedReports: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Revenue</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('revenue')}</span>
               <DollarSign size={18} className="text-green-600 dark:text-green-400" />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -603,24 +603,24 @@ const EnhancedReports: React.FC = () => {
             </p>
             <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
               <ArrowUpRight size={14} />
-              <span>{todayStats?.revenueChange || 0}% vs yesterday</span>
+              <span>{todayStats?.revenueChange || 0}% {t('vsYesterday')}</span>
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Expenses</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('expenses')}</span>
               <TrendingDown size={18} className="text-red-600 dark:text-red-400" />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
               {todayStats ? formatCurrency(todayStats.expenses) : '$0.00'}
             </p>
-            <p className="text-xs text-slate-500 mt-1">{todayStats?.expensesCount || 0} transactions</p>
+            <p className="text-xs text-slate-500 mt-1">{todayStats?.expensesCount || 0} {t('transactions')}</p>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Profit</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('profit')}</span>
               <TrendingUp size={18} className="text-blue-600 dark:text-blue-400" />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -628,14 +628,14 @@ const EnhancedReports: React.FC = () => {
             </p>
             <p className="text-xs text-slate-500 mt-1">
               {todayStats && todayStats.revenue > 0 
-                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% margin` 
-                : 'No sales yet'}
+                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% ${t('margin')}` 
+                : t('noSalesYet')}
             </p>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Sales</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t('sales')}</span>
               <ShoppingCart size={18} className="text-purple-600 dark:text-purple-400" />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -643,8 +643,8 @@ const EnhancedReports: React.FC = () => {
             </p>
             <p className="text-xs text-slate-500 mt-1">
               {todayStats && todayStats.salesCount > 0 
-                ? `Avg: ${formatCurrency(todayStats.revenue / todayStats.salesCount)}` 
-                : 'No transactions'}
+                ? `${t('avgLabel')}: ${formatCurrency(todayStats.revenue / todayStats.salesCount)}` 
+                : t('noTransactions')}
             </p>
           </div>
         </div>
@@ -656,21 +656,21 @@ const EnhancedReports: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus size={16} />
-            New Sale
+            {t('newSale')}
           </button>
           <button
             onClick={() => navigate('/expenses')}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Plus size={16} />
-            Add Expense
+            {t('addExpenseButton')}
           </button>
           <button
             onClick={() => navigate('/inventory')}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Package size={16} />
-            Manage Inventory
+            {t('manageInventory')}
           </button>
         </div>
       </div>
@@ -681,12 +681,12 @@ const EnhancedReports: React.FC = () => {
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Activity Feed</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('todaysActivityFeed')}</h3>
               <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">{activityFeed.length} events</span>
+            <span className="text-xs text-slate-500 font-medium">{activityFeed.length} {t('events')}</span>
           </div>
           
           <div className="space-y-3 max-h-80 overflow-y-auto">
@@ -729,8 +729,8 @@ const EnhancedReports: React.FC = () => {
             ) : (
               <div className="text-center py-12">
                 <Activity size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-                <p className="text-slate-600 dark:text-slate-400">No activity today yet</p>
-                <p className="text-sm text-slate-500 mt-1">Start selling or add expenses to see activity</p>
+                <p className="text-slate-600 dark:text-slate-400">{t('noActivityToday')}</p>
+                <p className="text-sm text-slate-500 mt-1">{t('startSellingMessage')}</p>
               </div>
             )}
           </div>
@@ -741,37 +741,37 @@ const EnhancedReports: React.FC = () => {
           <div className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-5 rounded-xl shadow-sm border-2 border-red-200 dark:border-red-800">
             <div className="flex items-center gap-2 mb-3">
               <Receipt size={20} className="text-red-600 dark:text-red-400" />
-              <h4 className="font-bold text-slate-900 dark:text-white">Today's Expenses</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white">{t('todaysExpenses')}</h4>
             </div>
             <p className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
               {todayStats ? formatCurrency(todayStats.expenses) : '$0.00'}
             </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">💸 {todayStats?.expensesCount || 0} transactions</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">💸 {todayStats?.expensesCount || 0} {t('transactions')}</p>
           </div>
 
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl shadow-sm border-2 border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2 mb-3">
               <ShoppingCart size={20} className="text-green-600 dark:text-green-400" />
-              <h4 className="font-bold text-slate-900 dark:text-white">Today's Sales</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white">{t('todaysSales')}</h4>
             </div>
             <p className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
               {todayStats?.salesCount || 0}
             </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">📦 Transactions completed</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">📦 {t('transactionsCompleted')}</p>
           </div>
 
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp size={20} className="text-blue-600 dark:text-blue-400" />
-              <h4 className="font-bold text-slate-900 dark:text-white">Today's Profit</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white">{t('todaysProfit')}</h4>
             </div>
             <p className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
               {todayStats ? formatCurrency(todayStats.profit) : '$0.00'}
             </p>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
               💰 {todayStats && todayStats.revenue > 0 
-                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% margin` 
-                : 'No sales yet'}
+                ? `${((todayStats.profit / todayStats.revenue) * 100).toFixed(1)}% ${t('margin')}` 
+                : t('noSalesYet')}
             </p>
           </div>
         </div>
@@ -792,7 +792,7 @@ const EnhancedReports: React.FC = () => {
             {/* Date Range */}
             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg">
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                📅 Period: <span className="font-semibold text-slate-900 dark:text-white">
+                📅 {t('period')}: <span className="font-semibold text-slate-900 dark:text-white">
                   {new Date(reportForm.startDate).toLocaleDateString()} - {new Date(reportForm.endDate).toLocaleDateString()}
                 </span>
               </p>
@@ -800,24 +800,24 @@ const EnhancedReports: React.FC = () => {
 
             {/* Summary Section */}
             <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-6 rounded-lg border border-primary/20">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">📊 Summary</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">📊 {t('summary')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 {reportForm.reportType === 'sales' && reportData.summary && (
                   <>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Revenue</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalRevenue')}</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(reportData.summary.totalRevenue || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Sales</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalSales')}</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {reportData.summary.totalSales || 0}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg col-span-2">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Average Order Value</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('averageOrderValue')}</p>
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                         {formatCurrency(reportData.summary.averageOrderValue || 0)}
                       </p>
@@ -828,25 +828,25 @@ const EnhancedReports: React.FC = () => {
                 {reportForm.reportType === 'inventory' && reportData.summary && (
                   <>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Value</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalValue')}</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(reportData.summary.totalValue || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Products</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalProducts')}</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {reportData.summary.totalProducts || 0}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Low Stock</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('lowStock')}</p>
                       <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                         {reportData.summary.lowStockCount || 0}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Out of Stock</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('outOfStock')}</p>
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                         {reportData.summary.outOfStockCount || 0}
                       </p>
@@ -857,25 +857,25 @@ const EnhancedReports: React.FC = () => {
                 {reportForm.reportType === 'financial' && reportData.summary && (
                   <>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Revenue</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalRevenue')}</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(reportData.summary.totalRevenue || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Expenses</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalExpensesLabel')}</p>
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                         {formatCurrency(reportData.summary.totalExpenses || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Net Profit</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('netProfit')}</p>
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                         {formatCurrency(reportData.summary.netProfit || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Profit Margin</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('profitMarginLabel')}</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {reportData.summary.profitMargin || 0}%
                       </p>
@@ -886,19 +886,19 @@ const EnhancedReports: React.FC = () => {
                 {reportForm.reportType === 'customer' && reportData.summary && (
                   <>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Customers</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalCustomers')}</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {reportData.summary.totalCustomers || 0}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total Spent</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('totalSpent')}</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(reportData.summary.totalSpent || 0)}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg col-span-2">
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg per Customer</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{t('avgPerCustomer')}</p>
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                         {formatCurrency(reportData.summary.averageSpent || 0)}
                       </p>
@@ -910,16 +910,16 @@ const EnhancedReports: React.FC = () => {
 
             {/* Detailed Data */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">📋 Detailed Breakdown</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">📋 {t('detailedBreakdown')}</h3>
               <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="max-h-80 overflow-y-auto">
                   {reportForm.reportType === 'sales' && reportData.topProducts && (
                     <table className="w-full">
                       <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Product</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Quantity</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Revenue</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">{t('product')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('quantity')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('revenue')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -938,10 +938,10 @@ const EnhancedReports: React.FC = () => {
                     <table className="w-full">
                       <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Category</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Products</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Stock</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Value</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">{t('category')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('products')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('stock')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('value')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -961,10 +961,10 @@ const EnhancedReports: React.FC = () => {
                     <table className="w-full">
                       <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Date</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Revenue</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Expenses</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Profit</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">{t('date')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('revenue')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('expenses')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('profit')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -984,10 +984,10 @@ const EnhancedReports: React.FC = () => {
                     <table className="w-full">
                       <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Customer</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">Tier</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Spent</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">Orders</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">{t('customer')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400">{t('loyaltyTierLabel')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('totalSpent')}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">{t('orders')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -1017,14 +1017,14 @@ const EnhancedReports: React.FC = () => {
                 className="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2 font-semibold transition-all transform hover:scale-105"
               >
                 <Printer className="w-5 h-5" />
-                Download PDF
+                {t('downloadPDF')}
               </button>
               <button
                 onClick={handleExportCSV}
                 className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 font-semibold transition-all transform hover:scale-105"
               >
                 <FileSpreadsheet className="w-5 h-5" />
-                Export CSV
+                {t('downloadCSV')}
               </button>
               <button
                 onClick={() => {
@@ -1033,7 +1033,7 @@ const EnhancedReports: React.FC = () => {
                 }}
                 className="px-6 py-3 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold transition-colors"
               >
-                Close
+                {t('close')}
               </button>
             </div>
           </div>

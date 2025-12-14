@@ -375,7 +375,7 @@ export default function Finance() {
               icon={<DollarSign size={24} />}
               color="blue"
               subtitle={`${currentMetrics?.transactions || 0} ${t('financeTransactions')}`}
-              tooltip="Total income from all sales before deducting costs. This represents the gross amount received from customers."
+              tooltip={t('financeTooltipRevenue')}
             />
             <KPICard
               title={t('financeGrossProfit')}
@@ -388,7 +388,7 @@ export default function Finance() {
                 : `${t('financeTotalCost')}: $${currentMetrics?.totalCost.toFixed(2) || '0.00'}`
               }
               showChange={currentMetrics?.profitChange !== undefined}
-              tooltip="Net profit after deducting costs of goods sold (COGS) and operational expenses. Formula: Revenue - COGS - Expenses = Profit"
+              tooltip={t('financeTooltipProfit')}
             />
             <KPICard
               title={t('financeRefunds')}
@@ -398,7 +398,7 @@ export default function Finance() {
               color="red"
               subtitle={`${currentMetrics?.refundedTransactions || 0} ${t('financeTransactions')} | ${currentMetrics?.refundedItems || 0} ${t('financeItems')}`}
               showChange={true}
-              tooltip={`Total refunded amount and refund rate. ${currentMetrics?.refundRate?.toFixed(1) || 0}% of transactions had refunds. All revenue figures in this dashboard are NET values after deducting refunds.`}
+              tooltip={`${t('financeTooltipRefunds')} ${currentMetrics?.refundRate?.toFixed(1) || 0}% ${t('financeOf')} ${t('financeTransactions')} ${t('financeHadRefunds')}.`}
             />
             <KPICard
               title={t('financeProfitMargin')}
@@ -408,7 +408,7 @@ export default function Finance() {
               color="purple"
               subtitle={t('financeAverage')}
               showChange={false}
-              tooltip="Percentage of revenue that becomes profit, calculated as (Profit ÷ Revenue) × 100. Higher percentages indicate better profitability."
+              tooltip={t('financeTooltipMargin')}
             />
             <KPICard
               title={t('financeAvgOrder')}
@@ -417,7 +417,7 @@ export default function Finance() {
               icon={<ShoppingCart size={24} />}
               color="orange"
               subtitle={t('financePerTransaction')}
-              tooltip="Average amount spent per sale, calculated as Total Revenue ÷ Number of Transactions. Track this to measure customer spending patterns."
+              tooltip={t('financeTooltipAvgOrder')}
             />
           </div>
 
@@ -431,7 +431,7 @@ export default function Finance() {
                     <BarChart3 size={20} className="text-primary" />
                     {t('financeSalesTrend')}
                   </h3>
-                  <Tooltip text="Daily revenue over the selected period. Hover over data points to see exact amounts and percentage changes from the previous day.">
+                  <Tooltip text={t('financeTooltipSalesTrend')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
@@ -531,13 +531,13 @@ export default function Finance() {
                     <Sparkles size={20} className="text-primary" />
                     {t('financeTopProducts')}
                   </h3>
-                  <Tooltip text="Products ranked by total revenue. Margin colors: Green (≥50%), Blue (25-49%), Orange (<25%)">
+                  <Tooltip text={t('financeTooltipTopProducts')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
                 {topProducts.length > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                    Top {topProducts.length}
+                    {t('financeTopLabel')} {topProducts.length}
                   </span>
                 )}
               </div>
@@ -598,13 +598,13 @@ export default function Finance() {
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
+                      <p className="text-xs text-slate-500 mb-1">{t('financeTotalRevenue')}</p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">
                         ${topProducts.reduce((sum, p) => sum + p.revenue, 0).toFixed(2)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Total Profit</p>
+                      <p className="text-xs text-slate-500 mb-1">{t('financeTotalProfit')}</p>
                       <p className="text-sm font-semibold text-green-600 dark:text-green-400">
                         ${topProducts.reduce((sum, p) => sum + p.profit, 0).toFixed(2)}
                       </p>
@@ -622,14 +622,14 @@ export default function Finance() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Activity size={20} className="text-primary" />
-                    Sales by Category
+                    {t('financeSalesBy')}
                   </h3>
-                  <Tooltip text="Revenue distribution across product categories. Hover over segments to see exact amounts and percentages.">
+                  <Tooltip text={t('financeTooltipCategoryBreakdown')}>
                     <HelpCircle size={16} className="text-slate-400 hover:text-slate-600 cursor-help" />
                   </Tooltip>
                 </div>
                 <span className="text-sm text-slate-500">
-                  {salesByCategory.length} {salesByCategory.length === 1 ? 'category' : 'categories'}
+                  {salesByCategory.length} {salesByCategory.length === 1 ? t('financeCategoryLabel') : t('financeCategoriesLabel')}
                 </span>
               </div>
               
@@ -641,10 +641,10 @@ export default function Finance() {
                     <p className="text-4xl font-bold text-slate-900 dark:text-white">
                       ${salesByCategory.reduce((sum, c) => sum + c.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Total Revenue</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('financeTotalRevenue')}</p>
                     <div className="mt-2 px-3 py-1 bg-primary/10 rounded-full">
                       <p className="text-xs font-semibold text-primary">
-                        {salesByCategory.length} {salesByCategory.length === 1 ? 'Category' : 'Categories'}
+                        {salesByCategory.length} {salesByCategory.length === 1 ? t('financeCategoryLabel') : t('financeCategoriesLabel')}
                       </p>
                     </div>
                   </div>
@@ -700,8 +700,8 @@ export default function Finance() {
                               const percentage = ((value / total) * 100).toFixed(1)
                               return [
                                 `${context.label}`,
-                                `Revenue: $${value.toFixed(2)}`,
-                                `Share: ${percentage}%`
+                                `${t('financeRevenue')}: $${value.toFixed(2)}`,
+                                `${t('financeShare')}: ${percentage}%`
                               ]
                             }
                           }
@@ -752,19 +752,19 @@ export default function Finance() {
               {/* Category Summary */}
               <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Top Category</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeTopCategory')}</p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {salesByCategory[0]?.name || 'N/A'}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeTotalRevenue')}</p>
                   <p className="text-sm font-semibold text-primary">
                     ${salesByCategory.reduce((sum, c) => sum + c.revenue, 0).toFixed(2)}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 mb-1">Avg per Category</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('financeAvgPerCategory')}</p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
                     ${(salesByCategory.reduce((sum, c) => sum + c.revenue, 0) / salesByCategory.length).toFixed(2)}
                   </p>
