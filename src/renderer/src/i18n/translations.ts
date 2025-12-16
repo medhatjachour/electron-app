@@ -13,6 +13,7 @@ export const translations = {
     reports: 'Reports',
     finance: 'Finance',
     settings: 'Settings',
+    categories: 'Categories',
     
     // Common
     add: 'Add',
@@ -108,10 +109,14 @@ export const translations = {
     to: 'to',
     of: 'of',
     items: 'items',
+    previous: 'Previous',
+    next: 'Next',
     
     // Products
     editProduct: 'Edit Product',
+    productDetails: 'Product Details',
     productName: 'Product Name',
+    uncategorized: 'Uncategorized',
     baseSKU: 'Base SKU',
     category: 'Category',
     price: 'Price',
@@ -132,6 +137,7 @@ export const translations = {
     allSizes: 'All Sizes',
     inStock: 'In Stock',
     outOfStock: 'Out of Stock',
+    lowStock: 'Low Stock',
     productCatalog: 'Product Catalog',
     manageInventory: 'Manage your inventory',
     productsCount: 'products',
@@ -168,6 +174,8 @@ export const translations = {
     addToCart: 'Add to Cart',
     optional: 'optional',
     selectVariant: 'Select Variant',
+    product: 'Product',
+    qty: 'Qty',
     gridView: 'Grid View',
     quickSale: 'Quick Sale',
     viewCart: 'View Cart',
@@ -739,8 +747,6 @@ export const translations = {
     perPage: 'Per page:',
     showingCustomers: 'Showing {start} to {end} of {total} customers',
     first: 'First',
-    previous: 'Previous',
-    next: 'Next',
     last: 'Last',
     page: 'Page',
     loadingCustomers: 'Loading customers...',
@@ -984,7 +990,6 @@ export const translations = {
     itemsLabel: 'Items',
     unknownProduct: 'Unknown Product',
     categoryLabel: 'Category',
-    uncategorized: 'Uncategorized',
     quantityLabel: 'Quantity',
     refundedLabel: 'Refunded',
     unitLabel: 'unit',
@@ -1063,7 +1068,6 @@ export const translations = {
     // Products Page
     loadingProducts: 'Loading products...',
     addNewProduct: 'Add New Product',
-    productDetails: 'Product Details',
     name: 'Name',
     totalStock: 'Total Stock',
     
@@ -1289,6 +1293,7 @@ export const translations = {
     reports: 'التقارير',
     finance: 'المالية',
     settings: 'الإعدادات',
+    categories: 'الفئات',
     
     // Common
     add: 'إضافة',
@@ -1384,10 +1389,14 @@ export const translations = {
     to: 'إلى',
     of: 'من',
     items: 'عناصر',
+    previous: 'السابق',
+    next: 'التالي',
     
     // Products
     editProduct: 'تعديل المنتج',
+    productDetails: 'تفاصيل المنتج',
     productName: 'اسم المنتج',
+    uncategorized: 'بدون فئة',
     baseSKU: 'رمز المنتج',
     category: 'الفئة',
     price: 'السعر',
@@ -1408,6 +1417,7 @@ export const translations = {
     allSizes: 'جميع الأحجام',
     inStock: 'متوفر',
     outOfStock: 'غير متوفر',
+    lowStock: 'مخزون منخفض',
     productCatalog: 'كتالوج المنتجات',
     manageInventory: 'إدارة المخزون',
     productsCount: 'منتج',
@@ -1444,6 +1454,8 @@ export const translations = {
     addToCart: 'إضافة للسلة',
     optional: 'اختياري',
     selectVariant: 'اختر المتغير',
+    product: 'منتج',
+    qty: 'الكمية',
     gridView: 'عرض الشبكة',
     quickSale: 'بيع سريع',
     viewCart: 'عرض السلة',
@@ -2015,8 +2027,6 @@ export const translations = {
     perPage: 'لكل صفحة:',
     showingCustomers: 'عرض {start} إلى {end} من {total} عميل',
     first: 'الأول',
-    previous: 'السابق',
-    next: 'التالي',
     last: 'الأخير',
     page: 'صفحة',
     loadingCustomers: 'جاري تحميل العملاء...',
@@ -2262,7 +2272,6 @@ export const translations = {
     itemsLabel: 'العناصر',
     unknownProduct: 'منتج غير معروف',
     categoryLabel: 'الفئة',
-    uncategorized: 'بدون فئة',
     quantityLabel: 'الكمية',
     refundedLabel: 'تم الاسترجاع',
     unitLabel: 'وحدة',
@@ -2341,7 +2350,6 @@ export const translations = {
     // Products Page
     loadingProducts: 'جاري تحميل المنتجات...',
     addNewProduct: 'إضافة منتج جديد',
-    productDetails: 'تفاصيل المنتج',
     name: 'الاسم',
     totalStock: 'إجمالي المخزون',
     

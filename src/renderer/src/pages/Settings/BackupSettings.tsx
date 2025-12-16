@@ -2,9 +2,19 @@
  * Backup Settings Panel
  */
 
-import { Database, Download, Upload, HardDrive } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Database, Download, Upload, HardDrive, Trash2, RefreshCw } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useToast } from '../../contexts/ToastContext'
 import type { BackupSettings } from './types'
+
+type Backup = {
+  filename: string
+  path: string
+  size: number
+  createdAt: string
+  modifiedAt: string
+}
 
 type Props = {
   settings: BackupSettings
@@ -13,23 +23,138 @@ type Props = {
 
 export default function BackupSettingsPanel({ settings, onChange }: Props) {
   const { t } = useLanguage()
+  const toast = useToast()
+  const [backups, setBackups] = useState<Backup[]>([])
+  const [loading, setLoading] = useState(false)
+  const [backupDirectory, setBackupDirectory] = useState('')
+  
   const handleChange = (field: keyof BackupSettings, value: boolean | string | number) => {
     onChange({ ...settings, [field]: value })
   }
 
-  const handleBackup = () => {
-    alert('Backup functionality will be implemented')
-    // TODO: Implement backup via IPC
+  // Load backups list
+  const loadBackups = async () => {
+    try {
+      setLoading(true)
+      const result = await window.electron.ipcRenderer.invoke('backup:list', settings.backupLocation)
+      if (result.success) {
+        setBackups(result.data.backups)
+        setBackupDirectory(result.data.directory)
+      } else {
+        toast.error(result.error || 'Failed to load backups')
+      }
+    } catch (error) {
+      console.error('Failed to load backups:', error)
+      toast.error('Failed to load backups')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleRestore = () => {
-    alert('Restore functionality will be implemented')
-    // TODO: Implement restore via IPC
+  // Load backups on mount and when backup location changes
+  useEffect(() => {
+    loadBackups()
+  }, [settings.backupLocation])
+
+  const handleBackup = async () => {
+    try {
+      setLoading(true)
+      toast.info('Creating backup...')
+      
+      const result = await window.electron.ipcRenderer.invoke('backup:create', {
+        customPath: settings.backupLocation
+      })
+      
+      if (result.success) {
+        toast.success(`Backup created successfully: ${result.data.filename}`)
+        await loadBackups()
+        
+        // Clean old backups if auto-cleanup is enabled
+        if (settings.autoBackup && settings.keepBackups) {
+          await window.electron.ipcRenderer.invoke('backup:clean', {
+            keepCount: settings.keepBackups,
+            customPath: settings.backupLocation
+          })
+          await loadBackups()
+        }
+      } else {
+        toast.error(result.error || 'Failed to create backup')
+      }
+    } catch (error) {
+      console.error('Backup failed:', error)
+      toast.error('Failed to create backup')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleSelectLocation = () => {
-    alert('Folder selection dialog will be implemented')
-    // TODO: Implement folder selection via Electron dialog
+  const handleRestore = async (backupPath: string) => {
+    if (!confirm('Are you sure you want to restore from this backup? Your current database will be replaced.')) {
+      return
+    }
+    
+    try {
+      setLoading(true)
+      toast.info('Restoring backup...')
+      
+      const result = await window.electron.ipcRenderer.invoke('backup:restore', backupPath)
+      
+      if (result.success) {
+        toast.success('Backup restored successfully! Please restart the application.')
+      } else {
+        toast.error(result.error || 'Failed to restore backup')
+      }
+    } catch (error) {
+      console.error('Restore failed:', error)
+      toast.error('Failed to restore backup')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteBackup = async (backupPath: string) => {
+    if (!confirm('Are you sure you want to delete this backup?')) {
+      return
+    }
+    
+    try {
+      const result = await window.electron.ipcRenderer.invoke('backup:delete', backupPath)
+      
+      if (result.success) {
+        toast.success('Backup deleted successfully')
+        await loadBackups()
+      } else {
+        toast.error(result.error || 'Failed to delete backup')
+      }
+    } catch (error) {
+      console.error('Delete failed:', error)
+      toast.error('Failed to delete backup')
+    }
+  }
+
+  const handleSelectLocation = async () => {
+    try {
+      const result = await window.electron.ipcRenderer.invoke('backup:select-directory')
+      
+      if (result.success) {
+        handleChange('backupLocation', result.data.path)
+        toast.success('Backup location updated')
+      }
+    } catch (error) {
+      console.error('Failed to select directory:', error)
+      toast.error('Failed to select directory')
+    }
+  }
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+  }
+  
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toLocaleString()
   }
 
   return (
@@ -151,6 +276,76 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
                 {t('olderBackupsDeleted')}
               </p>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Backup List */}
+      <div className="glass-card p-6 space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-slate-900 dark:text-white">
+            Available Backups ({backups.length})
+          </h4>
+          <button
+            onClick={loadBackups}
+            disabled={loading}
+            className="btn-secondary flex items-center gap-2 px-3 py-2"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
+        
+        {backupDirectory && (
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Location: {backupDirectory}
+          </p>
+        )}
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Loading backups...</p>
+          </div>
+        ) : backups.length === 0 ? (
+          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+            <Database size={48} className="mx-auto mb-3 opacity-50" />
+            <p>No backups found</p>
+            <p className="text-sm mt-2">Create your first backup to get started</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {backups.map((backup) => (
+              <div
+                key={backup.path}
+                className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-slate-900 dark:text-white">
+                    {backup.filename}
+                  </div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    {formatDate(backup.createdAt)} • {formatFileSize(backup.size)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleRestore(backup.path)}
+                    disabled={loading}
+                    className="px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
+                  >
+                    <Upload size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBackup(backup.path)}
+                    disabled={loading}
+                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
