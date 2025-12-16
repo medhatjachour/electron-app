@@ -23,6 +23,7 @@ import { registerReportsHandlers } from './reports.handlers'
 import { registerAnalyticsHandlers } from './analytics.handlers'
 import { registerDeleteHandlers } from './delete.handlers'
 import { registerStockMovementHandlers } from './stock-movements.handlers'
+import './backup.handlers' // Import backup handlers (self-contained, no registration needed)
 
 // Initialize Prisma client
 let isSeeded = false
