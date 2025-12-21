@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
+import { InstallmentManager } from '../components/InstallmentManager'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -74,6 +75,8 @@ export default function Sales(): JSX.Element {
   const [selectedTransaction, setSelectedTransaction] = useState<SaleTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [showInstallmentManager, setShowInstallmentManager] = useState(false)
+  const [selectedTransactionForInstallments, setSelectedTransactionForInstallments] = useState<SaleTransaction | null>(null)
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -325,6 +328,11 @@ export default function Sales(): JSX.Element {
   const handleViewTransaction = (transaction: SaleTransaction) => {
     setSelectedTransaction(transaction)
     setShowViewModal(true)
+  }
+
+  const handleInstallmentManager = (transaction: SaleTransaction) => {
+    setSelectedTransactionForInstallments(transaction)
+    setShowInstallmentManager(true)
   }
 
   const handleExport = () => {
@@ -689,6 +697,16 @@ export default function Sales(): JSX.Element {
                               <Eye size={14} />
                               View
                             </button>
+                            {transaction.installments && transaction.installments.length > 0 && (
+                              <button 
+                                onClick={() => handleInstallmentManager(transaction)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-purple-200 dark:border-purple-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
+                                title="Manage installments"
+                              >
+                                <CreditCard size={14} />
+                                Installments
+                              </button>
+                            )}
                             {(transaction.status === 'completed' || transaction.status === 'partially_refunded') && refundsEnabled && (
                               <>
                                 {isWithinRefundPeriod(transaction.createdAt) ? (
@@ -1221,6 +1239,19 @@ export default function Sales(): JSX.Element {
         onClose={() => setShowRefundModal(false)}
         onRefund={handleRefundItems}
       />
+
+      {/* Installment Manager Modal */}
+      {showInstallmentManager && selectedTransactionForInstallments && (
+        <InstallmentManager
+          isOpen={showInstallmentManager}
+          onClose={() => {
+            setShowInstallmentManager(false)
+            setSelectedTransactionForInstallments(null)
+          }}
+          transactionId={selectedTransactionForInstallments.id}
+          customerName={selectedTransactionForInstallments.customerName || 'Walk-in Customer'}
+        />
+      )}
     </div>
   )
 }

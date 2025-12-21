@@ -11,6 +11,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
+import { PaymentFlowSelector } from './PaymentFlowSelector'
+import type { Customer } from './types'
 
 type ProductVariant = {
   id: string
@@ -53,17 +55,11 @@ type CartItem = {
   discountAppliedBy?: string
 }
 
-type Customer = {
-  id: string
-  name: string
-  email: string
-}
-
 type QuickSaleProps = {
   onCompleteSale?: (items: CartItem[], customer: Customer | null, paymentMethod: string) => Promise<void>
 }
 
-export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
+export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSaleProps) {
   const { showToast } = useToast()
   const { user } = useAuth()
   const { t } = useLanguage()
@@ -98,6 +94,10 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  
+  // Payment flow state
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false)
+  const [customerQuery, setCustomerQuery] = useState('')
   
   // Discount state
   const [showDiscountModal, setShowDiscountModal] = useState(false)
@@ -506,7 +506,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
   }
 
   // Complete sale
-  const completeSale = async () => {
+  const completeSale = async (paymentMethod: string = 'cash') => {
     if (cartItems.length === 0) {
       showToast('error', 'Cart empty')
       return
@@ -519,15 +519,71 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
         return
       }
 
-      // If shared completeSale function is provided, use it
-      if (onCompleteSale) {
-        await onCompleteSale(cartItems, selectedCustomer, 'cash')
-        showToast('success', 'Sale completed')
+      // For installment payments, create the sale record first
+      if (paymentMethod === 'installment') {
+        if (!selectedCustomer) {
+          showToast('error', 'Customer required for installments')
+          return
+        }
+        
+        // Create sale record first, then PaymentFlowSelector will link deposits/installments
+        const saleData = {
+          items: cartItems.map(item => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            price: item.finalPrice || item.price,
+            discountType: item.discountType || 'NONE',
+            discountValue: item.discountValue || 0,
+            discountReason: item.discountReason,
+            discountAppliedBy: item.discountAppliedBy
+          })),
+          transactionData: {
+            userId: user.id,
+            paymentMethod: 'installment',
+            customerName: selectedCustomer.name,
+            customerId: selectedCustomer.id,
+            subtotal,
+            tax: 0,
+            total
+          }
+        }
+
+        const result = await (window as any).api.saleTransactions.create(saleData)
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to create installment sale')
+        }
+
+        // Link any unlinked deposits and installments to this sale
+        const [customerDeposits, customerInstallments] = await Promise.all([
+          (window as any).api.deposits.getByCustomer(selectedCustomer.id),
+          (window as any).api.installments.getByCustomer(selectedCustomer.id)
+        ])
+
+        const unlinkedDeposits = customerDeposits.filter((d: any) => !d.saleId)
+        const unlinkedInstallments = customerInstallments.filter((i: any) => !i.saleId)
+
+        if (unlinkedDeposits.length > 0 || unlinkedInstallments.length > 0) {
+          try {
+            await (window as any).api.installments.linkToSale({
+              installmentIds: unlinkedInstallments.map((i: any) => i.id),
+              depositIds: unlinkedDeposits.map((d: any) => d.id),
+              saleId: result.transaction.id
+            })
+          } catch (linkError) {
+            console.error('Failed to link deposits/installments to sale:', linkError)
+          }
+        }
+
+        showToast('success', 'Installment sale completed')
+        
         // Reset
         setCartItems([])
         setSelectedCustomer(null)
         setSearchQuery('')
         setSearchResults([])
+        setShowPaymentOptions(false)
         return
       }
 
@@ -547,7 +603,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
         })),
         transactionData: {
           userId: user.id,
-          paymentMethod: 'cash', // Default payment method
+          paymentMethod: paymentMethod, // Use the passed payment method
           customerName: selectedCustomer?.name,
           customerId: selectedCustomer?.id,
           subtotal,
@@ -566,6 +622,7 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
       setSelectedCustomer(null)
       setSearchQuery('')
       setSearchResults([])
+      setShowPaymentOptions(false)
       
     } catch (error) {
       console.error('Sale error:', error)
@@ -1038,12 +1095,12 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               {t('clear')}
             </button>
             <button
-              onClick={completeSale}
+              onClick={() => setShowPaymentOptions(true)}
               disabled={cartItems.length === 0}
               className="flex-1 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-1.5"
             >
               <DollarSign size={18} />
-              {t('completeSale')}
+              {t('checkout')}
             </button>
           </div>
         </div>
@@ -1134,6 +1191,54 @@ export default function QuickSale({ onCompleteSale }: QuickSaleProps) {
               >
                 {t('cancel')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Options Modal */}
+      {showPaymentOptions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                {t('checkout')}
+              </h3>
+              <button
+                onClick={() => setShowPaymentOptions(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-slate-500 dark:text-slate-400" />
+              </button>
+            </div>
+
+            {/* Payment Flow Selector */}
+            <div className="flex-1 overflow-auto">
+              <PaymentFlowSelector
+                selectedCustomer={selectedCustomer}
+                customers={customers}
+                customerQuery={customerQuery}
+                onCustomerSelect={setSelectedCustomer}
+                onCustomerQueryChange={setCustomerQuery}
+                onAddNewCustomer={() => setShowAddCustomerModal(true)}
+                total={total}
+                onFullPayment={(method) => {
+                  completeSale(method)
+                }}
+                onPartialPayment={() => {
+                  // Just switch to installment view, no immediate action needed
+                }}
+                onCompleteInstallmentSale={() => {
+                  completeSale('installment')
+                }}
+                onDepositAdded={() => {
+                  console.log('Deposit added, refresh data')
+                }}
+                onInstallmentAdded={() => {
+                  console.log('Installment added, refresh data')
+                }}
+              />
             </div>
           </div>
         </div>

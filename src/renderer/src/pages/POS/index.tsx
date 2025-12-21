@@ -101,7 +101,7 @@ export default function POS(): JSX.Element {
   }
 
   return (
-    <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative">
+    <div className=" flex bg-slate-50 h-full dark:bg-slate-900 relative">
       <SuccessModal show={showSuccess} total={total} paymentMethod={paymentMethod} />
       <AddCustomerModal 
         show={showAddCustomerModal} 
@@ -136,6 +136,7 @@ export default function POS(): JSX.Element {
               <Zap size={18} />
               {t('quickSale')}
             </button>
+           
           </div>
         </div>
 
@@ -200,7 +201,7 @@ export default function POS(): JSX.Element {
       {viewMode === 'grid' && (
         <div 
           className={`
-            fixed lg:relative top-0 h-full z-10
+            fixed lg:relative top-0 min-h-full  overflow-y-scroll z-10
             w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
             bg-white dark:bg-slate-800 
             shadow-2xl lg:shadow-none
@@ -350,6 +351,8 @@ export default function POS(): JSX.Element {
           requireReason={true}
         />
       )}
+
+     
     </div>
   )
 }

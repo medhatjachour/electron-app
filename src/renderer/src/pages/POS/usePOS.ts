@@ -394,6 +394,17 @@ export function usePOS() {
       return
     }
 
+    // For installment payments, we don't create the sale here - the PaymentFlowSelector handles it
+    if (payment === 'installment') {
+      // Just validate that we have a customer for installments
+      if (!customer) {
+        alert('Customer selection is required for installment plans')
+        return
+      }
+      // The PaymentFlowSelector will handle creating the sale after deposits/installments are set up
+      return
+    }
+
     try {
       const userStr = localStorage.getItem('user')
       if (!userStr) {

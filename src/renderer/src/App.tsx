@@ -34,6 +34,7 @@ const Stores = lazy(() => import('./pages/Stores'))
 const Employees = lazy(() => import('./pages/Employees'))
 const Customers = lazy(() => import('./pages/Customers'))
 const Reports = lazy(() => import('./pages/Reports'))
+const Installments = lazy(() => import('./pages/Installments'))
 
 function AppContent() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
@@ -163,6 +164,16 @@ function AppContent() {
                 <RequireAuth>
                   <RootLayoutWrapper>
                     <Expenses />
+                  </RootLayoutWrapper>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/installments"
+              element={
+                <RequireAuth>
+                  <RootLayoutWrapper>
+                    <Installments />
                   </RootLayoutWrapper>
                 </RequireAuth>
               }

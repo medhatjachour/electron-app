@@ -242,6 +242,13 @@ const mockIPC = {
         return date >= start && date <= end
       })
     }
+  },
+  installments: {
+    list: async () => [],
+    getByCustomer: async (_customerId: string) => [],
+    getBySale: async (_saleId: string) => [],
+    markAsPaid: async (_data: any) => ({ success: false, error: 'Mock implementation' }),
+    create: async (_data: any) => ({ success: false, error: 'Mock implementation' })
   }
 }
 
@@ -304,5 +311,14 @@ export const ipc = isElectron ? {
       }>
     }) => window.electron.ipcRenderer.invoke('saleTransactions:refundItems', data),
     getByDateRange: (data: { startDate: Date, endDate: Date }) => window.electron.ipcRenderer.invoke('saleTransactions:getByDateRange', data)
+  },
+
+  // Installment operations
+  installments: {
+    list: () => window.electron.ipcRenderer.invoke('installments:list'),
+    getByCustomer: (customerId: string) => window.electron.ipcRenderer.invoke('installments:getByCustomer', customerId),
+    getBySale: (saleId: string) => window.electron.ipcRenderer.invoke('installments:getBySale', saleId),
+    markAsPaid: (data: { installmentId: string, paidDate?: string }) => window.electron.ipcRenderer.invoke('installments:markAsPaid', data),
+    create: (data: any) => window.electron.ipcRenderer.invoke('installments:create', data)
   }
 } : mockIPC
