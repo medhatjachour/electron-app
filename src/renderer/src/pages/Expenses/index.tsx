@@ -18,7 +18,7 @@ import {
   Download,
   Edit2,
   Trash2,
-  Receipt,
+  Receipt as ReceiptIcon,
   Building2,
   Zap,
   Package,
@@ -236,6 +236,7 @@ export default function Expenses() {
       error(t('failedToDeleteExpense'))
     }
   }
+
 
   const handleExport = () => {
     try {
@@ -631,8 +632,8 @@ export default function Expenses() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-12">
-              <Receipt size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+              <div className="text-center py-12">
+                <ReceiptIcon size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
               <p className="text-slate-600 dark:text-slate-400">{t('noExpensesFound')}</p>
               <p className="text-sm text-slate-500 mt-1">{t('addFirstExpense')}</p>
             </div>
@@ -642,8 +643,8 @@ export default function Expenses() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700" style={{ minWidth: 320, maxWidth: 400 }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {editingExpense ? `${t('edit')} ${t('expenses')}` : `${t('add')} ${t('expenses')}`}
@@ -660,32 +661,30 @@ export default function Expenses() {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  {t('category')}
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {EXPENSE_CATEGORIES.map((cat) => {
-                    const Icon = cat.icon
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setFormData({ ...formData, category: cat.id as ExpenseCategory })}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          formData.category === cat.id
-                            ? 'border-primary bg-primary/10'
-                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                        }`}
-                      >
-                        <Icon size={20} className="mx-auto mb-1" />
-                        <p className="text-xs font-medium text-center">{t(cat.nameKey).split(' ')[0]}</p>
-                      </button>
-                    )
-                  })}
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {t('category')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {EXPENSE_CATEGORIES.map((cat) => {
+                  const Icon = cat.icon
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setFormData({ ...formData, category: cat.id as ExpenseCategory })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        formData.category === cat.id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      <Icon size={20} className="mx-auto mb-1" />
+                      <p className="text-xs font-medium text-center">{t(cat.nameKey).split(' ')[0]}</p>
+                    </button>
+                  )
+                })}
               </div>
+            </div>
 
               {/* Amount */}
               <div>
@@ -716,7 +715,6 @@ export default function Expenses() {
                   rows={3}
                 />
               </div>
-            </div>
 
             {/* Actions */}
             <div className="flex items-center gap-2 mt-6">
@@ -738,9 +736,10 @@ export default function Expenses() {
                 {editingExpense ? `${t('edit')} ${t('expenses')}` : `${t('add')} ${t('expenses')}`}
               </button>
             </div>
-          </div>
-        </div>
+            </div>
+            </div>
       )}
+      {/* Receipt modal removed as requested */}
     </div>
   )
 }

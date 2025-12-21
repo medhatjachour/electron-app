@@ -158,7 +158,7 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="backup-settings">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('backupAndRestore')}

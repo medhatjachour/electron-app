@@ -6,11 +6,13 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useTour } from '../../components/TourGuide/TourProvider'
 import {
   BarChart3,
   Activity,
   Zap,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react'
 import DashboardStats from './components/DashboardStats'
 import RecentActivity from './components/RecentActivity'
@@ -28,6 +30,7 @@ const NotificationCenter = lazy(() => import('./components/NotificationCenter'))
 export default function Dashboard() {
   const { user } = useAuth()
   const { t } = useLanguage()
+  const { startTour, resetTour, isTourActive } = useTour()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState({
@@ -171,6 +174,20 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Test Tour Button */}
+              <button
+                onClick={() => {
+                  console.log('Test button clicked, isTourActive:', isTourActive)
+                  localStorage.removeItem('bizflow_tour_progress')
+                  resetTour()
+                }}
+                className="flex items-center gap-2 bg-yellow-500/20 hover:bg-yellow-500/30 backdrop-blur-sm px-3 py-2 rounded-lg transition-colors border border-yellow-500/50"
+                title="Test Tour (Clears storage and restarts)"
+              >
+                <HelpCircle size={16} />
+                <span className="text-sm font-medium hidden sm:inline">Test Tour</span>
+              </button>
+              
               <button
                 onClick={handleRefresh}
                 disabled={loading || refreshing}

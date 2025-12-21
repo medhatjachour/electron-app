@@ -28,6 +28,7 @@ export const translations = {
     loading: 'Loading',
     noData: 'No data available',
     actions: 'Actions',
+    viewReceipt: 'View Receipt',
     status: 'Status',
     live: 'Live',
     note: 'Note',
@@ -111,6 +112,74 @@ export const translations = {
     items: 'items',
     previous: 'Previous',
     next: 'Next',
+    back: 'Back',
+    finish: 'Finish',
+    complete: 'Complete',
+    step: 'Step',
+    stepsRemaining: 'steps remaining',
+    
+    // Tour Guide - Comprehensive
+    tourWelcome: 'Welcome to BizFlow! 🚀',
+    tourWelcomeDesc: 'Your all-in-one Point of Sale system with powerful features: Inventory tracking, profit calculation, financial management, multi-store support, and advanced analytics. Let\'s take a quick tour to get you started!',
+    
+    // Essential Setup
+    tourCreateAdmin: 'Create Admin Account',
+    tourCreateAdminDesc: 'First, let\'s create your admin account. Go to Settings → User Management to add yourself as the primary administrator. This account will have full access to all features.',
+    tourCreateStore: 'Create Your First Store',
+    tourCreateStoreDesc: 'Every business needs at least one store location. Click on Stores to add your first store with name, location, and contact information. Perfect for multi-location businesses!',
+    tourCreateCategory: 'Add Product Categories',
+    tourCreateCategoryDesc: 'Organize your products with categories. Go to Settings → Categories to create categories like "Electronics", "Clothing", "Food", etc. This makes inventory management much easier.',
+    
+    // Product Management
+    tourProductsIntro: 'Product Management',
+    tourProductsIntroDesc: 'Add products with detailed information: names, SKUs, prices, costs, descriptions, and images. Track stock levels in real-time across all stores.',
+    tourProductVariants: 'Product Variants & Pricing',
+    tourProductVariantsDesc: 'Create product variants (sizes, colors) with individual pricing and stock levels. Set different prices for wholesale vs retail. BizFlow handles all the complexity!',
+    
+    // Inventory Features
+    tourInventoryTracking: 'Real-Time Inventory Tracking',
+    tourInventoryTrackingDesc: 'Monitor stock levels across all stores in real-time. Get low-stock alerts, track stock movements, and manage transfers between locations. Never run out of popular items!',
+    
+    // POS System
+    tourPOSSystem: 'Lightning-Fast POS',
+    tourPOSSystemDesc: 'Your main selling interface! Barcode scanning, quick product search, customer selection, and multiple payment methods. Process sales in seconds!',
+    tourPOSFeatures: 'Advanced POS Features',
+    tourPOSFeaturesDesc: 'Apply discounts, split payments, handle returns/refunds, print receipts, and manage cash drawer. Everything you need for smooth transactions.',
+    
+    // Financial Management
+    tourFinanceOverview: 'Financial Management',
+    tourFinanceOverviewDesc: 'Track all your business finances in one place. Monitor revenue, expenses, profit margins, and cash flow. Make informed financial decisions.',
+    tourProfitCalculation: 'Automatic Profit Calculation',
+    tourProfitCalculationDesc: 'BizFlow automatically calculates profits by tracking product costs vs selling prices. View profit margins by product, category, or time period. Know exactly how much you\'re making!',
+    
+    // Customer Management
+    tourCustomers: 'Customer Relationship Management',
+    tourCustomersDesc: 'Build lasting relationships! Store customer information, track purchase history, offer loyalty rewards, and send personalized promotions. Turn one-time buyers into loyal customers.',
+    
+    // Sales Tracking
+    tourSalesTracking: 'Sales Transaction History',
+    tourSalesTrackingDesc: 'View all sales transactions with complete details. Search by date, customer, product, or amount. Handle returns and refunds easily. Complete audit trail for your records.',
+    
+    // Reports & Analytics
+    tourReports: 'Business Intelligence & Reports',
+    tourReportsDesc: 'Powerful analytics dashboard with sales trends, top products, revenue forecasts, and employee performance. Export reports to PDF or Excel. Data-driven decision making made easy!',
+    
+    // Employee Management
+    tourEmployees: 'Employee & Payroll Management',
+    tourEmployeesDesc: 'Manage your team with role-based access control. Track employee sales, calculate commissions, manage salaries and working hours. Keep your team organized and motivated.',
+    
+    // Backup & Security
+    tourBackup: 'Data Protection & Backup',
+    tourBackupDesc: 'Your business data is precious! Set up automatic daily backups to local or cloud storage. Restore anytime. Your data is always safe and secure.',
+    
+    tourComplete: 'You\'re Ready to Go! 🎉',
+    tourCompleteDesc: 'Congratulations! You now know all the powerful features BizFlow offers. Start with the essential setup (admin, store, categories), then explore the advanced features. You can restart this tour anytime from Settings → Help. Happy selling!',
+    skipTour: 'Skip Tour',
+    restartTour: 'Restart Tour',
+    help: 'Help',
+    helpCenter: 'Help Center',
+    onboardingTour: 'Onboarding Tour',
+    onboardingTourDesc: 'Take a guided tour through BizFlow to learn about all the features and how to set up your business.',
     
     // Products
     editProduct: 'Edit Product',
@@ -1306,6 +1375,7 @@ export const translations = {
     export: 'تصدير',
     import: 'استيراد',
     loading: 'جاري التحميل',
+    viewReceipt: 'عرض الإيصال',
     noData: 'لا توجد بيانات متاحة',
     actions: 'إجراءات',
     status: 'الحالة',
@@ -1391,6 +1461,74 @@ export const translations = {
     items: 'عناصر',
     previous: 'السابق',
     next: 'التالي',
+    back: 'رجوع',
+    finish: 'إنهاء',
+    complete: 'مكتمل',
+    step: 'خطوة',
+    stepsRemaining: 'خطوات متبقية',
+    
+    // Tour Guide - شامل
+    tourWelcome: 'مرحباً بك في BizFlow! 🚀',
+    tourWelcomeDesc: 'نظام نقاط البيع الشامل مع ميزات قوية: تتبع المخزون، حساب الأرباح، الإدارة المالية، دعم المتاجر المتعددة، والتحليلات المتقدمة. دعنا نأخذ جولة سريعة للبدء!',
+    
+    // الإعداد الأساسي
+    tourCreateAdmin: 'إنشاء حساب المسؤول',
+    tourCreateAdminDesc: 'أولاً، لننشئ حساب المسؤول الخاص بك. انتقل إلى الإعدادات ← إدارة المستخدمين لإضافة نفسك كمسؤول رئيسي. سيكون لهذا الحساب وصول كامل إلى جميع الميزات.',
+    tourCreateStore: 'إنشاء متجرك الأول',
+    tourCreateStoreDesc: 'كل عمل يحتاج إلى موقع متجر واحد على الأقل. انقر على المتاجر لإضافة متجرك الأول مع الاسم والموقع ومعلومات الاتصال. مثالي للأعمال متعددة المواقع!',
+    tourCreateCategory: 'إضافة فئات المنتجات',
+    tourCreateCategoryDesc: 'نظم منتجاتك بالفئات. انتقل إلى الإعدادات ← الفئات لإنشاء فئات مثل "إلكترونيات"، "ملابس"، "طعام"، إلخ. هذا يجعل إدارة المخزون أسهل بكثير.',
+    
+    // إدارة المنتجات
+    tourProductsIntro: 'إدارة المنتجات',
+    tourProductsIntroDesc: 'أضف منتجات مع معلومات مفصلة: الأسماء، رموز SKU، الأسعار، التكاليف، الأوصاف، والصور. تتبع مستويات المخزون في الوقت الفعلي عبر جميع المتاجر.',
+    tourProductVariants: 'متغيرات المنتجات والتسعير',
+    tourProductVariantsDesc: 'أنشئ متغيرات المنتجات (الأحجام، الألوان) مع تسعير ومستويات مخزون فردية. حدد أسعاراً مختلفة للجملة مقابل التجزئة. BizFlow يتعامل مع كل التعقيدات!',
+    
+    // ميزات المخزون
+    tourInventoryTracking: 'تتبع المخزون في الوقت الفعلي',
+    tourInventoryTrackingDesc: 'راقب مستويات المخزون عبر جميع المتاجر في الوقت الفعلي. احصل على تنبيهات المخزون المنخفض، تتبع حركات المخزون، وأدر التحويلات بين المواقع. لن تنفد أبداً من العناصر الشائعة!',
+    
+    // نظام نقاط البيع
+    tourPOSSystem: 'نقطة بيع فائقة السرعة',
+    tourPOSSystemDesc: 'واجهة البيع الرئيسية! مسح الباركود، البحث السريع عن المنتجات، اختيار العملاء، وطرق دفع متعددة. عالج المبيعات في ثوانٍ!',
+    tourPOSFeatures: 'ميزات نقطة البيع المتقدمة',
+    tourPOSFeaturesDesc: 'طبق الخصومات، قسّم المدفوعات، تعامل مع المرتجعات/الاستردادات، اطبع الإيصالات، وأدر درج النقدية. كل ما تحتاجه لمعاملات سلسة.',
+    
+    // الإدارة المالية
+    tourFinanceOverview: 'الإدارة المالية',
+    tourFinanceOverviewDesc: 'تتبع جميع مالياتك التجارية في مكان واحد. راقب الإيرادات، المصروفات، هوامش الربح، والتدفق النقدي. اتخذ قرارات مالية مدروسة.',
+    tourProfitCalculation: 'حساب الأرباح التلقائي',
+    tourProfitCalculationDesc: 'يحسب BizFlow الأرباح تلقائياً من خلال تتبع تكاليف المنتجات مقابل أسعار البيع. اعرض هوامش الربح حسب المنتج أو الفئة أو الفترة الزمنية. اعرف بالضبط كم تربح!',
+    
+    // إدارة العملاء
+    tourCustomers: 'إدارة علاقات العملاء',
+    tourCustomersDesc: 'ابنِ علاقات دائمة! احفظ معلومات العملاء، تتبع سجل المشتريات، قدّم مكافآت الولاء، وأرسل عروضاً ترويجية شخصية. حوّل المشترين لمرة واحدة إلى عملاء مخلصين.',
+    
+    // تتبع المبيعات
+    tourSalesTracking: 'سجل معاملات المبيعات',
+    tourSalesTrackingDesc: 'اعرض جميع معاملات المبيعات مع تفاصيل كاملة. ابحث حسب التاريخ أو العميل أو المنتج أو المبلغ. تعامل مع المرتجعات والاستردادات بسهولة. سجل تدقيق كامل لسجلاتك.',
+    
+    // التقارير والتحليلات
+    tourReports: 'ذكاء الأعمال والتقارير',
+    tourReportsDesc: 'لوحة تحليلات قوية مع اتجاهات المبيعات، المنتجات الأكثر مبيعاً، توقعات الإيرادات، وأداء الموظفين. صدّر التقارير إلى PDF أو Excel. اتخاذ قرارات مبنية على البيانات بسهولة!',
+    
+    // إدارة الموظفين
+    tourEmployees: 'إدارة الموظفين والرواتب',
+    tourEmployeesDesc: 'أدر فريقك مع التحكم في الوصول بناءً على الأدوار. تتبع مبيعات الموظفين، احسب العمولات، أدر الرواتب وساعات العمل. حافظ على تنظيم وتحفيز فريقك.',
+    
+    // النسخ الاحتياطي والأمان
+    tourBackup: 'حماية البيانات والنسخ الاحتياطي',
+    tourBackupDesc: 'بيانات عملك ثمينة! قم بإعداد نسخ احتياطية تلقائية يومية إلى التخزين المحلي أو السحابي. استعد في أي وقت. بياناتك دائماً آمنة ومحمية.',
+    
+    tourComplete: 'أنت جاهز للانطلاق! 🎉',
+    tourCompleteDesc: 'تهانينا! أنت الآن تعرف جميع الميزات القوية التي يقدمها BizFlow. ابدأ بالإعداد الأساسي (المسؤول، المتجر، الفئات)، ثم استكشف الميزات المتقدمة. يمكنك إعادة تشغيل هذه الجولة في أي وقت من الإعدادات ← المساعدة. مبيعات موفقة!',
+    skipTour: 'تخطي الجولة',
+    restartTour: 'إعادة تشغيل الجولة',
+    help: 'المساعدة',
+    helpCenter: 'مركز المساعدة',
+    onboardingTour: 'جولة تعريفية',
+    onboardingTourDesc: 'خذ جولة إرشادية عبر BizFlow لتتعلم عن جميع الميزات وكيفية إعداد عملك.',
     
     // Products
     editProduct: 'تعديل المنتج',

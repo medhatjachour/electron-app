@@ -17,11 +17,15 @@ const NOW = new Date()
 const FOUR_YEARS_AGO = new Date(NOW.getTime() - 4 * 365 * 24 * 60 * 60 * 1000)
 const THREE_YEARS_AGO = new Date(NOW.getTime() - 3 * 365 * 24 * 60 * 60 * 1000)
 
-// Configuration - Optimized for speed
+// Configuration - Comprehensive Testing Dataset
 const CONFIG = {
   TOTAL_PRODUCTS: 50000,
-  TOTAL_SALES: 100000,
-  CUSTOMER_COUNT: 1000,
+  TOTAL_SALES: 150000, // Increased for more data
+  CUSTOMER_COUNT: 2000, // More customers
+  REFUND_RATE: 0.05, // 5% of sales have refunds
+  PARTIAL_REFUND_RATE: 0.6, // 60% of refunds are partial
+  RESTOCK_FREQUENCY: 100, // Create restock every 100 sales
+  LOW_STOCK_THRESHOLD: 10,
   // Use larger batches with transactions for much better performance
   PRODUCT_BATCH_SIZE: 500, // Products per transaction
   VARIANT_BATCH_SIZE: 1000, // Variants per transaction
@@ -447,13 +451,35 @@ async function main() {
         for (const variant of selectedVariants) {
           const quantity = randomInt(1, 2)
           const price = variant.price
-          const total = price * quantity
+          // Most items have no discount, but some get a random discount
+          const hasDiscount = Math.random() < 0.15 // 15% of items get discounts
+          let discountType = 'NONE'
+          let discountValue = 0
+          let finalPrice = price
+          
+          if (hasDiscount) {
+            const isPercentage = Math.random() < 0.7 // 70% of discounts are percentage-based
+            if (isPercentage) {
+              discountType = 'PERCENTAGE'
+              discountValue = [5, 10, 15, 20, 25][randomInt(0, 4)] // Random percentage
+              finalPrice = price * (1 - discountValue / 100)
+            } else {
+              discountType = 'FIXED_AMOUNT'
+              discountValue = Math.min(price * 0.3, [5, 10, 15, 20][randomInt(0, 3)]) // Max 30% off
+              finalPrice = Math.max(price * 0.5, price - discountValue) // Minimum 50% of original
+            }
+          }
+          
+          const total = finalPrice * quantity
           
           items.push({
             productId: product.id,
             variantId: variant.id,
             quantity,
             price,
+            discountType,
+            discountValue,
+            finalPrice,
             total
           })
           
@@ -522,7 +548,7 @@ async function main() {
   console.log(`📦 Creating stock movements for ${allSaleItems.length.toLocaleString()} sale items...`)
   
   let totalStockMovements = 0
-  const stockMovementBatchSize = 1000
+  const stockMovementBatchSize = 250 // Reduced from 1000 for more stable transactions
   
   for (let i = 0; i < allSaleItems.length; i += stockMovementBatchSize) {
     const batch = allSaleItems.slice(i, i + stockMovementBatchSize)
@@ -561,6 +587,9 @@ async function main() {
           }
         }
       }
+    }, {
+      maxWait: 10000, // Maximum time to wait for transaction to start
+      timeout: 30000  // Maximum transaction time
     })
     
     if ((i + stockMovementBatchSize) % 10000 === 0 || (i + stockMovementBatchSize) >= allSaleItems.length) {
@@ -596,37 +625,50 @@ async function main() {
   
   console.log(`✅ Updated ${customerUpdates} customer records\n`)
 
-  // ==================== PARTIAL REFUNDS ====================
-  console.log('🔄 Creating partial refunds for testing...')
+  // ==================== REFUNDS & RETURNS ====================
+  console.log('🔄 Creating comprehensive refunds and returns for testing...')
   
-  // Get some recent completed transactions
-  const recentTransactions = await prisma.saleTransaction.findMany({
+  // Get transactions from last 6 months for refunds
+  const eligibleTransactions = await prisma.saleTransaction.findMany({
     where: { 
       status: 'completed',
-      createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } // Last 90 days
+      createdAt: { gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } // Last 6 months
     },
     include: { items: true },
-    take: 50,
     orderBy: { createdAt: 'desc' }
   })
   
+  console.log(`   Found ${eligibleTransactions.length} eligible transactions for refunds`)
+  
+  // Calculate number of refunds based on configured rate
+  const targetPartialRefunds = Math.floor(eligibleTransactions.length * CONFIG.REFUND_RATE * CONFIG.PARTIAL_REFUND_RATE)
+  const targetFullRefunds = Math.floor(eligibleTransactions.length * CONFIG.REFUND_RATE * (1 - CONFIG.PARTIAL_REFUND_RATE))
+  
+  console.log(`   Targeting ${targetPartialRefunds} partial refunds and ${targetFullRefunds} full refunds`)
+  
   let partialRefundCount = 0
   let fullRefundCount = 0
+  let totalRefundedAmount = 0
   
-  // Create 10 partially refunded transactions
-  for (let i = 0; i < Math.min(10, recentTransactions.length); i++) {
-    const transaction = recentTransactions[i]
+  // Create partial refunds
+  for (let i = 0; i < Math.min(targetPartialRefunds, eligibleTransactions.length); i++) {
+    const transaction = eligibleTransactions[i]
     
     if (transaction.items.length === 0) continue
     
+    let transactionRefundAmount = 0
+    
     await prisma.$transaction(async (tx) => {
-      // Pick random items to partially refund
-      const itemsToRefund = transaction.items.slice(0, Math.ceil(transaction.items.length / 2))
+      // Pick 30-70% of items to partially refund
+      const refundItemCount = Math.max(1, Math.floor(transaction.items.length * (0.3 + Math.random() * 0.4)))
+      const itemsToRefund = transaction.items.slice(0, refundItemCount)
       
       for (const item of itemsToRefund) {
         // Refund 30-70% of the quantity
         const refundPercentage = 0.3 + Math.random() * 0.4
         const quantityToRefund = Math.max(1, Math.floor(item.quantity * refundPercentage))
+        const refundAmount = item.total * (quantityToRefund / item.quantity)
+        transactionRefundAmount += refundAmount
         
         // Update sale item
         await tx.saleItem.update({
@@ -676,20 +718,29 @@ async function main() {
         where: { id: transaction.id },
         data: { status: 'partially_refunded' }
       })
-      
-      partialRefundCount++
     })
+    
+    partialRefundCount++
+    totalRefundedAmount += transactionRefundAmount
+    
+    if (partialRefundCount % 100 === 0) {
+      console.log(`   Created ${partialRefundCount}/${targetPartialRefunds} partial refunds...`)
+    }
   }
   
-  // Create 5 fully refunded transactions
-  for (let i = 10; i < Math.min(15, recentTransactions.length); i++) {
-    const transaction = recentTransactions[i]
+  // Create full refunds
+  for (let i = targetPartialRefunds; i < Math.min(targetPartialRefunds + targetFullRefunds, eligibleTransactions.length); i++) {
+    const transaction = eligibleTransactions[i]
     
     if (transaction.items.length === 0) continue
+    
+    let transactionRefundAmount = 0
     
     await prisma.$transaction(async (tx) => {
       // Refund all items completely
       for (const item of transaction.items) {
+        transactionRefundAmount += item.total
+        
         await tx.saleItem.update({
           where: { id: item.id },
           data: {
@@ -737,12 +788,18 @@ async function main() {
         where: { id: transaction.id },
         data: { status: 'refunded' }
       })
-      
-      fullRefundCount++
     })
+    
+    fullRefundCount++
+    totalRefundedAmount += transactionRefundAmount
+    
+    if (fullRefundCount % 50 === 0) {
+      console.log(`   Created ${fullRefundCount}/${targetFullRefunds} full refunds...`)
+    }
   }
   
-  console.log(`✅ Created ${partialRefundCount} partially refunded and ${fullRefundCount} fully refunded transactions\n`)
+  console.log(`✅ Created ${partialRefundCount} partial refunds and ${fullRefundCount} full refunds`)
+  console.log(`   Total refunded amount: $${totalRefundedAmount.toFixed(2)}\n`)
   
   // Recalculate customer totalSpent after refunds
   console.log('💳 Recalculating customer totalSpent after refunds...')
@@ -776,58 +833,142 @@ async function main() {
   
   console.log(`✅ Updated ${refundedCustomerUpdates} customer records\n`)
 
+  // ==================== CUSTOMER SEGMENTATION ====================
+  console.log('👥 Analyzing customer segments...')
+  
+  const customerAnalysis = await prisma.$transaction(async (tx) => {
+    const allCustomers = await tx.customer.findMany({
+      include: {
+        _count: { select: { saleTransactions: true } }
+      }
+    })
+    
+    let vipCount = 0
+    let loyalCount = 0
+    let regularCount = 0
+    let oneTimeCount = 0
+    
+    for (const customer of allCustomers) {
+      const purchaseCount = customer._count.saleTransactions
+      let segment = 'one-time'
+      
+      if (purchaseCount >= 20 || customer.totalSpent >= 10000) {
+        segment = 'vip'
+        vipCount++
+      } else if (purchaseCount >= 10 || customer.totalSpent >= 5000) {
+        segment = 'loyal'
+        loyalCount++
+      } else if (purchaseCount >= 3) {
+        segment = 'regular'
+        regularCount++
+      } else {
+        oneTimeCount++
+      }
+      
+      // Update customer loyalty tier based on purchases
+      let loyaltyTier = 'bronze'
+      if (customer.totalSpent >= 10000) loyaltyTier = 'platinum'
+      else if (customer.totalSpent >= 5000) loyaltyTier = 'gold'
+      else if (customer.totalSpent >= 2000) loyaltyTier = 'silver'
+      
+      await tx.customer.update({
+        where: { id: customer.id },
+        data: { loyaltyTier }
+      })
+    }
+    
+    return { vipCount, loyalCount, regularCount, oneTimeCount, total: allCustomers.length }
+  })
+  
+  console.log(`✅ Customer segmentation:`)
+  console.log(`   • VIP customers: ${customerAnalysis.vipCount} (${(customerAnalysis.vipCount / customerAnalysis.total * 100).toFixed(1)}%)`)
+  console.log(`   • Loyal customers: ${customerAnalysis.loyalCount} (${(customerAnalysis.loyalCount / customerAnalysis.total * 100).toFixed(1)}%)`)
+  console.log(`   • Regular customers: ${customerAnalysis.regularCount} (${(customerAnalysis.regularCount / customerAnalysis.total * 100).toFixed(1)}%)`)
+  console.log(`   • One-time buyers: ${customerAnalysis.oneTimeCount} (${(customerAnalysis.oneTimeCount / customerAnalysis.total * 100).toFixed(1)}%)\n`)
+
   // ==================== ADDITIONAL STOCK MOVEMENTS ====================
-  console.log('📦 Creating additional stock movements (restocks, adjustments, returns)...')
+  console.log('📦 Creating comprehensive stock movements (restocks, adjustments, returns)...')
   
   let additionalStockMovements = 0
-  const variantIds = await prisma.productVariant.findMany({ select: { id: true } })
+  const variantIds = await prisma.productVariant.findMany({ 
+    select: { id: true, stock: true, product: { select: { createdAt: true } } } 
+  })
+  
   const movementTypes = [
-    { type: 'RESTOCK', weight: 0.4 },
-    { type: 'ADJUSTMENT', weight: 0.2 },
+    { type: 'RESTOCK', weight: 0.5 }, // Increased restock frequency
+    { type: 'ADJUSTMENT', weight: 0.15 },
     { type: 'RETURN', weight: 0.2 },
-    { type: 'SHRINKAGE', weight: 0.2 }
+    { type: 'SHRINKAGE', weight: 0.15 }
   ]
   
-  // Add ~10,000 additional stock movements over time
-  const targetMovements = 10000
+  // Create more comprehensive stock movements
+  const targetMovements = 25000 // Increased from 10,000
   const movementBatchSize = 500
+  
+  console.log(`   Targeting ${targetMovements.toLocaleString()} stock movements...`)
   
   for (let i = 0; i < targetMovements; i += movementBatchSize) {
     const batchSize = Math.min(movementBatchSize, targetMovements - i)
     
     await prisma.$transaction(async (tx) => {
       for (let j = 0; j < batchSize; j++) {
-        const variant = variantIds[randomInt(0, variantIds.length - 1)]
+        const variantData = variantIds[randomInt(0, variantIds.length - 1)]
         const movementType = weightedRandom(
           movementTypes.map(m => m.type),
           movementTypes.map(m => m.weight)
         )
         
         const currentVariant = await tx.productVariant.findUnique({
-          where: { id: variant.id }
+          where: { id: variantData.id }
         })
         
         if (!currentVariant) continue
         
         let quantity = 0
         let reason = ''
+        let notes = ''
+        
+        // Create realistic movement dates based on product age
+        const productAge = Date.now() - variantData.product.createdAt.getTime()
+        const movementDate = new Date(variantData.product.createdAt.getTime() + Math.random() * productAge)
         
         switch (movementType) {
           case 'RESTOCK':
-            quantity = randomInt(20, 100)
-            reason = 'Supplier delivery'
+            // Larger restocks for low stock items
+            if (currentVariant.stock < CONFIG.LOW_STOCK_THRESHOLD) {
+              quantity = randomInt(50, 200)
+              reason = 'Emergency restock - low stock'
+              notes = `Stock was critically low at ${currentVariant.stock} units`
+            } else {
+              quantity = randomInt(20, 100)
+              reason = weightedRandom(
+                ['Supplier delivery', 'Scheduled restock', 'Bulk order', 'Seasonal stock'],
+                [0.4, 0.3, 0.2, 0.1]
+              )
+            }
             break
           case 'ADJUSTMENT':
-            quantity = randomInt(-10, 10)
-            reason = 'Inventory count correction'
+            quantity = randomInt(-15, 15)
+            reason = weightedRandom(
+              ['Inventory count correction', 'System sync', 'Manual adjustment', 'Found stock'],
+              [0.4, 0.3, 0.2, 0.1]
+            )
+            notes = quantity > 0 ? 'Stock discrepancy found - added' : 'Stock discrepancy found - removed'
             break
           case 'RETURN':
-            quantity = randomInt(1, 5)
-            reason = 'Customer return'
+            quantity = randomInt(1, 8)
+            reason = weightedRandom(
+              ['Customer return - changed mind', 'Wrong size/color', 'Defective product', 'Warranty return'],
+              [0.4, 0.3, 0.2, 0.1]
+            )
             break
           case 'SHRINKAGE':
-            quantity = -randomInt(1, 5)
-            reason = 'Damage/theft'
+            quantity = -randomInt(1, 10)
+            reason = weightedRandom(
+              ['Damaged in store', 'Theft/loss', 'Expired/spoiled', 'Display damage', 'Missing inventory'],
+              [0.3, 0.25, 0.2, 0.15, 0.1]
+            )
+            notes = 'Removed from sellable inventory'
             break
         }
         
@@ -836,28 +977,84 @@ async function main() {
         
         await tx.stockMovement.create({
           data: {
-            variantId: variant.id,
+            variantId: variantData.id,
             type: movementType,
             quantity,
             previousStock,
             newStock,
             reason,
+            notes: notes || undefined,
             userId: users[randomInt(0, users.length - 1)].id,
-            createdAt: randomDate(THREE_YEARS_AGO, NOW)
+            createdAt: movementDate
           }
         })
         
         await tx.productVariant.update({
-          where: { id: variant.id },
-          data: { stock: newStock, lastRestocked: movementType === 'RESTOCK' ? new Date() : undefined }
+          where: { id: variantData.id },
+          data: { 
+            stock: newStock, 
+            lastRestocked: movementType === 'RESTOCK' ? movementDate : undefined 
+          }
         })
         
         additionalStockMovements++
       }
     })
+    
+    if ((i + movementBatchSize) % 5000 === 0 || (i + movementBatchSize) >= targetMovements) {
+      const percent = (Math.min(i + movementBatchSize, targetMovements) / targetMovements * 100).toFixed(1)
+      console.log(`   ${Math.min(i + movementBatchSize, targetMovements).toLocaleString()} / ${targetMovements.toLocaleString()} movements (${percent}%)...`)
+    }
   }
   
   console.log(`✅ Created ${additionalStockMovements.toLocaleString()} additional stock movements\n`)
+
+  // ==================== EDGE CASES & SCENARIOS ====================
+  console.log('⚠️  Creating edge case scenarios...')
+  
+  // Out of stock products (5% of variants)
+  const outOfStockTarget = Math.floor(variantIds.length * 0.05)
+  let outOfStockCount = 0
+  
+  for (let i = 0; i < outOfStockTarget; i++) {
+    const variant = variantIds[randomInt(0, variantIds.length - 1)]
+    await prisma.productVariant.update({
+      where: { id: variant.id },
+      data: { stock: 0 }
+    })
+    outOfStockCount++
+  }
+  
+  // Dead stock (products with high stock but no recent sales) - 2% of variants
+  const deadStockTarget = Math.floor(variantIds.length * 0.02)
+  let deadStockCount = 0
+  
+  for (let i = 0; i < deadStockTarget; i++) {
+    const variant = variantIds[randomInt(0, variantIds.length - 1)]
+    await prisma.productVariant.update({
+      where: { id: variant.id },
+      data: { stock: randomInt(100, 500) } // High stock
+    })
+    deadStockCount++
+  }
+  
+  // Critical low stock (below threshold) - 10% of variants
+  const lowStockTarget = Math.floor(variantIds.length * 0.10)
+  let lowStockCount = 0
+  
+  for (let i = 0; i < lowStockTarget; i++) {
+    const variant = variantIds[randomInt(0, variantIds.length - 1)]
+    await prisma.productVariant.update({
+      where: { id: variant.id },
+      data: { stock: randomInt(1, CONFIG.LOW_STOCK_THRESHOLD - 1) }
+    })
+    lowStockCount++
+  }
+  
+  console.log(`✅ Created edge case scenarios:`)
+  console.log(`   • Out of stock: ${outOfStockCount.toLocaleString()} variants`)
+  console.log(`   • Dead stock: ${deadStockCount.toLocaleString()} variants`)
+  console.log(`   • Low stock: ${lowStockCount.toLocaleString()} variants\n`)
 
   // ==================== FINANCIAL TRANSACTIONS ====================
   console.log('💸 Creating financial transactions over 4 years...')
@@ -931,18 +1128,36 @@ async function main() {
   const duration = ((endTime - startTime) / 1000).toFixed(2)
   
   console.log('🎉 Development seeding completed successfully!\n')
-  console.log('📊 Summary:')
+  console.log('📊 COMPREHENSIVE DATASET SUMMARY:')
+  console.log('\n👥 Users & Organizations:')
   console.log(`   • ${categories.length} categories`)
-  console.log(`   • ${users.length} users`)
+  console.log(`   • ${users.length} users (setup, admin, manager)`)
   console.log(`   • ${stores.length} stores`)
-  console.log(`   • ${employees.length} employees`)
-  console.log(`   • ${customers.length.toLocaleString()} customers`)
-  console.log(`   • ${products.length.toLocaleString()} products (over 3 years)`)
-  console.log(`   • ${totalInitialStockMovements.toLocaleString()} initial stock movements`)
+  console.log(`   • ${employees.length} employees with salaries`)
+  console.log(`   • ${customers.length.toLocaleString()} customers (VIP: ${customerAnalysis.vipCount}, Loyal: ${customerAnalysis.loyalCount})`)
+  
+  console.log('\n📦 Products & Inventory:')
+  console.log(`   • ${products.length.toLocaleString()} products (created over 3 years)`)
+  console.log(`   • ${totalInitialStockMovements.toLocaleString()} initial stock entries`)
+  console.log(`   • ${outOfStockCount.toLocaleString()} out-of-stock variants`)
+  console.log(`   • ${lowStockCount.toLocaleString()} low-stock variants`)
+  console.log(`   • ${deadStockCount.toLocaleString()} dead-stock variants`)
+  
+  console.log('\n💰 Sales & Transactions:')
   console.log(`   • ${totalSalesCreated.toLocaleString()} sale transactions (over 4 years)`)
-  console.log(`   • ${totalStockMovements.toLocaleString()} sale-related stock movements`)
-  console.log(`   • ${additionalStockMovements.toLocaleString()} additional stock movements`)
-  console.log(`   • ${financialTransactionCount} financial transactions`)
+  console.log(`   • ${partialRefundCount} partially refunded transactions`)
+  console.log(`   • ${fullRefundCount} fully refunded transactions`)
+  console.log(`   • $${totalRefundedAmount.toFixed(2)} total refunded`)
+  
+  console.log('\n📊 Stock Movements:')
+  console.log(`   • ${totalStockMovements.toLocaleString()} sale-related movements`)
+  console.log(`   • ${additionalStockMovements.toLocaleString()} additional movements (restocks, returns, adjustments)`)
+  console.log(`   • ${(totalStockMovements + additionalStockMovements).toLocaleString()} total stock movements`)
+  
+  console.log('\n💸 Financial Data:')
+  console.log(`   • ${financialTransactionCount} financial transactions (income & expenses)`)
+  console.log(`   • 48 months of financial history`)
+  
   console.log(`\n⏱️  Completed in ${duration}s`)
   console.log('\n🔐 Login Credentials:')
   console.log('   Setup: setup / setup123')

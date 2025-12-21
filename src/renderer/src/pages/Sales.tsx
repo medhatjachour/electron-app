@@ -6,6 +6,7 @@ import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
+import Receipt from '../components/Receipt'
 
 type SaleItem = {
   id: string
@@ -58,6 +59,7 @@ export default function Sales(): JSX.Element {
   const [selectedTransaction, setSelectedTransaction] = useState<SaleTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -1066,10 +1068,29 @@ export default function Sales(): JSX.Element {
                 >
                   {t('closeButton')}
                 </button>
+                <button
+                  onClick={() => {
+                    // Open receipt modal
+                    setShowReceipt(true)
+                  }}
+                  className="w-full mt-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors font-medium"
+                >
+                  {t('viewReceipt')}
+                </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceipt && selectedTransaction && (
+        <Receipt
+          open={showReceipt}
+          onClose={() => setShowReceipt(false)}
+          data={selectedTransaction}
+          type="sale"
+        />
       )}
 
       {/* Refund Items Modal */}

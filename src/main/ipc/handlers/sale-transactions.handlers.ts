@@ -5,6 +5,12 @@ import { ipcMain } from 'electron'
  * Handles creating transactions with multiple items
  */
 
+function generateReceiptNumber(prefix = 'S') {
+  const ts = Date.now().toString(36).toUpperCase()
+  const rand = Math.floor(Math.random() * 9000 + 1000).toString()
+  return `${prefix}-${ts}-${rand}`
+}
+
 export function registerSaleTransactionHandlers(prisma: any) {
   /**
    * Create a new sale transaction with multiple items
@@ -28,9 +34,11 @@ export function registerSaleTransactionHandlers(prisma: any) {
 
       // Use transaction to ensure atomicity
       const result = await prisma.$transaction(async (tx: any) => {
-        // 1. Create the sale transaction
+        // 1. Create the sale transaction (include generated receiptNumber)
+        const receiptNumber = transactionData.receiptNumber || generateReceiptNumber('S')
         const saleTransaction = await tx.saleTransaction.create({
           data: {
+            receiptNumber,
             userId: transactionData.userId,
             customerId: transactionData.customerId || null,
             paymentMethod: transactionData.paymentMethod || 'cash',

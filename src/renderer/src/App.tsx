@@ -15,6 +15,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { DisplaySettingsProvider } from './contexts/DisplaySettingsContext'
+import { TourProvider } from './components/TourGuide/TourProvider'
 import PageLoader from './components/ui/PageLoader'
 import ErrorBoundary from './components/ErrorBoundary'
 import CommandPalette from './components/CommandPalette'
@@ -193,7 +194,9 @@ export default function AppRoutes() {
             <ToastProvider>
               <AuthProvider>
                 <HashRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-                  <AppContent />
+                  <TourProvider>
+                    <AppContent />
+                  </TourProvider>
                 </HashRouter>
               </AuthProvider>
             </ToastProvider>

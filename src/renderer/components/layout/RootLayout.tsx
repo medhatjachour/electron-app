@@ -241,6 +241,7 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   onMouseEnter={() => handleLinkHover(item.href)}
+                  data-tour={`${item.translationKey}-menu`}
                   className={`
                     flex items-center gap-3 rounded-xl px-3 py-2.5
                     text-sm font-medium transition-all duration-200

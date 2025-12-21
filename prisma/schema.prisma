@@ -152,6 +152,7 @@ model StockMovement {
 // Sales Transaction - One record per checkout/sale operation
 model SaleTransaction {
   id            String     @id @default(uuid())
+  receiptNumber String?    @unique
   userId        String
   customerId    String?    // Optional: Link to Customer for tracking
   paymentMethod String     @default("cash") // cash or card
@@ -229,6 +230,7 @@ model Sale {
 // Financial Transaction (renamed from Transaction to avoid confusion)
 model FinancialTransaction {
   id          String   @id @default(uuid())
+  receiptNumber String? @unique
   type        String   // "income" or "expense"
   amount      Float
   description String

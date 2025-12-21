@@ -6,7 +6,6 @@
 import { useState } from 'react'
 import { 
   Settings as SettingsIcon, 
-  User, 
   Bell, 
   CreditCard, 
   Receipt, 
@@ -15,7 +14,8 @@ import {
   Monitor,
   Tag,
   Users,
-  Archive
+  Archive,
+  HelpCircle
 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -30,6 +30,7 @@ import TaxReceiptSettings from './TaxReceiptSettings'
 import NotificationsSettings from './NotificationsSettings'
 import BackupSettings from './BackupSettings'
 import ArchiveManagementSettings from './ArchiveManagementSettings'
+import HelpSettings from './HelpSettings'
 import type { SettingsTab } from './types'
 
 export default function Settings() {
@@ -69,6 +70,7 @@ export default function Settings() {
     { id: 'notifications' as SettingsTab, name: t('notifications'), icon: Bell },
     { id: 'backup' as SettingsTab, name: t('backup'), icon: Database },
     { id: 'archive' as SettingsTab, name: t('archive'), icon: Archive },
+    { id: 'help' as SettingsTab, name: t('help'), icon: HelpCircle },
   ]
 
   const handleSave = () => {
@@ -195,6 +197,10 @@ export default function Settings() {
 
           {activeTab === 'archive' && (
             <ArchiveManagementSettings />
+          )}
+
+          {activeTab === 'help' && (
+            <HelpSettings />
           )}
         </div>
       </div>

@@ -20,6 +20,7 @@ import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
+import Receipt from '../../components/Receipt'
 import { usePOS } from './usePOS'
 import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
@@ -58,6 +59,8 @@ export default function POS(): JSX.Element {
   const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [receiptData, setReceiptData] = useState<any>(null)
   
   // Grid view has its own local customer state (like QuickSale does)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -66,6 +69,17 @@ export default function POS(): JSX.Element {
   // Clear local customer state when sale is completed successfully
   useEffect(() => {
     if (showSuccess) {
+      setReceiptData({
+        items: cart,
+        customerName: selectedCustomer?.name || customerQuery,
+        paymentMethod,
+        subtotal,
+        tax,
+        total,
+        createdAt: new Date(),
+        type: 'sale',
+      })
+      setShowReceipt(true)
       setSelectedCustomer(null)
       setCustomerQuery('')
     }
@@ -111,6 +125,7 @@ export default function POS(): JSX.Element {
         onClose={() => setShowAddCustomerModal(false)}
         onCustomerAdded={handleCustomerAdded}
       />
+      <Receipt open={showReceipt} onClose={() => setShowReceipt(false)} data={receiptData} type="sale" />
 
       {/* Main Content Area - Left Side */}
       <div className="flex-1 flex flex-col overflow-hidden">

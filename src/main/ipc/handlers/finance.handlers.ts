@@ -6,11 +6,17 @@
 import { ipcMain } from 'electron'
 
 export function registerFinanceHandlers(prisma: any) {
+  function generateReceiptNumber(prefix = 'P') {
+    const ts = Date.now().toString(36).toUpperCase()
+    const rand = Math.floor(Math.random() * 9000 + 1000).toString()
+    return `${prefix}-${ts}-${rand}`
+  }
   ipcMain.handle('finance:addTransaction', async (_, { type, amount, description, userId }) => {
     try {
       if (prisma) {
+        const receiptNumber = generateReceiptNumber('P')
         const transaction = await prisma.financialTransaction.create({ 
-          data: { type, amount, description, userId } 
+          data: { type, amount, description, userId, receiptNumber } 
         })
         return { success: true, transaction }
       }
