@@ -426,9 +426,9 @@ export function registerProductsHandlers(prisma: any) {
               let needsUpdate = false
               
               // Check for changes (excluding stock - stock is only modified via stock movement dialog)
-              if (v.color !== existing.color) { updates.color = v.color; needsUpdate = true }
-              if (v.size !== existing.size) { updates.size = v.size; needsUpdate = true }
-              if (v.price !== existing.price) { updates.price = v.price; needsUpdate = true }
+              if (v.color !== (existing as any).color) { updates.color = v.color; needsUpdate = true }
+              if (v.size !== (existing as any).size) { updates.size = v.size; needsUpdate = true }
+              if (v.price !== (existing as any).price) { updates.price = v.price; needsUpdate = true }
               // Stock is NOT updated here - use stock movement dialog to change stock
               
               if (needsUpdate) {

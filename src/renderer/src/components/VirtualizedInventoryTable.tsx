@@ -171,13 +171,9 @@ export default function VirtualizedInventoryTable({
           </div>
 
           <div className="w-20 flex-shrink-0 text-center">
-            <button
-              onClick={() => handleSort('variantCount')}
-              className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors mx-auto"
-            >
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 mx-auto">
               Variants
-              <SortIcon field="variantCount" />
-            </button>
+            </div>
           </div>
 
           <div className="w-24 flex-shrink-0 text-right">

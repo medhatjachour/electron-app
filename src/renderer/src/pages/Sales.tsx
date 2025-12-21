@@ -49,6 +49,7 @@ type SaleTransaction = {
     amount: number
     date: string
     method: string
+    status?: string
     note?: string
   }>
   installments?: Array<{
@@ -107,9 +108,8 @@ export default function Sales(): JSX.Element {
       startDate.setDate(startDate.getDate() - 30) // Last 30 days only
       
       const data = await ipc.saleTransactions.getByDateRange({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        limit: 100 // Limit to recent 100 transactions
+        startDate: startDate,
+        endDate: endDate
       })
       setTransactions(data)
     } catch (error) {
@@ -304,20 +304,22 @@ export default function Sales(): JSX.Element {
     setShowRefundModal(true)
   }
 
-  const handleRefundItems = async (items: Array<{ saleItemId: string; quantityToRefund: number }>) => {
+  const handleRefundItems = async () => {
     if (!selectedTransaction) return
 
-    const result = await ipc.saleTransactions.refundItems({
-      transactionId: selectedTransaction.id,
-      items
-    })
+    // TODO: Implement partial refund functionality
+    // const result = await ipc.saleTransactions.refundItems({
+    //   transactionId: selectedTransaction.id,
+    //   items
+    // })
 
-    if (result.success) {
-      alert('Items refunded successfully! Stock has been restored.')
-      await loadTransactions()
-    } else {
-      throw new Error(result.error || 'Failed to refund items')
-    }
+    alert('Partial refund functionality not yet implemented. Please use full refund.')
+    // if (result.success) {
+    //   alert('Items refunded successfully! Stock has been restored.')
+    //   await loadTransactions()
+    // } else {
+    //   throw new Error(result.error || 'Failed to refund items')
+    // }
   }
 
   const handleViewTransaction = (transaction: SaleTransaction) => {
@@ -973,25 +975,20 @@ export default function Sales(): JSX.Element {
                               {t('deposit')} #{deposit.id}
                             </p>
                             <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                              {t('dateLabel')}: {new Date(deposit.createdAt).toLocaleDateString()}
+                              {t('dateLabel')}: {new Date(deposit.date).toLocaleDateString()}
                             </p>
-                            {deposit.dueDate && (
-                              <p className="text-xs text-green-700 dark:text-green-300">
-                                {t('dueDate')}: {new Date(deposit.dueDate).toLocaleDateString()}
-                              </p>
-                            )}
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-green-900 dark:text-green-100">${deposit.amount.toFixed(2)}</div>
                             <div className="text-xs text-green-700 dark:text-green-300 mt-1 capitalize">
-                              {deposit.status}
+                              {deposit.status || 'completed'}
                             </div>
                           </div>
                         </div>
-                        {deposit.notes && (
+                        {deposit.note && (
                           <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
                             <div className="text-xs text-green-700 dark:text-green-300">
-                              <span className="font-semibold">{t('notes')}:</span> {deposit.notes}
+                              <span className="font-semibold">{t('notes')}:</span> {deposit.note}
                             </div>
                           </div>
                         )}
@@ -1023,7 +1020,7 @@ export default function Sales(): JSX.Element {
                                 ? 'text-red-900 dark:text-red-100'
                                 : 'text-blue-900 dark:text-blue-100'
                             }`}>
-                              {t('installment')} #{installment.installmentNumber}
+                              {t('installment')}
                             </p>
                             <p className={`text-xs mt-1 ${
                               installment.status === 'paid' 
@@ -1034,13 +1031,13 @@ export default function Sales(): JSX.Element {
                             }`}>
                               {t('dueDate')}: {new Date(installment.dueDate).toLocaleDateString()}
                             </p>
-                            {installment.paidAt && (
+                            {installment.paidDate && (
                               <p className={`text-xs ${
                                 installment.status === 'paid' 
                                   ? 'text-green-700 dark:text-green-300'
                                   : 'text-red-700 dark:text-red-300'
                               }`}>
-                                {t('paidOn')}: {new Date(installment.paidAt).toLocaleDateString()}
+                                {t('paidOn')}: {new Date(installment.paidDate).toLocaleDateString()}
                               </p>
                             )}
                           </div>
@@ -1065,7 +1062,7 @@ export default function Sales(): JSX.Element {
                             </div>
                           </div>
                         </div>
-                        {installment.notes && (
+                        {installment.note && (
                           <div className={`mt-3 pt-3 border-t ${
                             installment.status === 'paid' 
                               ? 'border-green-200 dark:border-green-700'
@@ -1080,7 +1077,7 @@ export default function Sales(): JSX.Element {
                                 ? 'text-red-700 dark:text-red-300'
                                 : 'text-blue-700 dark:text-blue-300'
                             }`}>
-                              <span className="font-semibold">{t('notes')}:</span> {installment.notes}
+                              <span className="font-semibold">{t('notes')}:</span> {installment.note}
                             </div>
                           </div>
                         )}

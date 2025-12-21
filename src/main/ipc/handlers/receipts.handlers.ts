@@ -10,7 +10,7 @@ export function registerReceiptHandlers(prisma: any) {
       return { success: true, receipt }
     } catch (error) {
       console.error('Error generating deposit receipt:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -20,7 +20,7 @@ export function registerReceiptHandlers(prisma: any) {
       return { success: true, receipt }
     } catch (error) {
       console.error('Error generating installment receipt:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -30,7 +30,7 @@ export function registerReceiptHandlers(prisma: any) {
       return { success: true, thermalData }
     } catch (error) {
       console.error('Error generating thermal receipt:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 }

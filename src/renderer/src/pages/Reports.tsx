@@ -24,7 +24,6 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Download } from 'lucide-react';
 
 interface TodayStats {
   revenue: number;

@@ -14,7 +14,7 @@ interface NotificationsProps {
   onClose?: () => void
 }
 
-export const Notifications: React.FC<NotificationsProps> = ({ onClose }) => {
+export const Notifications: React.FC<NotificationsProps> = ({ onClose: _onClose }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(true)
 

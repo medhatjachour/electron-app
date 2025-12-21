@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, CreditCard, Calendar, DollarSign } from 'lucide-react'
+import { Calendar, DollarSign } from 'lucide-react'
 import { PaymentPlan } from '../../../components/PaymentPlan'
 import DepositForm from './DepositForm'
 import InstallmentForm from './InstallmentForm'
@@ -52,7 +52,6 @@ export const PaymentPlanSection: React.FC<PaymentPlanSectionProps> = ({
         isOpen={showDepositForm}
         onClose={() => setShowDepositForm(false)}
         customerId={customerId}
-        saleId={saleId}
         onSuccess={() => {
           setShowDepositForm(false)
           setRefreshTrigger(prev => prev + 1)
@@ -65,7 +64,6 @@ export const PaymentPlanSection: React.FC<PaymentPlanSectionProps> = ({
         isOpen={showInstallmentForm}
         onClose={() => setShowInstallmentForm(false)}
         customerId={customerId}
-        saleId={saleId}
         onSuccess={() => {
           setShowInstallmentForm(false)
           setRefreshTrigger(prev => prev + 1)

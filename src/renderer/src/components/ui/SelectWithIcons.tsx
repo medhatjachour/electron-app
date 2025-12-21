@@ -3,13 +3,14 @@
  * Custom select dropdown with icons support
  */
 
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
+import { LucideIcon } from 'lucide-react'
 
 interface SelectOption {
   value: string | number
   label: string
-  icon?: React.ComponentType<{ size?: number; className?: string }>
+  icon?: LucideIcon
 }
 
 interface SelectWithIconsProps {

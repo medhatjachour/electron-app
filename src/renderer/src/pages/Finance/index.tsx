@@ -801,7 +801,7 @@ function KPICard({
   value: string
   change: number
   icon: React.ReactNode
-  color: 'blue' | 'green' | 'purple' | 'orange'
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red'
   showChange?: boolean
   subtitle?: string
   tooltip?: string
@@ -810,7 +810,8 @@ function KPICard({
     blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     green: 'bg-green-500/10 text-green-600 dark:text-green-400',
     purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    red: 'bg-red-500/10 text-red-600 dark:text-red-400'
   }
 
   return (

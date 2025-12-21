@@ -10,7 +10,7 @@ export function registerDepositsHandlers(prisma: any) {
       return { success: true, deposit }
     } catch (error) {
       console.error('Error creating deposit:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -50,7 +50,7 @@ export function registerDepositsHandlers(prisma: any) {
       return { success: true, result }
     } catch (error) {
       console.error('Error linking deposits to sale:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 }

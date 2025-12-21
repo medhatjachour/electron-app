@@ -10,7 +10,6 @@ interface DepositFormProps {
   isOpen: boolean
   onClose: () => void
   customerId?: string
-  saleId?: string
   onSuccess: () => void
 }
 
@@ -18,7 +17,6 @@ const DepositForm: React.FC<DepositFormProps> = ({
   isOpen,
   onClose,
   customerId,
-  saleId,
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
@@ -34,15 +32,20 @@ const DepositForm: React.FC<DepositFormProps> = ({
     e.preventDefault()
     setIsSubmitting(true)
 
+    if (!customerId) {
+      alert('Customer ID is required')
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       const result = await window.api.deposits.create({
         amount: parseFloat(formData.amount),
-        date: new Date(formData.date),
+        date: new Date(formData.date).toISOString(),
         method: formData.method,
         status: formData.status,
         note: formData.note || undefined,
-        customerId,
-        saleId
+        customerId
       })
 
       if (result.success) {

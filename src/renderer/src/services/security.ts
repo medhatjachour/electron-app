@@ -33,6 +33,7 @@ export enum Permission {
   // Sale permissions
   SALE_VIEW = 'sale:view',
   SALE_CREATE = 'sale:create',
+  SALE_UPDATE = 'sale:update',
   SALE_REFUND = 'sale:refund',
 
   // Report permissions
@@ -53,6 +54,23 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.admin]: [
     // Admins have all permissions
     ...Object.values(Permission),
+  ],
+  [Role.manager]: [
+    // Managers have most permissions except user management
+    Permission.PRODUCT_VIEW,
+    Permission.PRODUCT_CREATE,
+    Permission.PRODUCT_UPDATE,
+    Permission.PRODUCT_DELETE,
+    Permission.CUSTOMER_VIEW,
+    Permission.CUSTOMER_CREATE,
+    Permission.CUSTOMER_UPDATE,
+    Permission.CUSTOMER_DELETE,
+    Permission.SALE_VIEW,
+    Permission.SALE_CREATE,
+    Permission.SALE_UPDATE,
+    Permission.REPORT_VIEW,
+    Permission.REPORT_EXPORT,
+    Permission.REPORT_FINANCIAL,
   ],
   [Role.sales]: [
     Permission.PRODUCT_VIEW,

@@ -42,7 +42,7 @@ export function Log(target: unknown, propertyKey: string, descriptor: PropertyDe
 export function Cache(ttl: number = 60000): MethodDecorator {
   const cache = new Map<string, { value: unknown; expires: number }>()
 
-  return function (target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
+  return function (_target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
     const originalMethod = descriptor.value
 
     descriptor.value = async function (...args: unknown[]) {
@@ -154,7 +154,7 @@ export function Measure(target: unknown, propertyKey: string, descriptor: Proper
  * Debounce method calls
  */
 export function Debounce(delay: number = 300): MethodDecorator {
-  return function (target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
+  return function (_target: unknown, _propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
     const originalMethod = descriptor.value
     let timeout: NodeJS.Timeout | null = null
 
@@ -181,7 +181,7 @@ export function Debounce(delay: number = 300): MethodDecorator {
  * Throttle method calls
  */
 export function Throttle(delay: number = 1000): MethodDecorator {
-  return function (target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
+  return function (_target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): void {
     const originalMethod = descriptor.value
     let lastCall = 0
 
@@ -222,7 +222,7 @@ export function HandleErrors(fallbackValue?: unknown): MethodDecorator {
 /**
  * Ensure method is called only once
  */
-export function Once(target: unknown, propertyKey: string, descriptor: PropertyDescriptor): void {
+export function Once(_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor): void {
   const originalMethod = descriptor.value
   let called = false
   let result: unknown

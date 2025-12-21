@@ -161,7 +161,7 @@ export function useLazyLoad(ref: React.RefObject<Element>) {
 /**
  * Measure component render time
  */
-export function useRenderTime(componentName: string, enabled: boolean = process.env.NODE_ENV === 'development') {
+export function useRenderTime(_componentName: string, enabled: boolean = process.env.NODE_ENV === 'development') {
   const renderCount = useRef(0)
   const startTime = useRef(0)
   
@@ -172,8 +172,8 @@ export function useRenderTime(componentName: string, enabled: boolean = process.
   
   useEffect(() => {
     if (enabled) {
-      const endTime = performance.now()
-      const duration = endTime - startTime.current
+      // Duration calculation for potential future use
+      // const duration = performance.now() - startTime.current
     }
   })
 }

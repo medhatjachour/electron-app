@@ -26,7 +26,6 @@ interface PaymentFlowSelectorProps {
 type PaymentFlow = 'select' | 'full-payment' | 'installment-plan'
 
 export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
-  customerId,
   selectedCustomer,
   customers,
   customerQuery,
@@ -94,7 +93,7 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
           </div>
           <CustomerSelect
             customers={customers}
-            selectedCustomer={selectedCustomer}
+            selectedCustomer={selectedCustomer ?? null}
             customerQuery={customerQuery}
             onSelectCustomer={onCustomerSelect}
             onQueryChange={onCustomerQueryChange}
@@ -166,7 +165,7 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
 
           <CustomerSelect
             customers={customers}
-            selectedCustomer={selectedCustomer}
+            selectedCustomer={selectedCustomer ?? null}
             customerQuery={customerQuery}
             onSelectCustomer={onCustomerSelect}
             onQueryChange={onCustomerQueryChange}
@@ -286,7 +285,6 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
           isOpen={showDepositForm}
           onClose={() => setShowDepositForm(false)}
           customerId={selectedCustomer.id}
-          saleId={saleId}
           onSuccess={() => {
             setShowDepositForm(false)
             setRefreshTrigger(prev => prev + 1)
@@ -299,7 +297,6 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
           isOpen={showInstallmentForm}
           onClose={() => setShowInstallmentForm(false)}
           customerId={selectedCustomer.id}
-          saleId={saleId}
           onSuccess={() => {
             setShowInstallmentForm(false)
             setRefreshTrigger(prev => prev + 1)

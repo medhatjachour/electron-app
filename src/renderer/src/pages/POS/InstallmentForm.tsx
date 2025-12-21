@@ -9,7 +9,6 @@ interface InstallmentFormProps {
   isOpen: boolean
   onClose: () => void
   customerId?: string
-  saleId?: string
   onSuccess: () => void
 }
 
@@ -17,7 +16,6 @@ const InstallmentForm: React.FC<InstallmentFormProps> = ({
   isOpen,
   onClose,
   customerId,
-  saleId,
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
@@ -32,15 +30,19 @@ const InstallmentForm: React.FC<InstallmentFormProps> = ({
     e.preventDefault()
     setIsSubmitting(true)
 
+    if (!customerId) {
+      alert('Customer ID is required')
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       const result = await window.api.installments.create({
         amount: parseFloat(formData.amount),
-        dueDate: new Date(formData.dueDate),
+        dueDate: new Date(formData.dueDate).toISOString(),
         status: formData.status,
-        paidDate: formData.status === 'paid' ? new Date() : undefined,
         note: formData.note || undefined,
-        customerId,
-        saleId
+        customerId
       })
 
       if (result.success) {

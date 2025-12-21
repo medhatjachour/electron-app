@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { 
   Search, 
   LayoutDashboard, 
@@ -41,7 +41,6 @@ export default function CommandPalette({ isOpen, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const navigate = useNavigate()
-  const location = useLocation()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const commands: Command[] = [

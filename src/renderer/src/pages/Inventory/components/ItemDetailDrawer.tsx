@@ -4,7 +4,7 @@
  * Enhanced with optimistic updates for delete operations
  */
 
-import { useState, useEffect, SyntheticEvent } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Edit, RefreshCw, Package, DollarSign, Calendar, History, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useLanguage } from '../../../contexts/LanguageContext'
@@ -20,9 +20,9 @@ interface Props {
   onAdjustStock?: (variantId: string, productName: string, variantLabel: string, currentStock: number) => void
 }
 
-export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, isDeleting = false, onAdjustStock }: Props) {
+export default function ItemDetailDrawer({ item, onClose, onRefresh, onAdjustStock }: Props) {
   const { t } = useLanguage()
-  const { canEdit, canDelete } = useAuth()
+  const { canEdit } = useAuth()
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
@@ -89,7 +89,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
     })
   }
 
-  const handleImageError = (imageId: string, e: SyntheticEvent<HTMLImageElement>) => {
+  const handleImageError = (imageId: string) => {
     logger.warn(`Failed to load image: ${imageId}`)
     setImageErrors(prev => new Set(prev).add(imageId))
     setImageLoading(prev => {
@@ -220,7 +220,7 @@ export default function ItemDetailDrawer({ item, onClose, onRefresh, onDelete, i
                             }`}
                             loading="lazy"
                             onLoad={() => handleImageLoad(imageId)}
-                            onError={() => handleImageError(imageId, {} as SyntheticEvent<HTMLImageElement>)}
+                            onError={() => handleImageError(imageId)}
                           />
                           
                           {/* Hover overlay */}

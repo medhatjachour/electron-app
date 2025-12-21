@@ -67,7 +67,13 @@ export const SecuritySettingsSchema = z.object({
   confirmPassword: z.string().min(4, 'Please confirm your password'),
   twoFactorEnabled: z.boolean().default(false),
   sessionTimeout: z.number().int().min(5).max(1440).default(30) // minutes
-}).refine(data => data.newPassword === data.confirmPassword, {
+}).partial().refine(data => {
+  // Only validate password match if both passwords are provided
+  if (data.newPassword && data.confirmPassword) {
+    return data.newPassword === data.confirmPassword
+  }
+  return true
+}, {
   message: "Passwords don't match",
   path: ['confirmPassword']
 })
@@ -87,7 +93,7 @@ export const AllSettingsSchema = z.object({
   notifications: NotificationSettingsSchema,
   paymentMethods: PaymentMethodSettingsSchema,
   userProfile: UserProfileSettingsSchema,
-  security: SecuritySettingsSchema.partial(),
+  security: SecuritySettingsSchema,
   backup: BackupSettingsSchema
 })
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { DollarSign, Calendar, CheckCircle, Clock, AlertTriangle, Printer, Bell, Check } from 'lucide-react'
+import { DollarSign, Calendar, CheckCircle, Clock, AlertTriangle, Printer, Check } from 'lucide-react'
 
 export type Deposit = {
   id: string
@@ -28,9 +28,6 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [installments, setInstallments] = useState<Installment[]>([])
   const [loading, setLoading] = useState(true)
-  const [upcomingReminders, setUpcomingReminders] = useState<any[]>([])
-  const [overdueItems, setOverdueItems] = useState<any[]>([])
-  const [showReminders, setShowReminders] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -64,14 +61,6 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
           setDeposits(depositData)
           setInstallments(installmentData)
         }
-
-        // Load reminders and overdue items
-        const [reminders, overdue] = await Promise.all([
-          window.api.installments.getUpcomingReminders(7),
-          window.api.installments.getOverdue()
-        ])
-        setUpcomingReminders(reminders)
-        setOverdueItems(overdue)
       } catch (error) {
         console.error('Error loading payment plan:', error)
       } finally {
@@ -106,7 +95,7 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
 
   const handleMarkAsPaid = async (installmentId: string) => {
     try {
-      await window.api.installments.markAsPaid({ installmentId })
+      await window.api.installments.markAsPaid(installmentId)
       // Refresh the data
       window.location.reload() // Simple refresh for now
     } catch (error) {
@@ -145,7 +134,6 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
   const totalInstallments = installments.reduce((sum, inst) => sum + inst.amount, 0)
   const paidInstallments = installments.filter(inst => inst.status === 'paid').reduce((sum, inst) => sum + inst.amount, 0)
   const pendingInstallments = installments.filter(inst => inst.status === 'pending').length
-  const overdueInstallments = installments.filter(inst => inst.status === 'overdue').length
 
   if (loading) {
     return (
@@ -164,32 +152,6 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
 
   return (
     <div className="space-y-4">
-      {/* Notifications and Reminders */}
-      {(upcomingReminders.length > 0 || overdueInstallments > 0) && (
-        <div className="space-y-2">
-          {overdueInstallments > 0 && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="text-red-500" size={16} />
-                <span className="text-sm font-medium text-red-800 dark:text-red-200">
-                  {overdueInstallments} overdue payment{overdueInstallments > 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          )}
-          {upcomingReminders.length > 0 && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Bell className="text-yellow-500" size={16} />
-                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  {upcomingReminders.length} upcoming payment{upcomingReminders.length > 1 ? 's' : ''} due soon
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-2 text-xs">
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2 text-center">

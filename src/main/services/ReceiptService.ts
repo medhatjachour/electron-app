@@ -112,7 +112,7 @@ export class ReceiptService {
 
   generateThermalReceipt(receipt: any): string {
     // ESC/POS commands for thermal printer
-    const commands = []
+    const commands: string[] = []
 
     // Initialize printer
     commands.push('\x1B\x40') // ESC @ - Initialize

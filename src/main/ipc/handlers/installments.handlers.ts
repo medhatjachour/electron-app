@@ -10,7 +10,7 @@ export function registerInstallmentsHandlers(prisma: any) {
       return { success: true, installment }
     } catch (error) {
       console.error('Error creating installment:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -70,7 +70,7 @@ export function registerInstallmentsHandlers(prisma: any) {
       return { success: true, installment }
     } catch (error) {
       console.error('Error marking installment as paid:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -80,7 +80,7 @@ export function registerInstallmentsHandlers(prisma: any) {
       return { success: true, installment }
     } catch (error) {
       console.error('Error marking installment as overdue:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
@@ -90,7 +90,7 @@ export function registerInstallmentsHandlers(prisma: any) {
       return { success: true, result }
     } catch (error) {
       console.error('Error linking installments to sale:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 }

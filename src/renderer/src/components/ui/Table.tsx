@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function Table({ columns, data }: { columns: string[]; data: any[] }) {
   return (
     <div className="overflow-auto">

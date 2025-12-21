@@ -24,6 +24,7 @@ interface API {
     getAll: () => Promise<any>
     getById: (id: string) => Promise<any>
     refund: (id: string) => Promise<any>
+    refundItems: (data: { transactionId: string; items: Array<{ saleItemId: string; quantityToRefund: number }> }) => Promise<any>
     getByDateRange: (data: { startDate: string; endDate: string }) => Promise<any>
   }
   inventory: {
@@ -51,6 +52,7 @@ interface API {
       userId: string
     }) => Promise<any>
     getTransactions: (data: { startDate: Date; endDate: Date }) => Promise<any>
+    getStats: () => Promise<any>
     updateTransaction: (id: string, data: {
       type?: 'income' | 'expense'
       amount?: number
@@ -161,6 +163,85 @@ interface API {
       endDate?: string
       search?: string
     }) => Promise<any>
+  }
+  stockMovements: {
+    record: (data: {
+      variantId: string
+      type: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      quantity: number
+      previousStock: number
+      newStock: number
+      reason?: string
+      referenceId?: string
+      userId?: string
+      notes?: string
+    }) => Promise<any>
+    getHistory: (variantId: string, limit?: number) => Promise<any>
+    getProductHistory: (productId: string, limit?: number) => Promise<any>
+    getRecent: (limit?: number, type?: string) => Promise<any>
+    bulkRecord: (data: Array<{
+      variantId: string
+      type: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
+      quantity: number
+      previousStock: number
+      newStock: number
+      reason?: string
+      referenceId?: string
+      userId?: string
+      notes?: string
+    }>) => Promise<any>
+  }
+  deposits: {
+    create: (data: {
+      customerId: string
+      amount: number
+      date: string
+      method: string
+      status: string
+      note?: string
+    }) => Promise<any>
+    list: () => Promise<Array<{
+      id: string
+      customerId: string
+      amount: number
+      date: string
+      method: string
+      status?: string
+      note?: string
+    }>>
+    getByCustomer: (customerId: string) => Promise<Array<{
+      id: string
+      customerId: string
+      amount: number
+      date: string
+      method: string
+      status?: string
+      note?: string
+    }>>
+    getBySale: (saleId: string) => Promise<any>
+    linkToSale: (data: { depositIds: string[]; saleId: string }) => Promise<any>
+  }
+  installments: {
+    create: (data: {
+      customerId: string
+      amount: number
+      dueDate: string
+      status: string
+      note?: string
+    }) => Promise<any>
+    list: () => Promise<any>
+    getByCustomer: (customerId: string) => Promise<any>
+    getBySale: (saleId: string) => Promise<any>
+    linkToSale: (data: { installmentIds: string[]; saleId: string }) => Promise<any>
+    markAsPaid: (installmentId: string) => Promise<any>
+    markAsOverdue: (installmentId: string) => Promise<any>
+    getUpcomingReminders: (days: number) => Promise<any>
+    getOverdue: () => Promise<any>
+  }
+  receipts: {
+    generateDeposit: (depositId: string) => Promise<any>
+    generateInstallment: (installmentId: string) => Promise<any>
+    generateThermal: (receipt: any) => Promise<any>
   }
 }
 

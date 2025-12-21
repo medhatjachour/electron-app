@@ -10,13 +10,11 @@
  * - usePOS: Business logic and state management
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Grid, Zap } from 'lucide-react'
 import ProductSearch from './ProductSearch'
 import QuickSale from './QuickSale'
 import ShoppingCart from './ShoppingCart'
-import CustomerSelect from './CustomerSelect'
-import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
@@ -31,7 +29,6 @@ export default function POS(): JSX.Element {
   const {
     customers,
     cart,
-    customerQuery: sharedCustomerQuery,
     paymentMethod,
     showSuccess,
     showDiscountModal,
@@ -46,7 +43,6 @@ export default function POS(): JSX.Element {
     clearCart,
     completeSale,
     completeSaleFromQuickView,
-    setCustomerQuery: setSharedCustomerQuery,
     setPaymentMethod,
     refreshCustomers,
     canApplyDiscount,

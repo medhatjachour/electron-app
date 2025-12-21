@@ -1,27 +1,26 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  HomeIcon, 
-  ShoppingCartIcon, 
-  CubeIcon, 
-  BanknotesIcon,
-  UserIcon
-} from '@heroicons/react/24/outline';
-import { preloadData } from '../../src/hooks/useDataCache';
+import {
+  Home,
+  ShoppingCart,
+  Package,
+  DollarSign,
+  User
+} from 'lucide-react';
 
 interface NavItem {
   name: string;
   href: string;
-  icon: (props: React.ComponentProps<'svg'>) => JSX.Element;
+  icon: React.ComponentType<any>;
   roles: string[];
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'sales', 'inventory', 'finance'] },
-  { name: 'Sales', href: '/sales', icon: ShoppingCartIcon, roles: ['admin', 'sales'] },
-  { name: 'Inventory', href: '/inventory', icon: CubeIcon, roles: ['admin', 'inventory'] },
-  { name: 'Finance', href: '/finance', icon: BanknotesIcon, roles: ['admin', 'finance'] },
-  { name: 'Profile', href: '/profile', icon: UserIcon, roles: ['admin', 'sales', 'inventory', 'finance'] },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['admin', 'sales', 'inventory', 'finance'] },
+  { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin', 'sales'] },
+  { name: 'Inventory', href: '/inventory', icon: Package, roles: ['admin', 'inventory'] },
+  { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
+  { name: 'Profile', href: '/profile', icon: User, roles: ['admin', 'sales', 'inventory', 'finance'] },
 ];
 
 interface SidebarProps {
@@ -46,13 +45,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
               return (
                 <li key={item.name}>
                   <Link
-                    href={item.href}
+                    to={item.href}
                     className={`group flex items-center rounded-lg px-4 py-2 text-sm font-medium ${
                       isActive
                         ? 'bg-gray-100 text-gray-700'
                         : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                     }`}
-                    to={item.href}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 ${
