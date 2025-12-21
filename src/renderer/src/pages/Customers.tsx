@@ -857,6 +857,62 @@ export default function Customers(): JSX.Element {
                       </div>
                     ))}
                   </div>
+
+                  {/* Deposits */}
+                  {transaction.deposits && transaction.deposits.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('deposits')}</p>
+                      <div className="space-y-1">
+                        {transaction.deposits.map((deposit: any, idx: number) => (
+                          <div key={deposit.id || idx} className="flex justify-between text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                            <span className="text-green-700 dark:text-green-300">
+                              {t('deposit')} #{deposit.id} - {new Date(deposit.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className="font-medium text-green-900 dark:text-green-100">
+                              ${deposit.amount.toFixed(2)} ({deposit.status})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Installments */}
+                  {transaction.installments && transaction.installments.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('installments')}</p>
+                      <div className="space-y-1">
+                        {transaction.installments.map((installment: any, idx: number) => (
+                          <div key={installment.id || idx} className={`flex justify-between text-xs px-2 py-1 rounded ${
+                            installment.status === 'paid' 
+                              ? 'bg-green-50 dark:bg-green-900/20'
+                              : installment.status === 'overdue'
+                              ? 'bg-red-50 dark:bg-red-900/20'
+                              : 'bg-blue-50 dark:bg-blue-900/20'
+                          }`}>
+                            <span className={`${
+                              installment.status === 'paid' 
+                                ? 'text-green-700 dark:text-green-300'
+                                : installment.status === 'overdue'
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-blue-700 dark:text-blue-300'
+                            }`}>
+                              {t('installment')} #{installment.installmentNumber} - {t('dueDate')}: {new Date(installment.dueDate).toLocaleDateString()}
+                            </span>
+                            <span className={`font-medium ${
+                              installment.status === 'paid' 
+                                ? 'text-green-900 dark:text-green-100'
+                                : installment.status === 'overdue'
+                                ? 'text-red-900 dark:text-red-100'
+                                : 'text-blue-900 dark:text-blue-100'
+                            }`}>
+                              ${installment.amount.toFixed(2)} ({installment.status})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-600 flex justify-between items-center">
                     <span className="text-xs text-slate-500 dark:text-slate-400">

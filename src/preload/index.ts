@@ -272,6 +272,47 @@ const api = {
       }>
       userId?: string
     }) => ipcRenderer.invoke('stockMovements:bulkRecord', data)
+  },
+  // Deposits and Installments
+  deposits: {
+    create: (data: {
+      amount: number
+      date?: Date
+      method: string
+      status?: string
+      note?: string
+      customerId?: string
+      saleId?: string
+    }) => ipcRenderer.invoke('deposits:create', data),
+    list: () => ipcRenderer.invoke('deposits:list'),
+    getByCustomer: (customerId: string) => ipcRenderer.invoke('deposits:getByCustomer', customerId),
+    getBySale: (saleId: string) => ipcRenderer.invoke('deposits:getBySale', saleId),
+    linkToSale: (data: { depositIds: string[]; saleId: string }) => ipcRenderer.invoke('deposits:linkToSale', data)
+  },
+  installments: {
+    create: (data: {
+      amount: number
+      dueDate: Date
+      paidDate?: Date
+      status?: string
+      note?: string
+      customerId?: string
+      saleId?: string
+    }) => ipcRenderer.invoke('installments:create', data),
+    list: () => ipcRenderer.invoke('installments:list'),
+    getByCustomer: (customerId: string) => ipcRenderer.invoke('installments:getByCustomer', customerId),
+    getBySale: (saleId: string) => ipcRenderer.invoke('installments:getBySale', saleId),
+    getUpcomingReminders: (daysAhead?: number) => ipcRenderer.invoke('installments:getUpcomingReminders', daysAhead),
+    getOverdue: () => ipcRenderer.invoke('installments:getOverdue'),
+    markAsPaid: (data: { installmentId: string; paidDate?: string }) => ipcRenderer.invoke('installments:markAsPaid', data),
+    markAsOverdue: (installmentId: string) => ipcRenderer.invoke('installments:markAsOverdue', installmentId),
+    linkToSale: (data: { installmentIds: string[]; saleId: string }) => ipcRenderer.invoke('installments:linkToSale', data)
+  },
+  // Receipt generation
+  receipts: {
+    generateDeposit: (depositId: string) => ipcRenderer.invoke('receipts:generateDeposit', depositId),
+    generateInstallment: (installmentId: string) => ipcRenderer.invoke('receipts:generateInstallment', installmentId),
+    generateThermal: (receipt: any) => ipcRenderer.invoke('receipts:generateThermal', receipt)
   }
 }
 

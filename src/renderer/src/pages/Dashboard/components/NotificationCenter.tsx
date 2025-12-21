@@ -105,6 +105,49 @@ export default function NotificationCenter() {
         })
       }
 
+      // Payment reminders and overdue notifications
+      // @ts-ignore
+      const [upcomingReminders, overdueItems] = await Promise.all([
+        window.api?.installments?.getUpcomingReminders(7),
+        window.api?.installments?.getOverdue()
+      ])
+
+      // Upcoming payment reminders
+      if (upcomingReminders && upcomingReminders.length > 0) {
+        upcomingReminders.slice(0, 3).forEach((reminder: any) => {
+          newNotifications.push({
+            id: `reminder-${reminder.id}`,
+            type: 'warning',
+            title: 'Payment Due Soon',
+            message: `$${reminder.amount.toFixed(2)} due on ${new Date(reminder.dueDate).toLocaleDateString()} for ${reminder.customer?.name || 'Customer'}`,
+            timestamp: new Date(),
+            read: false,
+            action: {
+              label: 'View POS',
+              link: '/pos'
+            }
+          })
+        })
+      }
+
+      // Overdue payment notifications
+      if (overdueItems && overdueItems.length > 0) {
+        overdueItems.slice(0, 3).forEach((item: any) => {
+          newNotifications.push({
+            id: `overdue-${item.id}`,
+            type: 'error',
+            title: 'Overdue Payment',
+            message: `$${item.amount.toFixed(2)} was due on ${new Date(item.dueDate).toLocaleDateString()} for ${item.customer?.name || 'Customer'}`,
+            timestamp: new Date(),
+            read: false,
+            action: {
+              label: 'View POS',
+              link: '/pos'
+            }
+          })
+        })
+      }
+
       setNotifications(newNotifications)
     } catch (error) {
       console.error('Error loading notifications:', error)

@@ -20,6 +20,7 @@ import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
+import { PaymentFlowSelector } from './PaymentFlowSelector'
 import { usePOS } from './usePOS'
 import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
@@ -264,44 +265,34 @@ export default function POS(): JSX.Element {
 
           {/* Checkout Buttons - Always visible at bottom */}
           {cart.length > 0 && (
-            <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 h-96 flex flex-col">
               {showCheckoutOptions ? (
-                // Full Checkout Options (Customer + Payment)
-                <>
-                  {/* Customer Selection - Compact */}
-                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <CustomerSelect
-                      customers={customers}
-                      selectedCustomer={selectedCustomer}
-                      customerQuery={customerQuery}
-                      onSelectCustomer={setSelectedCustomer}
-                      onQueryChange={setCustomerQuery}
-                      onAddNewCustomer={() => setShowAddCustomerModal(true)}
-                    />
-                  </div>
-
-                  {/* Payment Section */}
-                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <PaymentSection
-                      paymentMethod={paymentMethod}
-                      onPaymentMethodChange={setPaymentMethod}
-                      subtotal={subtotal}
-                      tax={tax}
-                      total={total}
-                      onCompleteSale={handleCompleteSale}
-                    />
-                  </div>
-
-                  {/* Back to Simple View */}
-                  <div className="px-4 py-2">
-                    <button
-                      onClick={() => setShowCheckoutOptions(false)}
-                      className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      {t('backToQuickCheckout')}
-                    </button>
-                  </div>
-                </>
+                // Payment Flow Selector
+                <PaymentFlowSelector
+                  selectedCustomer={selectedCustomer}
+                  customers={customers}
+                  customerQuery={customerQuery}
+                  onCustomerSelect={setSelectedCustomer}
+                  onCustomerQueryChange={setCustomerQuery}
+                  onAddNewCustomer={() => setShowAddCustomerModal(true)}
+                  total={total}
+                  onFullPayment={(method) => {
+                    setPaymentMethod(method)
+                    handleCompleteSale()
+                  }}
+                  onPartialPayment={() => {
+                    // Just switch to installment view, no immediate action needed
+                  }}
+                  onCompleteInstallmentSale={() => {
+                    handleCompleteSale()
+                  }}
+                  onDepositAdded={() => {
+                    console.log('Deposit added, refresh data')
+                  }}
+                  onInstallmentAdded={() => {
+                    console.log('Installment added, refresh data')
+                  }}
+                />
               ) : (
                 // Quick Checkout Buttons
                 <div className="p-4 space-y-2">
@@ -340,7 +331,7 @@ export default function POS(): JSX.Element {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    {t('moreOptionsCustomerCard')}
+                    {t('paymentOptions')}
                   </button>
                 </div>
               )}

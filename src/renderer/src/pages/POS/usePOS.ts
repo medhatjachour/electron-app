@@ -272,6 +272,41 @@ export function usePOS() {
         throw new Error(result.error || 'Failed to create transaction')
       }
       
+      // Link any deposits and installments created for this customer to the new sale
+      if (finalCustomerId) {
+        try {
+          // Get deposits and installments for this customer that don't have a saleId
+          const [customerDeposits, customerInstallments] = await Promise.all([
+            window.api.deposits.getByCustomer(finalCustomerId),
+            window.api.installments.getByCustomer(finalCustomerId)
+          ])
+          
+          // Filter for deposits/installments without saleId (created during this POS session)
+          const unlinkedDeposits = customerDeposits.filter((d: any) => !d.saleId)
+          const unlinkedInstallments = customerInstallments.filter((i: any) => !i.saleId)
+          
+          // Link them to the newly created sale
+          if (unlinkedDeposits.length > 0) {
+            await window.api.deposits.linkToSale({
+              depositIds: unlinkedDeposits.map((d: any) => d.id),
+              saleId: result.transaction.id
+            })
+          }
+          
+          if (unlinkedInstallments.length > 0) {
+            await window.api.installments.linkToSale({
+              installmentIds: unlinkedInstallments.map((i: any) => i.id),
+              saleId: result.transaction.id
+            })
+          }
+          
+          console.log(`✅ Linked ${unlinkedDeposits.length} deposits and ${unlinkedInstallments.length} installments to sale ${result.transaction.id}`)
+        } catch (linkError) {
+          console.error('⚠️ Failed to link deposits/installments to sale:', linkError)
+          // Don't fail the sale for this - it's not critical
+        }
+      }
+      
       setShowSuccess(true)
       await loadProducts()
       

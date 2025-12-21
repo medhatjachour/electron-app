@@ -1,0 +1,309 @@
+import React, { useEffect, useState } from 'react'
+import { DollarSign, Calendar, CheckCircle, Clock, AlertTriangle, Printer, Bell, Check } from 'lucide-react'
+
+export type Deposit = {
+  id: string
+  amount: number
+  date: string
+  method: string
+  note?: string
+}
+
+export type Installment = {
+  id: string
+  amount: number
+  dueDate: string
+  paidDate?: string
+  status: string
+  note?: string
+}
+
+interface PaymentPlanProps {
+  customerId?: string
+  saleId?: string
+  refreshTrigger?: number
+}
+
+export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, refreshTrigger }) => {
+  const [deposits, setDeposits] = useState<Deposit[]>([])
+  const [installments, setInstallments] = useState<Installment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [upcomingReminders, setUpcomingReminders] = useState<any[]>([])
+  const [overdueItems, setOverdueItems] = useState<any[]>([])
+  const [showReminders, setShowReminders] = useState(false)
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        if (customerId && !saleId) {
+          // POS context: show only deposits/installments created in the current session
+          const [depositData, installmentData] = await Promise.all([
+            window.api.deposits.getByCustomer(customerId),
+            window.api.installments.getByCustomer(customerId)
+          ])
+          
+          // Filter to show only recent ones (created in the last 30 minutes) that are not linked to any sale
+          // This ensures we only show deposits/installments created in the current POS session
+          const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
+          const recentDeposits = depositData.filter((d: any) => 
+            !d.saleId && new Date(d.createdAt) > thirtyMinutesAgo
+          )
+          const recentInstallments = installmentData.filter((i: any) => 
+            !i.saleId && new Date(i.createdAt) > thirtyMinutesAgo
+          )
+          
+          setDeposits(recentDeposits)
+          setInstallments(recentInstallments)
+        } else if (saleId) {
+          // Sale details context: show deposits/installments for this specific sale
+          const [depositData, installmentData] = await Promise.all([
+            window.api.deposits.getBySale(saleId),
+            window.api.installments.getBySale(saleId)
+          ])
+          setDeposits(depositData)
+          setInstallments(installmentData)
+        }
+
+        // Load reminders and overdue items
+        const [reminders, overdue] = await Promise.all([
+          window.api.installments.getUpcomingReminders(7),
+          window.api.installments.getOverdue()
+        ])
+        setUpcomingReminders(reminders)
+        setOverdueItems(overdue)
+      } catch (error) {
+        console.error('Error loading payment plan:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [customerId, saleId, refreshTrigger])
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <CheckCircle className="text-green-500" size={16} />
+      case 'overdue':
+        return <AlertTriangle className="text-red-500" size={16} />
+      default:
+        return <Clock className="text-yellow-500" size={16} />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
+      case 'overdue':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800'
+      default:
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800'
+    }
+  }
+
+  const handleMarkAsPaid = async (installmentId: string) => {
+    try {
+      await window.api.installments.markAsPaid({ installmentId })
+      // Refresh the data
+      window.location.reload() // Simple refresh for now
+    } catch (error) {
+      console.error('Error marking installment as paid:', error)
+      alert('Failed to mark installment as paid')
+    }
+  }
+
+  const handleGenerateReceipt = async (type: 'deposit' | 'installment', id: string) => {
+    try {
+      let result
+      if (type === 'deposit') {
+        result = await window.api.receipts.generateDeposit(id)
+      } else {
+        result = await window.api.receipts.generateInstallment(id)
+      }
+
+      if (result.success) {
+        // Generate thermal receipt data
+        const thermalResult = await window.api.receipts.generateThermal(result.receipt)
+        if (thermalResult.success) {
+          // For now, just log the thermal data (in a real app, this would be sent to printer)
+          console.log('Thermal receipt data:', thermalResult.thermalData)
+          alert('Receipt generated successfully! Check console for thermal data.')
+        }
+      } else {
+        alert('Failed to generate receipt')
+      }
+    } catch (error) {
+      console.error('Error generating receipt:', error)
+      alert('Failed to generate receipt')
+    }
+  }
+
+  const totalDeposits = deposits.reduce((sum, dep) => sum + dep.amount, 0)
+  const totalInstallments = installments.reduce((sum, inst) => sum + inst.amount, 0)
+  const paidInstallments = installments.filter(inst => inst.status === 'paid').reduce((sum, inst) => sum + inst.amount, 0)
+  const pendingInstallments = installments.filter(inst => inst.status === 'pending').length
+  const overdueInstallments = installments.filter(inst => inst.status === 'overdue').length
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="animate-pulse">
+          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-2"></div>
+          <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        </div>
+        <div className="animate-pulse">
+          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-2"></div>
+          <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Notifications and Reminders */}
+      {(upcomingReminders.length > 0 || overdueInstallments > 0) && (
+        <div className="space-y-2">
+          {overdueInstallments > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-red-500" size={16} />
+                <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                  {overdueInstallments} overdue payment{overdueInstallments > 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          )}
+          {upcomingReminders.length > 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Bell className="text-yellow-500" size={16} />
+                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  {upcomingReminders.length} upcoming payment{upcomingReminders.length > 1 ? 's' : ''} due soon
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-4 gap-2 text-xs">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2 text-center">
+          <div className="font-semibold text-green-800 dark:text-green-200">${totalDeposits.toFixed(2)}</div>
+          <div className="text-green-600 dark:text-green-400">Deposits</div>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 text-center">
+          <div className="font-semibold text-blue-800 dark:text-blue-200">${totalInstallments.toFixed(2)}</div>
+          <div className="text-blue-600 dark:text-blue-400">Total Due</div>
+        </div>
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-2 text-center">
+          <div className="font-semibold text-purple-800 dark:text-purple-200">${paidInstallments.toFixed(2)}</div>
+          <div className="text-purple-600 dark:text-purple-400">Paid</div>
+        </div>
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-2 text-center">
+          <div className="font-semibold text-orange-800 dark:text-orange-200">{pendingInstallments}</div>
+          <div className="text-orange-600 dark:text-orange-400">Pending</div>
+        </div>
+      </div>
+
+      {/* Deposits Section */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <DollarSign size={14} className="text-green-600" />
+          <h4 className="text-sm font-medium text-slate-900 dark:text-white">Deposits</h4>
+        </div>
+        {deposits.length > 0 ? (
+          <div className="space-y-2">
+            {deposits.map(dep => (
+              <div key={dep.id} className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="font-semibold text-green-800 dark:text-green-200">${dep.amount.toFixed(2)}</div>
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      {new Date(dep.date).toLocaleDateString()} • {dep.method}
+                    </div>
+                    {dep.note && (
+                      <div className="text-xs text-green-700 dark:text-green-300 mt-1">{dep.note}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleGenerateReceipt('deposit', dep.id)}
+                    className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors ml-2"
+                    title="Generate Receipt"
+                  >
+                    <Printer size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-slate-500 dark:text-slate-400 text-sm">
+            No deposits yet
+          </div>
+        )}
+      </div>
+
+      {/* Installments Section */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar size={14} className="text-blue-600" />
+          <h4 className="text-sm font-medium text-slate-900 dark:text-white">Installments</h4>
+        </div>
+        {installments.length > 0 ? (
+          <div className="space-y-2">
+            {installments.map(inst => (
+              <div key={inst.id} className={`border rounded-lg p-3 ${getStatusColor(inst.status)}`}>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(inst.status)}
+                      <span className="font-semibold">${inst.amount.toFixed(2)}</span>
+                    </div>
+                    <div className="text-xs mt-1">
+                      Due: {new Date(inst.dueDate).toLocaleDateString()}
+                      {inst.paidDate && (
+                        <span className="ml-2">
+                          • Paid: {new Date(inst.paidDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    {inst.note && (
+                      <div className="text-xs mt-1 opacity-80">{inst.note}</div>
+                    )}
+                  </div>
+                  <div className="flex gap-1 ml-2">
+                    {inst.status === 'pending' && (
+                      <button
+                        onClick={() => handleMarkAsPaid(inst.id)}
+                        className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                        title="Mark as Paid"
+                      >
+                        <Check size={12} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleGenerateReceipt('installment', inst.id)}
+                      className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                      title="Generate Receipt"
+                    >
+                      <Printer size={12} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-slate-500 dark:text-slate-400 text-sm">
+            No installments scheduled
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

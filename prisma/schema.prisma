@@ -165,6 +165,8 @@ model SaleTransaction {
   items         SaleItem[] // Line items in this transaction
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  deposits      Deposit[]  // Deposits linked to this sale
+  installments  Installment[] // Installments linked to this sale
   
   @@index([createdAt])
   @@index([userId])
@@ -281,6 +283,8 @@ model Customer {
   archivedBy       String?           // User ID who archived this customer
   archiveReason    String?           // Why customer was archived
   saleTransactions SaleTransaction[] // Sales linked to this customer
+  deposits         Deposit[]         // Deposits made by this customer
+  installments     Installment[]     // Installments made by this customer
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   
@@ -288,4 +292,45 @@ model Customer {
   @@index([phone])
   @@index([loyaltyTier])
   @@index([isArchived])
+}
+
+// Deposit model: upfront payment, optionally linked to a sale and/or customer
+model Deposit {
+  id             String           @id @default(uuid())
+  amount         Float
+  date           DateTime         @default(now())
+  method         String           // e.g. "cash", "card", "bank"
+  status         String           @default("paid") // "paid" for deposits
+  note           String?
+  customerId     String?
+  saleId         String?
+  customer       Customer?        @relation(fields: [customerId], references: [id])
+  sale           SaleTransaction? @relation(fields: [saleId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  @@index([customerId])
+  @@index([saleId])
+  @@index([date])
+}
+
+// Installment model: scheduled payment, optionally linked to a sale and/or customer
+model Installment {
+  id             String           @id @default(uuid())
+  amount         Float
+  dueDate        DateTime
+  paidDate       DateTime?
+  status         String           @default("pending") // "pending", "paid", "overdue"
+  note           String?
+  customerId     String?
+  saleId         String?
+  customer       Customer?        @relation(fields: [customerId], references: [id])
+  sale           SaleTransaction? @relation(fields: [saleId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  @@index([customerId])
+  @@index([saleId])
+  @@index([dueDate])
+  @@index([status])
 }

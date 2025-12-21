@@ -206,7 +206,9 @@ export function registerCustomersHandlers(prisma: any) {
                   }
                 }
               }
-            }
+            },
+            deposits: true,
+            installments: true
           },
           orderBy: { createdAt: 'desc' },
           take: 50 // Last 50 transactions

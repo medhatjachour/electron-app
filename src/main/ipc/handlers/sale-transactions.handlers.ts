@@ -211,7 +211,9 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               }
             }
-          }
+          },
+          deposits: true,
+          installments: true
         },
         orderBy: { createdAt: 'desc' }
       })
@@ -686,7 +688,9 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               }
             }
-          }
+          },
+          deposits: true,
+          installments: true
         },
         orderBy: { createdAt: 'desc' }
       })

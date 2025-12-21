@@ -1178,6 +1178,15 @@ export const translations = {
     acceptGiftCard: 'Accept store gift cards',
     paymentMethodNote: 'At least one payment method must be enabled. Cash is recommended as a fallback option.',
     
+    // Deposits and Installments
+    deposits: 'Deposits',
+    installments: 'Installments',
+    deposit: 'Deposit',
+    installment: 'Installment',
+    dueDate: 'Due Date',
+    paidOn: 'Paid On',
+    overdue: 'Overdue',
+    
     // Tax & Receipt Settings
     taxReceiptSettings: 'Tax & Receipt Settings',
     configureTaxReceipt: 'Configure tax rates and receipt printing options',
@@ -2459,6 +2468,15 @@ export const translations = {
     giftCard: 'بطاقة هدايا',
     acceptGiftCard: 'قبول بطاقات هدايا المتجر',
     paymentMethodNote: 'يجب تفعيل طريقة دفع واحدة على الأقل. يوصى بالنقد كخيار احتياطي.',
+    
+    // Deposits and Installments
+    deposits: 'الودائع',
+    installments: 'الأقساط',
+    deposit: 'وديعة',
+    installment: 'قسط',
+    dueDate: 'تاريخ الاستحقاق',
+    paidOn: 'مدفوع في',
+    overdue: 'متأخر',
     
     // Tax & Receipt Settings
     taxReceiptSettings: 'إعدادات الضرائب والإيصالات',
