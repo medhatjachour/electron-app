@@ -246,7 +246,7 @@ export default function POS(): JSX.Element {
         </div>
 
         {/* Main Content Area - Scrollable with fixed sections */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-scroll">
           {/* Cart Items - Takes full space now */}
           <div className="flex-1 overflow-auto">
             <ShoppingCart

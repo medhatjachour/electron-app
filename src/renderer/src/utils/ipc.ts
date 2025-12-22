@@ -233,6 +233,7 @@ const mockIPC = {
       }
       return { success: false, message: 'Transaction not found' }
     },
+    refundItems: async (_data: any) => ({ success: false, error: 'Mock implementation' }),
     getByDateRange: async (data: any) => {
       const transactions = JSON.parse(localStorage.getItem('saleTransactions') || '[]')
       const start = new Date(data.startDate)

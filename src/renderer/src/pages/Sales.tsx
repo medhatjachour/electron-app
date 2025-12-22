@@ -7,6 +7,7 @@ import RefundItemsModal from './Sales/RefundItemsModal'
 import { InstallmentManager } from '../components/InstallmentManager'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useToast } from '../contexts/ToastContext'
 
 type SaleItem = {
   id: string
@@ -68,6 +69,7 @@ type SaleTransaction = {
 
 export default function Sales(): JSX.Element {
   const { t } = useLanguage()
+  const { showToast } = useToast()
   const [transactions, setTransactions] = useState<SaleTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState('all')
@@ -307,22 +309,26 @@ export default function Sales(): JSX.Element {
     setShowRefundModal(true)
   }
 
-  const handleRefundItems = async () => {
+  const handleRefundItems = async (items: Array<{ saleItemId: string; quantityToRefund: number }>) => {
     if (!selectedTransaction) return
 
-    // TODO: Implement partial refund functionality
-    // const result = await ipc.saleTransactions.refundItems({
-    //   transactionId: selectedTransaction.id,
-    //   items
-    // })
+    try {
+      const result = await ipc.saleTransactions.refundItems({
+        transactionId: selectedTransaction.id,
+        items
+      })
 
-    alert('Partial refund functionality not yet implemented. Please use full refund.')
-    // if (result.success) {
-    //   alert('Items refunded successfully! Stock has been restored.')
-    //   await loadTransactions()
-    // } else {
-    //   throw new Error(result.error || 'Failed to refund items')
-    // }
+      if (result.success) {
+        showToast('success', t('itemsRefundedSuccess'))
+        await loadTransactions()
+        setShowRefundModal(false)
+      } else {
+        throw new Error(result.error || t('failedToRefundItems'))
+      }
+    } catch (error: any) {
+      console.error('Failed to refund items:', error)
+      showToast('error', error.message || t('failedToRefundItems'))
+    }
   }
 
   const handleViewTransaction = (transaction: SaleTransaction) => {

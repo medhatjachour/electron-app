@@ -235,12 +235,8 @@ export default function InventoryPage() {
 
       const result = await window.api?.stockMovements?.record({
         variantId: stockMovementDialog.variantId,
-        type: data.mode === 'add' ? 'RESTOCK' : data.mode === 'remove' ? 'SALE' : 'ADJUSTMENT',
-        quantity: data.value,
-        previousStock: stockMovementDialog.currentStock,
-        newStock: data.mode === 'add' ? stockMovementDialog.currentStock + data.value : 
-                  data.mode === 'remove' ? stockMovementDialog.currentStock - data.value : 
-                  data.value,
+        mode: data.mode,
+        value: data.value,
         reason: data.reason,
         notes: data.notes,
         userId: user?.id

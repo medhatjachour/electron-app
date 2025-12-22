@@ -167,14 +167,11 @@ interface API {
   stockMovements: {
     record: (data: {
       variantId: string
-      type: 'RESTOCK' | 'SALE' | 'ADJUSTMENT' | 'SHRINKAGE' | 'RETURN'
-      quantity: number
-      previousStock: number
-      newStock: number
-      reason?: string
-      referenceId?: string
-      userId?: string
+      mode: 'add' | 'set' | 'remove'
+      value: number
+      reason: string
       notes?: string
+      userId?: string
     }) => Promise<any>
     getHistory: (variantId: string, limit?: number) => Promise<any>
     getProductHistory: (productId: string, limit?: number) => Promise<any>
