@@ -69,7 +69,6 @@ export default function POS(): JSX.Element {
   }, [showSuccess])
 
   const handleCustomerAdded = (newCustomer: Customer) => {
-    console.log('👤 Customer added in POS:', newCustomer)
     // Refresh customers list and select the new customer immediately
     refreshCustomers()
     setSelectedCustomer(newCustomer)
@@ -79,7 +78,6 @@ export default function POS(): JSX.Element {
   
   // Wrapper to call completeSale with the local customer
   const handleCompleteSale = () => {
-    console.log('🎯 Complete sale with customer:', selectedCustomer)
     completeSale(selectedCustomer)
   }
 
@@ -284,10 +282,8 @@ export default function POS(): JSX.Element {
                     handleCompleteSale()
                   }}
                   onDepositAdded={() => {
-                    console.log('Deposit added, refresh data')
                   }}
                   onInstallmentAdded={() => {
-                    console.log('Installment added, refresh data')
                   }}
                 />
               ) : (

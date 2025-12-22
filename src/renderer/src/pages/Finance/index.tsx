@@ -30,8 +30,7 @@ import {
   Filler
 } from 'chart.js'
 import type { DateRangeType } from './types'
-import { useToast } from '../../hooks/useToast'
-import ToastContainer from '../../components/ui/ToastContainer'
+import { useToast } from '../../contexts/ToastContext'
 import RevenueForecasting from './components/RevenueForecasting'
 import CashFlowProjection from './components/CashFlowProjection'
 import ProductInsights from './components/ProductInsights'
@@ -226,10 +225,10 @@ export default function Finance() {
       const filename = `finance-report-${dateRange}-${date}.xlsx`
       XLSX.writeFile(wb, filename)
 
-      toast.success(t('financeExportSuccess'), `${t('financeReportExported')} ${filename}`)
+      toast.success(`${t('financeExportSuccess')}: ${t('financeReportExported')} ${filename}`)
     } catch (error) {
       console.error('Export error:', error)
-      toast.error(t('financeExportFailed'), error instanceof Error ? error.message : t('financeUnknownError'))
+      toast.error(`${t('financeExportFailed')}: ${error instanceof Error ? error.message : t('financeUnknownError')}`)
     } finally {
       setExporting(false)
     }
@@ -780,8 +779,6 @@ export default function Finance() {
       {activeTab === 'insights' && <ProductInsights />}
       {activeTab === 'health' && <FinancialHealthDashboard />}
       {activeTab === 'pricing' && <PricingCalculator />}
-
-      <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />
     </div>
   )
 }

@@ -47,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('user', JSON.stringify(res.user))
           return res.user
         } else {
-          console.log('❌ Login failed:', res.message)
           throw new Error(res.message || 'Login failed')
         }
       }

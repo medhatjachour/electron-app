@@ -117,9 +117,8 @@ export const PaymentPlan: React.FC<PaymentPlanProps> = ({ customerId, saleId, re
         // Generate thermal receipt data
         const thermalResult = await window.api.receipts.generateThermal(result.receipt)
         if (thermalResult.success) {
-          // For now, just log the thermal data (in a real app, this would be sent to printer)
-          console.log('Thermal receipt data:', thermalResult.thermalData)
-          alert('Receipt generated successfully! Check console for thermal data.')
+          // For now, just show success message (in a real app, this would be sent to printer)
+          alert('Receipt generated successfully!')
         }
       } else {
         alert('Failed to generate receipt')

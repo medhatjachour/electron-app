@@ -38,43 +38,30 @@ export const InstallmentManager: React.FC<InstallmentManagerProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'pending' | 'paid' | 'overdue'>('ALL')
 
   const loadInstallments = async () => {
-    console.log('loadInstallments called')
     try {
       setLoading(true)
       let result
 
-      console.log('Loading installments with props:', { customerId, customerName, transactionId })
-
       // If we have specific filters, use them
       if (customerId) {
-        console.log('Fetching installments by customer:', customerId)
         result = await ipc.installments.getByCustomer(customerId)
       } else if (transactionId) {
-        console.log('Fetching installments by sale:', transactionId)
         result = await ipc.installments.getBySale(transactionId)
       } else {
-        console.log('Fetching all installments')
         result = await ipc.installments.list()
       }
 
-      console.log('Installments result:', result, 'Length:', result?.length)
-
       if (result && Array.isArray(result)) {
-        console.log('Processing', result.length, 'installments')
         // Add customer names to installments if not already present
         const installmentsWithCustomers = result.map((installment: any) => {
-          console.log('Processing installment:', installment.id, 'Status:', installment.status)
           return {
             ...installment,
             customerName: installment.customerName || customerName || 'Unknown Customer'
           }
         })
 
-        console.log('Processed installments:', installmentsWithCustomers.length, 'items')
-        console.log('First installment sample:', installmentsWithCustomers[0])
         setInstallments(installmentsWithCustomers)
       } else {
-        console.log('No installments found or invalid result')
         setInstallments([])
       }
     } catch (error) {
@@ -169,11 +156,7 @@ export const InstallmentManager: React.FC<InstallmentManagerProps> = ({
     (new Date(i.dueDate) < new Date() && i.status === 'pending')
   ).length
 
-  console.log('InstallmentManager render - isOpen:', isOpen, 'installments:', installments.length, 'filtered:', filteredInstallments.length)
-
   if (!isOpen) return null
-
-  console.log('InstallmentManager rendering modal')
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -253,7 +236,6 @@ export const InstallmentManager: React.FC<InstallmentManagerProps> = ({
             <div className="p-6">
               <div className="space-y-3">
                 {filteredInstallments.map((installment) => {
-                  console.log('Rendering installment:', installment.id, 'Status:', installment.status, 'Should show button:', installment.status === 'pending')
                   return (
                   <div key={installment.id} className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
                     installment.status === 'paid'

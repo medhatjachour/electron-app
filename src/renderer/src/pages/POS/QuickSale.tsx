@@ -1233,10 +1233,8 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                   completeSale('installment')
                 }}
                 onDepositAdded={() => {
-                  console.log('Deposit added, refresh data')
                 }}
                 onInstallmentAdded={() => {
-                  console.log('Installment added, refresh data')
                 }}
               />
             </div>
