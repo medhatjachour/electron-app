@@ -656,7 +656,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   }, [showDropdown])
 
   return (
-    <div className="h-full flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900">
+    <div className="h-full flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900 overflow-y-scroll">
       {/* Search Bar with Dropdown - Compact */}
       <div className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="relative">
