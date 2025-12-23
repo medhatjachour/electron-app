@@ -313,6 +313,23 @@ const api = {
     generateDeposit: (depositId: string) => ipcRenderer.invoke('receipts:generateDeposit', depositId),
     generateInstallment: (installmentId: string) => ipcRenderer.invoke('receipts:generateInstallment', installmentId),
     generateThermal: (receipt: any) => ipcRenderer.invoke('receipts:generateThermal', receipt)
+  },
+  // Delete operations
+  delete: {
+    checkCustomer: (customerId: string) => ipcRenderer.invoke('delete:check-customer', { customerId }),
+    checkProduct: (productId: string) => ipcRenderer.invoke('delete:check-product', { productId }),
+    checkUser: (userId: string) => ipcRenderer.invoke('delete:check-user', { userId }),
+    archiveCustomer: (customerId: string) => ipcRenderer.invoke('delete:archive-customer', { customerId }),
+    archiveProduct: (productId: string) => ipcRenderer.invoke('delete:archive-product', { productId }),
+    deactivateUser: (userId: string) => ipcRenderer.invoke('delete:deactivate-user', { userId }),
+    hardDeleteCustomer: (customerId: string) => ipcRenderer.invoke('delete:hard-delete-customer', { customerId }),
+    hardDeleteProduct: (productId: string) => ipcRenderer.invoke('delete:hard-delete-product', { productId }),
+    hardDeleteUser: (userId: string) => ipcRenderer.invoke('delete:hard-delete-user', { userId }),
+    getArchivedCustomers: () => ipcRenderer.invoke('delete:get-archived-customers'),
+    getArchivedProducts: () => ipcRenderer.invoke('delete:get-archived-products'),
+    getDeactivatedUsers: () => ipcRenderer.invoke('delete:get-deactivated-users'),
+    cleanupUnlinkedDeposits: (customerId: string) => ipcRenderer.invoke('delete:cleanup-unlinked-deposits', customerId),
+    cleanupUnlinkedInstallments: (customerId: string) => ipcRenderer.invoke('delete:cleanup-unlinked-installments', customerId)
   }
 }
 

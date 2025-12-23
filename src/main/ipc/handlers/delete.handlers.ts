@@ -190,4 +190,25 @@ export function registerDeleteHandlers(prisma: any) {
       return { success: false, error: error.message, data: [] }
     }
   })
+  
+  // Cleanup unlinked payments
+  ipcMain.handle('delete:cleanup-unlinked-deposits', async (_, customerId) => {
+    try {
+      const deletedCount = await DeleteService.deleteUnlinkedDeposits(customerId)
+      return { success: true, deletedCount }
+    } catch (error: any) {
+      console.error('Error cleaning up unlinked deposits:', error)
+      return { success: false, error: error.message }
+    }
+  })
+  
+  ipcMain.handle('delete:cleanup-unlinked-installments', async (_, customerId) => {
+    try {
+      const deletedCount = await DeleteService.deleteUnlinkedInstallments(customerId)
+      return { success: true, deletedCount }
+    } catch (error: any) {
+      console.error('Error cleaning up unlinked installments:', error)
+      return { success: false, error: error.message }
+    }
+  })
 }

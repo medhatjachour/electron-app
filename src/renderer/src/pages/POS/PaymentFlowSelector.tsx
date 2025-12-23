@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DollarSign, CreditCard, Calendar, CheckCircle, Clock, ArrowRight, User } from 'lucide-react'
 import { PaymentPlan } from '../../../components/PaymentPlan'
 import DepositForm from './DepositForm'
@@ -44,6 +44,36 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
   const [showDepositForm, setShowDepositForm] = useState(false)
   const [showInstallmentForm, setShowInstallmentForm] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  // Clean up unlinked deposits and installments when customer changes
+  useEffect(() => {
+    if (selectedCustomer) {
+      const cleanupUnlinkedPayments = async () => {
+        try {
+          console.log('🧹 Cleaning up unlinked payments for customer:', selectedCustomer.id)
+          
+          // Clean up unlinked deposits
+          const depositResult = await (window as any).api.delete.cleanupUnlinkedDeposits(selectedCustomer.id)
+          
+          // Clean up unlinked installments
+          const installmentResult = await (window as any).api.delete.cleanupUnlinkedInstallments(selectedCustomer.id)
+          
+          if (depositResult.success && installmentResult.success) {
+            const totalCleaned = (depositResult.deletedCount || 0) + (installmentResult.deletedCount || 0)
+            if (totalCleaned > 0) {
+              console.log(`✅ Cleaned up ${totalCleaned} unlinked payments for customer ${selectedCustomer.name}`)
+              // Refresh the payment plan display
+              setRefreshTrigger(prev => prev + 1)
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error cleaning up unlinked payments:', error)
+        }
+      }
+      
+      cleanupUnlinkedPayments()
+    }
+  }, [selectedCustomer])
 
   const handleFullPayment = (method: 'cash' | 'card') => {
     onFullPayment(method)
