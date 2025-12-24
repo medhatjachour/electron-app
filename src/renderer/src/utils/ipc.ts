@@ -316,7 +316,7 @@ export const ipc = isElectron ? {
 
   // Installment operations
   installments: {
-    list: () => window.electron.ipcRenderer.invoke('installments:list'),
+    list: (options?: any) => window.electron.ipcRenderer.invoke('installments:list', options),
     getByCustomer: (customerId: string) => window.electron.ipcRenderer.invoke('installments:getByCustomer', customerId),
     getBySale: (saleId: string) => window.electron.ipcRenderer.invoke('installments:getBySale', saleId),
     markAsPaid: (data: { installmentId: string, paidDate?: string }) => window.electron.ipcRenderer.invoke('installments:markAsPaid', data),

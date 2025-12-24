@@ -14,13 +14,13 @@ export function registerInstallmentsHandlers(prisma: any) {
     }
   })
 
-  ipcMain.handle('installments:list', async () => {
+  ipcMain.handle('installments:list', async (_, options) => {
     try {
-      const installments = await installmentService.listInstallments()
-      return installments
+      const result = await installmentService.listInstallments(options)
+      return result
     } catch (error) {
       console.error('Error listing installments:', error)
-      return []
+      return { installments: [], total: 0, page: 1, limit: 50, totalPages: 0 }
     }
   })
 

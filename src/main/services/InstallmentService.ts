@@ -47,8 +47,82 @@ export class InstallmentService {
     })
   }
 
-  async listInstallments() {
-    return this.prisma.installment.findMany({ orderBy: { dueDate: 'asc' } })
+  async listInstallments(options?: {
+    page?: number
+    limit?: number
+    status?: string
+    search?: string
+    dateFilter?: string
+  }) {
+    const { page = 1, limit = 50, status, search, dateFilter } = options || {}
+
+    let where: any = {}
+
+    // Status filter
+    if (status && status !== 'all') {
+      where.status = status
+    }
+
+    // Date filter
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date()
+      switch (dateFilter) {
+        case 'today':
+          where.dueDate = {
+            gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+            lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+          }
+          break
+        case 'week':
+          const startOfWeek = new Date(now)
+          startOfWeek.setDate(now.getDate() - now.getDay())
+          startOfWeek.setHours(0, 0, 0, 0)
+          where.dueDate = {
+            gte: startOfWeek,
+            lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+          }
+          break
+        case 'month':
+          where.dueDate = {
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lt: new Date(now.getFullYear(), now.getMonth() + 1, 1)
+          }
+          break
+        case 'overdue':
+          where.dueDate = { lt: now }
+          where.status = { not: 'paid' }
+          break
+      }
+    }
+
+    // Search filter
+    if (search) {
+      where.OR = [
+        { customer: { name: { contains: search } } },
+        { saleId: { contains: search } }
+      ]
+    }
+
+    const [installments, total] = await Promise.all([
+      this.prisma.installment.findMany({
+        where,
+        include: {
+          customer: true
+        },
+        orderBy: { dueDate: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      this.prisma.installment.count({ where })
+    ])
+
+    return {
+      installments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
   }
 
   async getUpcomingReminders(daysAhead: number = 7) {

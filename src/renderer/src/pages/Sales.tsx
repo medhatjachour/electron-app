@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard, CheckCircle } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
@@ -32,6 +32,21 @@ type SaleItem = {
     variantSKU: string
     size?: string
     color?: string
+  }
+}
+
+type Installment = {
+  id: string
+  amount: number
+  dueDate: string | number
+  status: 'pending' | 'paid' | 'overdue'
+  paidDate?: string
+  notes?: string
+  customerId: string
+  saleId?: string
+  customer?: {
+    id: string
+    name: string
   }
 }
 
@@ -68,6 +83,9 @@ type SaleTransaction = {
 }
 
 export default function Sales(): JSX.Element {
+  const [activeTab, setActiveTab] = useState<'sales' | 'installments'>('sales')
+  const [installments, setInstallments] = useState<Installment[]>([])
+  const [installmentsLoading, setInstallmentsLoading] = useState(false)
   const { t } = useLanguage()
   const { showToast } = useToast()
   const [transactions, setTransactions] = useState<SaleTransaction[]>([])
@@ -82,6 +100,17 @@ export default function Sales(): JSX.Element {
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  
+  // Installment pagination state
+  const [installmentCurrentPage, setInstallmentCurrentPage] = useState(1)
+  const [installmentTotalPages, setInstallmentTotalPages] = useState(1)
+  const [installmentTotalItems, setInstallmentTotalItems] = useState(0)
+  const installmentItemsPerPage = 20
+  
+  // Installment filtering state
+  const [installmentSearchQuery, setInstallmentSearchQuery] = useState('')
+  const [installmentStatusFilter, setInstallmentStatusFilter] = useState('all')
+  const [installmentDateFilter, setInstallmentDateFilter] = useState('all')
   
   // Get refund period from settings
   const refundPeriodDays = parseInt(localStorage.getItem('refundPeriodDays') || '30')
@@ -104,6 +133,12 @@ export default function Sales(): JSX.Element {
     loadTransactions()
   }, [])
 
+  useEffect(() => {
+    if (activeTab === 'installments') {
+      loadInstallments(1)
+    }
+  }, [activeTab])
+
   const loadTransactions = async () => {
     try {
       setLoading(true)
@@ -121,6 +156,31 @@ export default function Sales(): JSX.Element {
       console.error('Failed to load transactions:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadInstallments = async (page = 1) => {
+    try {
+      setInstallmentsLoading(true)
+      const result = await ipc.installments.list({
+        page,
+        limit: installmentItemsPerPage,
+        status: installmentStatusFilter,
+        search: installmentSearchQuery,
+        dateFilter: installmentDateFilter
+      })
+      
+      setInstallments(result.installments || [])
+      setInstallmentTotalItems(result.total || 0)
+      setInstallmentTotalPages(result.totalPages || 1)
+      setInstallmentCurrentPage(page)
+    } catch (error) {
+      console.error('Failed to load installments:', error)
+      setInstallments([])
+      setInstallmentTotalItems(0)
+      setInstallmentTotalPages(1)
+    } finally {
+      setInstallmentsLoading(false)
     }
   }
 
@@ -172,6 +232,9 @@ export default function Sales(): JSX.Element {
 
     return filtered
   }, [transactions, searchQuery, dateFilter])
+
+  // Installments are now filtered server-side, so we just return them as-is
+  const filteredInstallments = installments
 
   const stats = useMemo(() => {
     // Include completed and partially_refunded transactions
@@ -341,6 +404,17 @@ export default function Sales(): JSX.Element {
     setShowInstallmentManager(true)
   }
 
+  const handleMarkAsPaid = async (installmentId: string) => {
+    try {
+      await ipc.installments.markAsPaid({ installmentId })
+      showToast('success', 'Installment marked as paid successfully')
+      loadInstallments(installmentCurrentPage) // Refresh the current page
+    } catch (error) {
+      console.error('Error marking installment as paid:', error)
+      showToast('error', 'Failed to mark installment as paid')
+    }
+  }
+
   const handleExport = () => {
     try {
       // Create CSV content with transaction-based data
@@ -435,7 +509,34 @@ export default function Sales(): JSX.Element {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Tabs */}
+      <div className="border-b border-slate-200 dark:border-slate-700">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'sales'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            {t('sales')}
+          </button>
+          <button
+            onClick={() => setActiveTab('installments')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'installments'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            {t('installments')}
+          </button>
+        </nav>
+      </div>
+
+      {/* Stats Cards - Only show for sales tab */}
+      {activeTab === 'sales' && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
@@ -514,9 +615,206 @@ export default function Sales(): JSX.Element {
           )}
         </div>
       </div>
+      )}
 
-      {/* Empty State */}
-      {!stats.hasData && !loading && (
+      {/* Installments Tab Content */}
+      {activeTab === 'installments' && (
+        <div className="space-y-6">
+          {/* Installments Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('installments')}</h2>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Track and manage customer installment payments</p>
+            </div>
+            <button
+              onClick={() => loadInstallments(1)}
+              disabled={installmentsLoading}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <RefreshCcw size={20} className={installmentsLoading ? 'animate-spin' : ''} />
+              {t('refresh')}
+            </button>
+          </div>
+
+          {/* Installments Filters */}
+          <div className="glass-card p-4">
+            <div className="flex gap-4 items-center flex-wrap">
+              <div className="flex-1 min-w-[250px] relative">
+                <input
+                  type="text"
+                  placeholder="Search by customer name, sale ID, or amount..."
+                  className="input-field w-full"
+                  value={installmentSearchQuery}
+                  onChange={(e) => {
+                    setInstallmentSearchQuery(e.target.value)
+                    setInstallmentCurrentPage(1) // Reset to first page
+                    // Debounce the search to avoid too many API calls
+                    setTimeout(() => loadInstallments(1), 300)
+                  }}
+                />
+              </div>
+              <select
+                className="input-field w-48"
+                value={installmentStatusFilter}
+                onChange={(e) => {
+                  setInstallmentStatusFilter(e.target.value)
+                  setInstallmentCurrentPage(1) // Reset to first page
+                  loadInstallments(1)
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <select
+                className="input-field w-48"
+                value={installmentDateFilter}
+                onChange={(e) => {
+                  setInstallmentDateFilter(e.target.value)
+                  setInstallmentCurrentPage(1) // Reset to first page
+                  loadInstallments(1)
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Due Today</option>
+                <option value="week">Due This Week</option>
+                <option value="month">Due This Month</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <Filter size={16} />
+                <span>{installmentTotalItems} installment{installmentTotalItems !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Installments Table */}
+          <div className="glass-card">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Due Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Paid Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Sale ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {installmentsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="flex items-center justify-center">
+                          <RefreshCcw size={24} className="animate-spin text-slate-400 mr-2" />
+                          <span className="text-slate-500 dark:text-slate-400">Loading installments...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : installments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="text-slate-500 dark:text-slate-400">No installments found</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredInstallments.map((installment) => (
+                      <tr key={installment.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-slate-900 dark:text-white">
+                            {installment.customer?.name || 'Unknown Customer'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-900 dark:text-white font-semibold">
+                            ${installment.amount.toFixed(2)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                            {new Date(installment.dueDate).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            installment.status === 'paid'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : installment.status === 'overdue'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {installment.status.charAt(0).toUpperCase() + installment.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                            {installment.paidDate ? new Date(installment.paidDate).toLocaleDateString() : '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                            {installment.saleId ? installment.saleId.slice(-8) : '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          {installment.status !== 'paid' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(installment.id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                            >
+                              <CheckCircle size={14} className="mr-1" />
+                              Mark Paid
+                            </button>
+                          )}
+                          {installment.status === 'paid' && (
+                            <span className="text-green-600 dark:text-green-400 text-xs font-medium">
+                              ✓ Paid
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Installments Pagination */}
+            {installmentTotalPages > 1 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={installmentCurrentPage}
+                  totalPages={installmentTotalPages}
+                  onPageChange={(page) => loadInstallments(page)}
+                  totalItems={installmentTotalItems}
+                  itemsPerPage={installmentItemsPerPage}
+                  itemName="installments"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State - Only for sales tab */}
+      {activeTab === 'sales' && !stats.hasData && !loading && (
         <div className="glass-card p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
@@ -539,8 +837,8 @@ export default function Sales(): JSX.Element {
         </div>
       )}
 
-      {/* Filters */}
-      {stats.hasData && (
+      {/* Filters and Sales Table - Only for sales tab */}
+      {activeTab === 'sales' && stats.hasData && (
         <div className="glass-card p-4">
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex-1 min-w-[250px] relative">
@@ -577,7 +875,7 @@ export default function Sales(): JSX.Element {
       )}
 
       {/* Transactions Table */}
-      {stats.hasData && (
+      {activeTab === 'sales' && stats.hasData && (
         <div className="glass-card overflow-hidden">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h2>
