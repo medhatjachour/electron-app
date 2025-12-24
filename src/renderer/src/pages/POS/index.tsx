@@ -56,6 +56,7 @@ export default function POS(): JSX.Element {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  const [isCompletingSale, setIsCompletingSale] = useState(false)
   
   // Grid view has its own local customer state (like QuickSale does)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -78,8 +79,14 @@ export default function POS(): JSX.Element {
   }
   
   // Wrapper to call completeSale with the local customer
-  const handleCompleteSale = () => {
-    completeSale(selectedCustomer)
+  const handleCompleteSale = async () => {
+    setIsCompletingSale(true)
+    try {
+      await completeSale(selectedCustomer)
+    } finally {
+      setIsCompletingSale(false)
+      setShowPaymentModal(false) // Ensure modal closes
+    }
   }
 
   const { t, language } = useLanguage()
@@ -90,13 +97,21 @@ export default function POS(): JSX.Element {
       alert(t('cartIsEmpty'))
       return
     }
+
+    // Set payment method and customer state synchronously
     setPaymentMethod('cash')
     setSelectedCustomer(null)
     setCustomerQuery('')
-    // Small delay to ensure state is updated
-    setTimeout(() => {
-      completeSale()
-    }, 100)
+    setIsCompletingSale(true)
+
+    try {
+      // Call completeSale with null customer (no override needed since we set state above)
+      await completeSale(null)
+    } catch (error) {
+      console.error('Quick checkout failed:', error)
+    } finally {
+      setIsCompletingSale(false)
+    }
   }
 
   return (
@@ -283,18 +298,29 @@ export default function POS(): JSX.Element {
                 {/* Quick Cash Checkout */}
                 <button
                   onClick={handleQuickCheckout}
-                  className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-success to-emerald-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                  disabled={isCompletingSale}
+                  className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-success to-emerald-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {t('quickCheckoutCash')}
+                  {isCompletingSale ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {t('quickCheckoutCash')}
+                    </>
+                  )}
                 </button>
 
                 {/* More Options Button */}
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  className="w-full py-3 text-sm font-semibold rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                  disabled={isCompletingSale}
+                  className="w-full py-3 text-sm font-semibold rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -327,10 +353,13 @@ export default function POS(): JSX.Element {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('paymentOptions')}</h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                {isCompletingSale ? 'Processing Payment...' : t('paymentOptions')}
+              </h2>
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                disabled={isCompletingSale}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -346,6 +375,7 @@ export default function POS(): JSX.Element {
                 onCustomerQueryChange={setCustomerQuery}
                 onAddNewCustomer={() => setShowAddCustomerModal(true)}
                 total={total}
+                isProcessing={isCompletingSale}
                 onFullPayment={(method) => {
                   setPaymentMethod(method)
                   setShowPaymentModal(false)

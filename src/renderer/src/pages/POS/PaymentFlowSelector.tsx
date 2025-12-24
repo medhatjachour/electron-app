@@ -16,6 +16,7 @@ interface PaymentFlowSelectorProps {
   onAddNewCustomer: () => void
   saleId?: string
   total: number
+  isProcessing?: boolean
   onFullPayment: (method: 'cash' | 'card') => void
   onPartialPayment: () => void
   onCompleteInstallmentSale?: () => void
@@ -34,13 +35,14 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
   onAddNewCustomer,
   saleId,
   total,
+  isProcessing = false,
   onFullPayment,
   onPartialPayment,
   onCompleteInstallmentSale,
   onDepositAdded,
   onInstallmentAdded
 }) => {
-  const [paymentFlow, setPaymentFlow] = useState<PaymentFlow>('select')
+  const [paymentFlow, setPaymentFlow] = useState<PaymentFlow>('full-payment')
   const [showDepositForm, setShowDepositForm] = useState(false)
   const [showInstallmentForm, setShowInstallmentForm] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -145,20 +147,51 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleFullPayment('cash')}
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-semibold"
+                disabled={isProcessing}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-success"
               >
-                <DollarSign size={20} />
-                Pay Cash
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign size={20} />
+                    Pay Cash
+                  </>
+                )}
               </button>
               <button
                 onClick={() => handleFullPayment('card')}
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-semibold"
+                disabled={isProcessing}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
               >
-                <CreditCard size={20} />
-                Pay Card
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={20} />
+                    Pay Card
+                  </>
+                )}
               </button>
             </div>
           </div>
+        </div>
+
+        {/* More Options Link */}
+        <div className="px-4 py-2 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setPaymentFlow('select')}
+            disabled={isProcessing}
+            className="w-full text-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            More payment options (Deposit, Installment)
+          </button>
         </div>
       </div>
     )
@@ -301,17 +334,68 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
 
         {/* Fixed Action Buttons at Bottom */}
         <div className="flex-shrink-0 px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {/* Quick Payment Options */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleFullPayment('cash')}
+                disabled={isProcessing}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-success"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign size={20} />
+                    Pay Cash
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => handleFullPayment('card')}
+                disabled={isProcessing}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={20} />
+                    Pay Card
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Complete Sale Button */}
             <button
               onClick={onCompleteInstallmentSale}
-              className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+              disabled={isProcessing}
+              className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <CheckCircle size={20} />
-              Complete Sale
+              {isProcessing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={20} />
+                  Complete Sale
+                </>
+              )}
             </button>
+
             <button
               onClick={() => setPaymentFlow('select')}
-              className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              disabled={isProcessing}
+              className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Back to Payment Options
             </button>

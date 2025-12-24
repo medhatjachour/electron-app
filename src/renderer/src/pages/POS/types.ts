@@ -49,4 +49,4 @@ export type Customer = {
   phone: string
 }
 
-export type PaymentMethod = 'cash' | 'card' | null
+export type PaymentMethod = 'cash' | 'card'

@@ -1027,52 +1027,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
 
         {/* Cart Footer - Compact */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-700 space-y-2.5">
-          {/* Customer Selection - Modern Design */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                {t('customer')}
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowAddCustomerModal(true)}
-                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                <UserPlus size={14} />
-                {t('addNew')}
-              </button>
-            </div>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
-              <User size={18} className={selectedCustomer ? 'text-primary' : 'text-slate-400'} />
-            </div>
-            <select
-              value={selectedCustomer?.id || ''}
-              onChange={(e) => {
-                const customer = customers.find(c => c.id === e.target.value)
-                setSelectedCustomer(customer || null)
-              }}
-              className={`w-full pl-10 pr-4 py-2.5 text-sm border-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none cursor-pointer ${
-                selectedCustomer
-                  ? 'border-primary bg-primary/5 dark:bg-primary/10 text-slate-900 dark:text-white font-medium'
-                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary/50'
-              }`}
-            >
-              <option value="">🚶 {t('walkInCustomer')}</option>
-              {customers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  👤 {customer.name}
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-          </div>
-
+     
           {/* Totals - Compact */}
           <div className="space-y-1 py-2 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
@@ -1224,12 +1179,14 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                 onAddNewCustomer={() => setShowAddCustomerModal(true)}
                 total={total}
                 onFullPayment={(method) => {
+                  setShowPaymentOptions(false)
                   completeSale(method)
                 }}
                 onPartialPayment={() => {
                   // Just switch to installment view, no immediate action needed
                 }}
                 onCompleteInstallmentSale={() => {
+                  setShowPaymentOptions(false)
                   completeSale('installment')
                 }}
                 onDepositAdded={() => {

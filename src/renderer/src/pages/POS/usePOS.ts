@@ -161,7 +161,7 @@ export function usePOS() {
 
   const clearCart = useCallback(() => {
     setCart([])
-    setPaymentMethod(null)
+    setPaymentMethod('cash') // Reset to default cash payment
     setCustomerQuery('')
     setSelectedCustomer(null)
   }, [])
@@ -178,7 +178,7 @@ export function usePOS() {
       cartLength: cart.length 
     })
     
-    if (!paymentMethod) {
+    if (!paymentMethod || paymentMethod === '') {
       alert('Please select a payment method (Cash or Card)')
       return
     }
