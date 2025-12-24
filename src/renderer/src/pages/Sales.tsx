@@ -461,6 +461,53 @@ export default function Sales(): JSX.Element {
     }
   }
 
+  const handleInstallmentsExport = async () => {
+    try {
+      // Fetch all installments for export (not just current page)
+      const result = await ipc.installments.list({
+        page: 1,
+        limit: 10000, // Large limit to get all installments
+        status: installmentStatusFilter,
+        search: installmentSearchQuery,
+        dateFilter: installmentDateFilter
+      })
+
+      const allInstallments = result.installments || []
+
+      // Create CSV content for installments
+      const headers = ['Installment ID', 'Customer', 'Amount', 'Due Date', 'Status', 'Paid Date', 'Sale ID', 'Notes']
+      const rows = allInstallments.map(installment => [
+        installment.id,
+        installment.customer?.name || 'Unknown Customer',
+        `$${installment.amount.toFixed(2)}`,
+        formatDate(installment.dueDate.toString()),
+        installment.status.charAt(0).toUpperCase() + installment.status.slice(1),
+        installment.paidDate ? formatDate(installment.paidDate) : 'Not Paid',
+        installment.saleId || 'N/A',
+        installment.notes || ''
+      ])
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      // Create download link
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `installments-report-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export installments:', error)
+      alert('Failed to export installments report')
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleString('en-US', {
@@ -487,20 +534,24 @@ export default function Sales(): JSX.Element {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('sales')}</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('salesHistory')}</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            {activeTab === 'sales' ? t('sales') : t('installments')}
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            {activeTab === 'sales' ? t('salesHistory') : 'Track and manage customer installment payments'}
+          </p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={loadTransactions}
-            disabled={loading}
+          <button
+            onClick={activeTab === 'sales' ? loadTransactions : () => loadInstallments(1)}
+            disabled={activeTab === 'sales' ? loading : installmentsLoading}
             className="btn-secondary flex items-center gap-2"
           >
-            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+            <RefreshCcw size={20} className={(activeTab === 'sales' ? loading : installmentsLoading) ? 'animate-spin' : ''} />
             {t('refresh')}
           </button>
-          <button 
-            onClick={handleExport}
+          <button
+            onClick={activeTab === 'sales' ? handleExport : handleInstallmentsExport}
             className="btn-primary flex items-center gap-2"
           >
             <Download size={20} />
@@ -620,22 +671,6 @@ export default function Sales(): JSX.Element {
       {/* Installments Tab Content */}
       {activeTab === 'installments' && (
         <div className="space-y-6">
-          {/* Installments Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('installments')}</h2>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Track and manage customer installment payments</p>
-            </div>
-            <button
-              onClick={() => loadInstallments(1)}
-              disabled={installmentsLoading}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <RefreshCcw size={20} className={installmentsLoading ? 'animate-spin' : ''} />
-              {t('refresh')}
-            </button>
-          </div>
-
           {/* Installments Filters */}
           <div className="glass-card p-4">
             <div className="flex gap-4 items-center flex-wrap">
