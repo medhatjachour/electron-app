@@ -90,7 +90,7 @@ const api = {
       description: string
       userId: string
     }) => ipcRenderer.invoke('finance:addTransaction', data),
-    getTransactions: (data: { startDate: Date; endDate: Date }) =>
+    getTransactions: (data: { startDate: string; endDate: string }) =>
       ipcRenderer.invoke('finance:getTransactions', data),
     getStats: () => ipcRenderer.invoke('finance:getStats'),
     updateTransaction: (id: string, data: {
@@ -272,6 +272,64 @@ const api = {
       }>
       userId?: string
     }) => ipcRenderer.invoke('stockMovements:bulkRecord', data)
+  },
+  // Deposits and Installments
+  deposits: {
+    create: (data: {
+      amount: number
+      date?: Date
+      method: string
+      status?: string
+      note?: string
+      customerId?: string
+      saleId?: string
+    }) => ipcRenderer.invoke('deposits:create', data),
+    list: () => ipcRenderer.invoke('deposits:list'),
+    getByCustomer: (customerId: string) => ipcRenderer.invoke('deposits:getByCustomer', customerId),
+    getBySale: (saleId: string) => ipcRenderer.invoke('deposits:getBySale', saleId),
+    linkToSale: (data: { depositIds: string[]; saleId: string }) => ipcRenderer.invoke('deposits:linkToSale', data)
+  },
+  installments: {
+    create: (data: {
+      amount: number
+      dueDate: Date
+      paidDate?: Date
+      status?: string
+      note?: string
+      customerId?: string
+      saleId?: string
+    }) => ipcRenderer.invoke('installments:create', data),
+    list: () => ipcRenderer.invoke('installments:list'),
+    getByCustomer: (customerId: string) => ipcRenderer.invoke('installments:getByCustomer', customerId),
+    getBySale: (saleId: string) => ipcRenderer.invoke('installments:getBySale', saleId),
+    getUpcomingReminders: (daysAhead?: number) => ipcRenderer.invoke('installments:getUpcomingReminders', daysAhead),
+    getOverdue: () => ipcRenderer.invoke('installments:getOverdue'),
+    markAsPaid: (data: { installmentId: string; paidDate?: string }) => ipcRenderer.invoke('installments:markAsPaid', data),
+    markAsOverdue: (installmentId: string) => ipcRenderer.invoke('installments:markAsOverdue', installmentId),
+    linkToSale: (data: { installmentIds: string[]; saleId: string }) => ipcRenderer.invoke('installments:linkToSale', data)
+  },
+  // Receipt generation
+  receipts: {
+    generateDeposit: (depositId: string) => ipcRenderer.invoke('receipts:generateDeposit', depositId),
+    generateInstallment: (installmentId: string) => ipcRenderer.invoke('receipts:generateInstallment', installmentId),
+    generateThermal: (receipt: any) => ipcRenderer.invoke('receipts:generateThermal', receipt)
+  },
+  // Delete operations
+  delete: {
+    checkCustomer: (customerId: string) => ipcRenderer.invoke('delete:check-customer', { customerId }),
+    checkProduct: (productId: string) => ipcRenderer.invoke('delete:check-product', { productId }),
+    checkUser: (userId: string) => ipcRenderer.invoke('delete:check-user', { userId }),
+    archiveCustomer: (customerId: string) => ipcRenderer.invoke('delete:archive-customer', { customerId }),
+    archiveProduct: (productId: string) => ipcRenderer.invoke('delete:archive-product', { productId }),
+    deactivateUser: (userId: string) => ipcRenderer.invoke('delete:deactivate-user', { userId }),
+    hardDeleteCustomer: (customerId: string) => ipcRenderer.invoke('delete:hard-delete-customer', { customerId }),
+    hardDeleteProduct: (productId: string) => ipcRenderer.invoke('delete:hard-delete-product', { productId }),
+    hardDeleteUser: (userId: string) => ipcRenderer.invoke('delete:hard-delete-user', { userId }),
+    getArchivedCustomers: () => ipcRenderer.invoke('delete:get-archived-customers'),
+    getArchivedProducts: () => ipcRenderer.invoke('delete:get-archived-products'),
+    getDeactivatedUsers: () => ipcRenderer.invoke('delete:get-deactivated-users'),
+    cleanupUnlinkedDeposits: (customerId: string) => ipcRenderer.invoke('delete:cleanup-unlinked-deposits', customerId),
+    cleanupUnlinkedInstallments: (customerId: string) => ipcRenderer.invoke('delete:cleanup-unlinked-installments', customerId)
   }
 }
 

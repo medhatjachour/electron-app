@@ -27,13 +27,6 @@ import type {
   StockMovement
 } from '../../shared/types'
 
-interface PaginationParams {
-  page?: number
-  limit?: number
-  skip?: number
-  take?: number
-}
-
 interface InventoryQueryOptions {
   includeImages?: boolean
   category?: string

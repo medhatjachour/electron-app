@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { translations, Language, TranslationKey } from '../i18n/translations'
+import { translations, Language } from '../i18n/translations'
 
 interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (key: TranslationKey) => string
+  t: (key: string, params?: Record<string, any>) => string
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
@@ -30,8 +30,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang)
   }
 
-  const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations.en[key] || key
+  const t = (key: string, params?: Record<string, any>): string => {
+    let translation = translations[language][key] || translations.en[key] || key
+    
+    if (params) {
+      // Simple interpolation: replace {key} with params.key
+      Object.keys(params).forEach(paramKey => {
+        translation = translation.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(params[paramKey]))
+      })
+    }
+    
+    return translation
   }
 
   const contextValue = { language, setLanguage, t }

@@ -146,18 +146,15 @@ export default function RootLayout({ children, userRole }: RootLayoutProps) {
         startDate.setDate(startDate.getDate() - 30)
         
         const transactions = await window.api.finance.getTransactions({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString()
+          startDate,
+          endDate
         })
         const stats = await window.api.finance.getStats()
         return { transactions, stats }
       })
     } else if (href === '/products') {
       preloadData('products-data', async () => {
-        return await window.api.products.getAll({
-          includeImages: true,
-          limit: 50
-        })
+        return await window.api.products.getAll()
       })
     } else if (href === '/inventory') {
       preloadData('inventory-data', async () => {

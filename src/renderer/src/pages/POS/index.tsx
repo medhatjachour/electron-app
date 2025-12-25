@@ -10,16 +10,15 @@
  * - usePOS: Business logic and state management
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Grid, Zap } from 'lucide-react'
 import ProductSearch from './ProductSearch'
 import QuickSale from './QuickSale'
 import ShoppingCart from './ShoppingCart'
-import CustomerSelect from './CustomerSelect'
-import PaymentSection from './PaymentSection'
 import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
+import { PaymentFlowSelector } from './PaymentFlowSelector'
 import { usePOS } from './usePOS'
 import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
@@ -30,7 +29,6 @@ export default function POS(): JSX.Element {
   const {
     customers,
     cart,
-    customerQuery: sharedCustomerQuery,
     paymentMethod,
     showSuccess,
     showDiscountModal,
@@ -45,7 +43,6 @@ export default function POS(): JSX.Element {
     clearCart,
     completeSale,
     completeSaleFromQuickView,
-    setCustomerQuery: setSharedCustomerQuery,
     setPaymentMethod,
     refreshCustomers,
     canApplyDiscount,
@@ -55,9 +52,10 @@ export default function POS(): JSX.Element {
   } = usePOS()
 
   const [cartOpen, setCartOpen] = useState(false)
-  const [showCheckoutOptions, setShowCheckoutOptions] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  const [isCompletingSale, setIsCompletingSale] = useState(false)
   
   // Grid view has its own local customer state (like QuickSale does)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -72,7 +70,6 @@ export default function POS(): JSX.Element {
   }, [showSuccess])
 
   const handleCustomerAdded = (newCustomer: Customer) => {
-    console.log('👤 Customer added in POS:', newCustomer)
     // Refresh customers list and select the new customer immediately
     refreshCustomers()
     setSelectedCustomer(newCustomer)
@@ -81,9 +78,14 @@ export default function POS(): JSX.Element {
   }
   
   // Wrapper to call completeSale with the local customer
-  const handleCompleteSale = () => {
-    console.log('🎯 Complete sale with customer:', selectedCustomer)
-    completeSale(selectedCustomer)
+  const handleCompleteSale = async () => {
+    setIsCompletingSale(true)
+    try {
+      await completeSale(selectedCustomer)
+    } finally {
+      setIsCompletingSale(false)
+      setShowPaymentModal(false) // Ensure modal closes
+    }
   }
 
   const { t, language } = useLanguage()
@@ -94,17 +96,25 @@ export default function POS(): JSX.Element {
       alert(t('cartIsEmpty'))
       return
     }
+
+    // Set payment method and customer state synchronously
     setPaymentMethod('cash')
     setSelectedCustomer(null)
     setCustomerQuery('')
-    // Small delay to ensure state is updated
-    setTimeout(() => {
-      completeSale()
-    }, 100)
+    setIsCompletingSale(true)
+
+    try {
+      // Call completeSale with null customer (no override needed since we set state above)
+      await completeSale(null)
+    } catch (error) {
+      console.error('Quick checkout failed:', error)
+    } finally {
+      setIsCompletingSale(false)
+    }
   }
 
   return (
-    <div className="h-screen flex bg-slate-50 dark:bg-slate-900 relative">
+    <div className=" flex bg-slate-50 h-full dark:bg-slate-900 relative">
       <SuccessModal show={showSuccess} total={total} paymentMethod={paymentMethod} />
       <AddCustomerModal 
         show={showAddCustomerModal} 
@@ -139,6 +149,7 @@ export default function POS(): JSX.Element {
               <Zap size={18} />
               {t('quickSale')}
             </button>
+           
           </div>
         </div>
 
@@ -203,7 +214,7 @@ export default function POS(): JSX.Element {
       {viewMode === 'grid' && (
         <div 
           className={`
-            fixed lg:relative top-0 h-full z-10
+            fixed lg:relative top-0 min-h-full  overflow-y-scroll z-10
             w-full sm:w-[420px] lg:w-[380px] xl:w-[420px] 2xl:w-[480px]
             bg-white dark:bg-slate-800 
             shadow-2xl lg:shadow-none
@@ -248,7 +259,7 @@ export default function POS(): JSX.Element {
         </div>
 
         {/* Main Content Area - Scrollable with fixed sections */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-scroll">
           {/* Cart Items - Takes full space now */}
           <div className="flex-1 overflow-auto">
             <ShoppingCart
@@ -264,86 +275,58 @@ export default function POS(): JSX.Element {
 
           {/* Checkout Buttons - Always visible at bottom */}
           {cart.length > 0 && (
-            <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-              {showCheckoutOptions ? (
-                // Full Checkout Options (Customer + Payment)
-                <>
-                  {/* Customer Selection - Compact */}
-                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <CustomerSelect
-                      customers={customers}
-                      selectedCustomer={selectedCustomer}
-                      customerQuery={customerQuery}
-                      onSelectCustomer={setSelectedCustomer}
-                      onQueryChange={setCustomerQuery}
-                      onAddNewCustomer={() => setShowAddCustomerModal(true)}
-                    />
-                  </div>
-
-                  {/* Payment Section */}
-                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <PaymentSection
-                      paymentMethod={paymentMethod}
-                      onPaymentMethodChange={setPaymentMethod}
-                      subtotal={subtotal}
-                      tax={tax}
-                      total={total}
-                      onCompleteSale={handleCompleteSale}
-                    />
-                  </div>
-
-                  {/* Back to Simple View */}
-                  <div className="px-4 py-2">
-                    <button
-                      onClick={() => setShowCheckoutOptions(false)}
-                      className="w-full py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      {t('backToQuickCheckout')}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                // Quick Checkout Buttons
-                <div className="p-4 space-y-2">
-                  {/* Order Summary - Compact */}
-                  <div className="space-y-1 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>{t('subtotal')}:</span>
-                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>{t('tax')} ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
-                      <span className="font-semibold">${tax.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-600">
-                      <span className="text-base font-bold text-slate-900 dark:text-white">{t('total')}:</span>
-                      <span className="text-2xl font-bold text-primary">${total.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Quick Cash Checkout */}
-                  <button
-                    onClick={handleQuickCheckout}
-                    className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-success to-emerald-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {t('quickCheckoutCash')}
-                  </button>
-
-                  {/* More Options Button */}
-                  <button
-                    onClick={() => setShowCheckoutOptions(true)}
-                    className="w-full py-3 text-sm font-semibold rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    {t('moreOptionsCustomerCard')}
-                  </button>
+            <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+              {/* Order Summary - Compact */}
+              <div className="space-y-1 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <span>{t('subtotal')}:</span>
+                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
-              )}
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <span>{t('tax')} ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
+                  <span className="font-semibold">${tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-600">
+                  <span className="text-base font-bold text-slate-900 dark:text-white">{t('total')}:</span>
+                  <span className="text-2xl font-bold text-primary">${total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Checkout Buttons */}
+              <div className="space-y-2">
+                {/* Quick Cash Checkout */}
+                <button
+                  onClick={handleQuickCheckout}
+                  disabled={isCompletingSale}
+                  className="w-full py-3 text-base font-bold rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-success to-emerald-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {isCompletingSale ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {t('quickCheckoutCash')}
+                    </>
+                  )}
+                </button>
+
+                {/* More Options Button */}
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  disabled={isCompletingSale}
+                  className="w-full py-3 text-sm font-semibold rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  {t('paymentOptions')}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -363,6 +346,58 @@ export default function POS(): JSX.Element {
           requireReason={true}
         />
       )}
+
+      {/* Payment Options Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                {isCompletingSale ? 'Processing Payment...' : t('paymentOptions')}
+              </h2>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                disabled={isCompletingSale}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 max-h-[calc(90vh-120px)] overflow-auto">
+              <PaymentFlowSelector
+                selectedCustomer={selectedCustomer}
+                customers={customers}
+                customerQuery={customerQuery}
+                onCustomerSelect={setSelectedCustomer}
+                onCustomerQueryChange={setCustomerQuery}
+                onAddNewCustomer={() => setShowAddCustomerModal(true)}
+                total={total}
+                isProcessing={isCompletingSale}
+                onFullPayment={(method) => {
+                  setPaymentMethod(method)
+                  setShowPaymentModal(false)
+                  handleCompleteSale()
+                }}
+                onPartialPayment={() => {
+                  // Just switch to installment view, no immediate action needed
+                }}
+                onCompleteInstallmentSale={() => {
+                  setShowPaymentModal(false)
+                  handleCompleteSale()
+                }}
+                onDepositAdded={() => {
+                }}
+                onInstallmentAdded={() => {
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+     
     </div>
   )
 }

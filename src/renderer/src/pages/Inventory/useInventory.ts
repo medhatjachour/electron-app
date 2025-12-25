@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { InventoryItem, InventoryMetrics } from 'src/shared/types'
+import { InventoryItem, InventoryMetrics } from '../../../../shared/types'
 
 export function useInventory() {
   const [items, setItems] = useState<InventoryItem[]>([])

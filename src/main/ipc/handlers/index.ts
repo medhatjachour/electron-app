@@ -23,6 +23,9 @@ import { registerReportsHandlers } from './reports.handlers'
 import { registerAnalyticsHandlers } from './analytics.handlers'
 import { registerDeleteHandlers } from './delete.handlers'
 import { registerStockMovementHandlers } from './stock-movements.handlers'
+import { registerDepositsHandlers } from './deposits.handlers'
+import { registerInstallmentsHandlers } from './installments.handlers'
+import { registerReceiptHandlers } from './receipts.handlers'
 import './backup.handlers' // Import backup handlers (self-contained, no registration needed)
 
 // Initialize Prisma client
@@ -124,6 +127,11 @@ export function registerAllHandlers() {
   
   registerReportsHandlers(prisma)
   
+  // Register deposit and installment handlers
+  registerDepositsHandlers(prisma)
+  registerInstallmentsHandlers(prisma)
+  // Register receipt handlers
+  registerReceiptHandlers(prisma)
   // Register analytics handlers (self-contained with own Prisma instance)
   registerAnalyticsHandlers()
   

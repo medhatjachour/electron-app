@@ -17,20 +17,6 @@ export default function InventoryFilters({ categories, filters, onFiltersChange 
     onFiltersChange({ ...filters, [key]: value })
   }
 
-  const toggleCategory = (category: string) => {
-    const newCategories = filters.categories.includes(category)
-      ? filters.categories.filter(c => c !== category)
-      : [...filters.categories, category]
-    updateFilter('categories', newCategories)
-  }
-
-  const toggleStockStatus = (status: 'out' | 'low' | 'normal' | 'high') => {
-    const newStatuses = filters.stockStatus.includes(status)
-      ? filters.stockStatus.filter(s => s !== status)
-      : [...filters.stockStatus, status]
-    updateFilter('stockStatus', newStatuses)
-  }
-
   const clearFilters = () => {
     onFiltersChange({
       search: '',

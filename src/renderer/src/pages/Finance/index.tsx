@@ -30,8 +30,7 @@ import {
   Filler
 } from 'chart.js'
 import type { DateRangeType } from './types'
-import { useToast } from '../../hooks/useToast'
-import ToastContainer from '../../components/ui/ToastContainer'
+import { useToast } from '../../contexts/ToastContext'
 import RevenueForecasting from './components/RevenueForecasting'
 import CashFlowProjection from './components/CashFlowProjection'
 import ProductInsights from './components/ProductInsights'
@@ -226,10 +225,10 @@ export default function Finance() {
       const filename = `finance-report-${dateRange}-${date}.xlsx`
       XLSX.writeFile(wb, filename)
 
-      toast.success(t('financeExportSuccess'), `${t('financeReportExported')} ${filename}`)
+      toast.success(`${t('financeExportSuccess')}: ${t('financeReportExported')} ${filename}`)
     } catch (error) {
       console.error('Export error:', error)
-      toast.error(t('financeExportFailed'), error instanceof Error ? error.message : t('financeUnknownError'))
+      toast.error(`${t('financeExportFailed')}: ${error instanceof Error ? error.message : t('financeUnknownError')}`)
     } finally {
       setExporting(false)
     }
@@ -780,8 +779,6 @@ export default function Finance() {
       {activeTab === 'insights' && <ProductInsights />}
       {activeTab === 'health' && <FinancialHealthDashboard />}
       {activeTab === 'pricing' && <PricingCalculator />}
-
-      <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />
     </div>
   )
 }
@@ -801,7 +798,7 @@ function KPICard({
   value: string
   change: number
   icon: React.ReactNode
-  color: 'blue' | 'green' | 'purple' | 'orange'
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red'
   showChange?: boolean
   subtitle?: string
   tooltip?: string
@@ -810,7 +807,8 @@ function KPICard({
     blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     green: 'bg-green-500/10 text-green-600 dark:text-green-400',
     purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    red: 'bg-red-500/10 text-red-600 dark:text-red-400'
   }
 
   return (

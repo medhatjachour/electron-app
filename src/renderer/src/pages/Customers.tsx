@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart, Download, FileSpreadsheet, FileText, User } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Heart, Edit2, Trash2, TrendingUp, DollarSign, ShoppingCart, Download, FileSpreadsheet, FileText, User, CreditCard } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import SmartDeleteDialog from '../components/SmartDeleteDialog'
+import { InstallmentManager } from '../components/InstallmentManager'
 import { ipc } from '../utils/ipc'
 import { useToast } from '../contexts/ToastContext'
 import { formatCurrency } from '@renderer/utils/formatNumber'
@@ -44,6 +45,10 @@ export default function Customers(): JSX.Element {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedCustomerHistory, setSelectedCustomerHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  
+  // Installment manager state
+  const [showInstallmentManager, setShowInstallmentManager] = useState(false)
+  const [selectedCustomerForInstallments, setSelectedCustomerForInstallments] = useState<Customer | null>(null)
   
   // Delete dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -261,6 +266,11 @@ export default function Customers(): JSX.Element {
     } finally {
       setLoadingHistory(false)
     }
+  }
+
+  const openInstallmentManager = (customer: Customer) => {
+    setSelectedCustomerForInstallments(customer)
+    setShowInstallmentManager(true)
   }
 
   const resetForm = () => {
@@ -602,7 +612,15 @@ export default function Customers(): JSX.Element {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => openInstallmentManager(customer)}
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    title="Manage installments"
+                  >
+                    <CreditCard size={16} />
+                    <span className="text-xs">{t('installments')}</span>
+                  </button>
                   <button
                     onClick={() => openHistoryModal(customer)}
                     className="flex flex-col items-center justify-center gap-1 px-2 py-2 bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-colors"
@@ -857,6 +875,62 @@ export default function Customers(): JSX.Element {
                       </div>
                     ))}
                   </div>
+
+                  {/* Deposits */}
+                  {transaction.deposits && transaction.deposits.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('deposits')}</p>
+                      <div className="space-y-1">
+                        {transaction.deposits.map((deposit: any, idx: number) => (
+                          <div key={deposit.id || idx} className="flex justify-between text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                            <span className="text-green-700 dark:text-green-300">
+                              {t('deposit')} #{deposit.id} - {new Date(deposit.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className="font-medium text-green-900 dark:text-green-100">
+                              ${deposit.amount.toFixed(2)} ({deposit.status})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Installments */}
+                  {transaction.installments && transaction.installments.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('installments')}</p>
+                      <div className="space-y-1">
+                        {transaction.installments.map((installment: any, idx: number) => (
+                          <div key={installment.id || idx} className={`flex justify-between text-xs px-2 py-1 rounded ${
+                            installment.status === 'paid' 
+                              ? 'bg-green-50 dark:bg-green-900/20'
+                              : installment.status === 'overdue'
+                              ? 'bg-red-50 dark:bg-red-900/20'
+                              : 'bg-blue-50 dark:bg-blue-900/20'
+                          }`}>
+                            <span className={`${
+                              installment.status === 'paid' 
+                                ? 'text-green-700 dark:text-green-300'
+                                : installment.status === 'overdue'
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-blue-700 dark:text-blue-300'
+                            }`}>
+                              {t('installment')} #{installment.installmentNumber} - {t('dueDate')}: {new Date(installment.dueDate).toLocaleDateString()}
+                            </span>
+                            <span className={`font-medium ${
+                              installment.status === 'paid' 
+                                ? 'text-green-900 dark:text-green-100'
+                                : installment.status === 'overdue'
+                                ? 'text-red-900 dark:text-red-100'
+                                : 'text-blue-900 dark:text-blue-100'
+                            }`}>
+                              ${installment.amount.toFixed(2)} ({installment.status})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-600 flex justify-between items-center">
                     <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -906,6 +980,19 @@ export default function Customers(): JSX.Element {
         onDelete={handleConfirmDelete}
         onArchive={handleArchiveCustomer}
       />
+
+      {/* Installment Manager Modal */}
+      {showInstallmentManager && selectedCustomerForInstallments && (
+        <InstallmentManager
+          isOpen={showInstallmentManager}
+          onClose={() => {
+            setShowInstallmentManager(false)
+            setSelectedCustomerForInstallments(null)
+          }}
+          customerId={selectedCustomerForInstallments.id}
+          customerName={selectedCustomerForInstallments.name}
+        />
+      )}
     </div>
   )
 }

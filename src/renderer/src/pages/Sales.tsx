@@ -1,11 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight } from 'lucide-react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard, CheckCircle } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
+import { InstallmentManager } from '../components/InstallmentManager'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useToast } from '../contexts/ToastContext'
+import { useLocation } from 'react-router-dom'
 
 type SaleItem = {
   id: string
@@ -33,6 +36,21 @@ type SaleItem = {
   }
 }
 
+type Installment = {
+  id: string
+  amount: number
+  dueDate: string | number
+  status: 'pending' | 'paid' | 'overdue'
+  paidDate?: string
+  notes?: string
+  customerId: string
+  saleId?: string
+  customer?: {
+    id: string
+    name: string
+  }
+}
+
 type SaleTransaction = {
   id: string
   userId: string
@@ -44,13 +62,47 @@ type SaleTransaction = {
   total: number
   createdAt: string
   items: SaleItem[]
+  deposits?: Array<{
+    id: string
+    amount: number
+    date: string
+    method: string
+    status?: string
+    note?: string
+  }>
+  installments?: Array<{
+    id: string
+    amount: number
+    dueDate: string
+    paidDate?: string
+    status: string
+    note?: string
+  }>
   user?: {
     username: string
   }
 }
 
 export default function Sales(): JSX.Element {
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState<'sales' | 'installments'>(() => {
+    // Check URL search params for tab
+    const searchParams = new URLSearchParams(location.search)
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'installments') {
+      return 'installments'
+    }
+    // Check navigation state
+    const state = location.state as any
+    if (state?.activeTab === 'installments') {
+      return 'installments'
+    }
+    return 'sales'
+  })
+  const [installments, setInstallments] = useState<Installment[]>([])
+  const [installmentsLoading, setInstallmentsLoading] = useState(false)
   const { t } = useLanguage()
+  const { showToast } = useToast()
   const [transactions, setTransactions] = useState<SaleTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState('all')
@@ -58,9 +110,22 @@ export default function Sales(): JSX.Element {
   const [selectedTransaction, setSelectedTransaction] = useState<SaleTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [showInstallmentManager, setShowInstallmentManager] = useState(false)
+  const [selectedTransactionForInstallments, setSelectedTransactionForInstallments] = useState<SaleTransaction | null>(null)
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  
+  // Installment pagination state
+  const [installmentCurrentPage, setInstallmentCurrentPage] = useState(1)
+  const [installmentTotalPages, setInstallmentTotalPages] = useState(1)
+  const [installmentTotalItems, setInstallmentTotalItems] = useState(0)
+  const installmentItemsPerPage = 20
+  
+  // Installment filtering state
+  const [installmentSearchQuery, setInstallmentSearchQuery] = useState('')
+  const [installmentStatusFilter, setInstallmentStatusFilter] = useState('all')
+  const [installmentDateFilter, setInstallmentDateFilter] = useState('all')
   
   // Get refund period from settings
   const refundPeriodDays = parseInt(localStorage.getItem('refundPeriodDays') || '30')
@@ -79,9 +144,41 @@ export default function Sales(): JSX.Element {
   // Check if refunds are enabled in settings
   const refundsEnabled = refundPeriodDays > 0
 
+  // Debounced search for installments
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  
+  const debouncedLoadInstallments = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadInstallments(1)
+    }, 300)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'installments') {
+      loadInstallments(1)
+    }
+  }, [activeTab])
+
   useEffect(() => {
     loadTransactions()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'installments') {
+      loadInstallments(1)
+    }
+  }, [activeTab, installmentStatusFilter, installmentDateFilter])
 
   const loadTransactions = async () => {
     try {
@@ -92,15 +189,39 @@ export default function Sales(): JSX.Element {
       startDate.setDate(startDate.getDate() - 30) // Last 30 days only
       
       const data = await ipc.saleTransactions.getByDateRange({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        limit: 100 // Limit to recent 100 transactions
+        startDate: startDate,
+        endDate: endDate
       })
       setTransactions(data)
     } catch (error) {
       console.error('Failed to load transactions:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadInstallments = async (page = 1) => {
+    try {
+      setInstallmentsLoading(true)
+      const result = await ipc.installments.list({
+        page,
+        limit: installmentItemsPerPage,
+        status: installmentStatusFilter,
+        search: installmentSearchQuery,
+        dateFilter: installmentDateFilter
+      })
+      
+      setInstallments(result.installments || [])
+      setInstallmentTotalItems(result.total || 0)
+      setInstallmentTotalPages(result.totalPages || 1)
+      setInstallmentCurrentPage(page)
+    } catch (error) {
+      console.error('Failed to load installments:', error)
+      setInstallments([])
+      setInstallmentTotalItems(0)
+      setInstallmentTotalPages(1)
+    } finally {
+      setInstallmentsLoading(false)
     }
   }
 
@@ -152,6 +273,9 @@ export default function Sales(): JSX.Element {
 
     return filtered
   }, [transactions, searchQuery, dateFilter])
+
+  // Installments are now filtered server-side, so we just return them as-is
+  const filteredInstallments = installments
 
   const stats = useMemo(() => {
     // Include completed and partially_refunded transactions
@@ -292,22 +416,44 @@ export default function Sales(): JSX.Element {
   const handleRefundItems = async (items: Array<{ saleItemId: string; quantityToRefund: number }>) => {
     if (!selectedTransaction) return
 
-    const result = await ipc.saleTransactions.refundItems({
-      transactionId: selectedTransaction.id,
-      items
-    })
+    try {
+      const result = await ipc.saleTransactions.refundItems({
+        transactionId: selectedTransaction.id,
+        items
+      })
 
-    if (result.success) {
-      alert('Items refunded successfully! Stock has been restored.')
-      await loadTransactions()
-    } else {
-      throw new Error(result.error || 'Failed to refund items')
+      if (result.success) {
+        showToast('success', t('itemsRefundedSuccess'))
+        await loadTransactions()
+        setShowRefundModal(false)
+      } else {
+        throw new Error(result.error || t('failedToRefundItems'))
+      }
+    } catch (error: any) {
+      console.error('Failed to refund items:', error)
+      showToast('error', error.message || t('failedToRefundItems'))
     }
   }
 
   const handleViewTransaction = (transaction: SaleTransaction) => {
     setSelectedTransaction(transaction)
     setShowViewModal(true)
+  }
+
+  const handleInstallmentManager = (transaction: SaleTransaction) => {
+    setSelectedTransactionForInstallments(transaction)
+    setShowInstallmentManager(true)
+  }
+
+  const handleMarkAsPaid = async (installmentId: string) => {
+    try {
+      await ipc.installments.markAsPaid({ installmentId })
+      showToast('success', 'Installment marked as paid successfully')
+      loadInstallments(installmentCurrentPage) // Refresh the current page
+    } catch (error) {
+      console.error('Error marking installment as paid:', error)
+      showToast('error', 'Failed to mark installment as paid')
+    }
   }
 
   const handleExport = () => {
@@ -356,6 +502,53 @@ export default function Sales(): JSX.Element {
     }
   }
 
+  const handleInstallmentsExport = async () => {
+    try {
+      // Fetch all installments for export (not just current page)
+      const result = await ipc.installments.list({
+        page: 1,
+        limit: 10000, // Large limit to get all installments
+        status: installmentStatusFilter,
+        search: installmentSearchQuery,
+        dateFilter: installmentDateFilter
+      })
+
+      const allInstallments = result.installments || []
+
+      // Create CSV content for installments
+      const headers = ['Installment ID', 'Customer', 'Amount', 'Due Date', 'Status', 'Paid Date', 'Sale ID', 'Notes']
+      const rows = allInstallments.map(installment => [
+        installment.id,
+        installment.customer?.name || 'Unknown Customer',
+        `$${installment.amount.toFixed(2)}`,
+        formatDate(installment.dueDate.toString()),
+        installment.status.charAt(0).toUpperCase() + installment.status.slice(1),
+        installment.paidDate ? formatDate(installment.paidDate) : 'Not Paid',
+        installment.saleId || 'N/A',
+        installment.notes || ''
+      ])
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      // Create download link
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `installments-report-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export installments:', error)
+      alert('Failed to export installments report')
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleString('en-US', {
@@ -382,20 +575,24 @@ export default function Sales(): JSX.Element {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('sales')}</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">{t('salesHistory')}</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            {activeTab === 'sales' ? t('sales') : t('installments')}
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            {activeTab === 'sales' ? t('salesHistory') : 'Track and manage customer installment payments'}
+          </p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={loadTransactions}
-            disabled={loading}
+          <button
+            onClick={activeTab === 'sales' ? loadTransactions : () => loadInstallments(1)}
+            disabled={activeTab === 'sales' ? loading : installmentsLoading}
             className="btn-secondary flex items-center gap-2"
           >
-            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+            <RefreshCcw size={20} className={(activeTab === 'sales' ? loading : installmentsLoading) ? 'animate-spin' : ''} />
             {t('refresh')}
           </button>
-          <button 
-            onClick={handleExport}
+          <button
+            onClick={activeTab === 'sales' ? handleExport : handleInstallmentsExport}
             className="btn-primary flex items-center gap-2"
           >
             <Download size={20} />
@@ -404,7 +601,34 @@ export default function Sales(): JSX.Element {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Tabs */}
+      <div className="border-b border-slate-200 dark:border-slate-700">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'sales'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            {t('sales')}
+          </button>
+          <button
+            onClick={() => setActiveTab('installments')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'installments'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            {t('installments')}
+          </button>
+        </nav>
+      </div>
+
+      {/* Stats Cards - Only show for sales tab */}
+      {activeTab === 'sales' && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="glass-card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
@@ -483,9 +707,189 @@ export default function Sales(): JSX.Element {
           )}
         </div>
       </div>
+      )}
 
-      {/* Empty State */}
-      {!stats.hasData && !loading && (
+      {/* Installments Tab Content */}
+      {activeTab === 'installments' && (
+        <div className="space-y-6">
+          {/* Installments Filters */}
+          <div className="glass-card p-4">
+            <div className="flex gap-4 items-center flex-wrap">
+              <div className="flex-1 min-w-[250px] relative">
+                <input
+                  type="text"
+                  placeholder="Search by customer name, sale ID, or amount..."
+                  className="input-field w-full"
+                  value={installmentSearchQuery}
+                  onChange={(e) => {
+                    setInstallmentSearchQuery(e.target.value)
+                    setInstallmentCurrentPage(1) // Reset to first page
+                    debouncedLoadInstallments()
+                  }}
+                />
+              </div>
+              <select
+                className="input-field w-48"
+                value={installmentStatusFilter}
+                onChange={(e) => {
+                  setInstallmentStatusFilter(e.target.value)
+                  setInstallmentCurrentPage(1) // Reset to first page
+                  loadInstallments(1)
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <select
+                className="input-field w-48"
+                value={installmentDateFilter}
+                onChange={(e) => {
+                  setInstallmentDateFilter(e.target.value)
+                  setInstallmentCurrentPage(1) // Reset to first page
+                  loadInstallments(1)
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Due Today</option>
+                <option value="week">Due This Week</option>
+                <option value="month">Due This Month</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <Filter size={16} />
+                <span>{installmentTotalItems} installment{installmentTotalItems !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Installments Table */}
+          <div className="glass-card">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Due Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Paid Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Sale ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                  {installmentsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="flex items-center justify-center">
+                          <RefreshCcw size={24} className="animate-spin text-slate-400 mr-2" />
+                          <span className="text-slate-500 dark:text-slate-400">Loading installments...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : installments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="text-slate-500 dark:text-slate-400">No installments found</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredInstallments.map((installment) => (
+                      <tr key={installment.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-slate-900 dark:text-white">
+                            {installment.customer?.name || 'Unknown Customer'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-900 dark:text-white font-semibold">
+                            ${installment.amount.toFixed(2)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                            {new Date(installment.dueDate).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            installment.status === 'paid'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : installment.status === 'overdue'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {installment.status.charAt(0).toUpperCase() + installment.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                            {installment.paidDate ? new Date(installment.paidDate).toLocaleDateString() : '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                            {installment.saleId ? installment.saleId.slice(-8) : '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          {installment.status !== 'paid' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(installment.id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                            >
+                              <CheckCircle size={14} className="mr-1" />
+                              Mark Paid
+                            </button>
+                          )}
+                          {installment.status === 'paid' && (
+                            <span className="text-green-600 dark:text-green-400 text-xs font-medium">
+                              ✓ Paid
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Installments Pagination */}
+            {installmentTotalPages > 1 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={installmentCurrentPage}
+                  totalPages={installmentTotalPages}
+                  onPageChange={(page) => loadInstallments(page)}
+                  totalItems={installmentTotalItems}
+                  itemsPerPage={installmentItemsPerPage}
+                  itemName="installments"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State - Only for sales tab */}
+      {activeTab === 'sales' && !stats.hasData && !loading && (
         <div className="glass-card p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
@@ -508,8 +912,8 @@ export default function Sales(): JSX.Element {
         </div>
       )}
 
-      {/* Filters */}
-      {stats.hasData && (
+      {/* Filters and Sales Table - Only for sales tab */}
+      {activeTab === 'sales' && stats.hasData && (
         <div className="glass-card p-4">
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex-1 min-w-[250px] relative">
@@ -546,7 +950,7 @@ export default function Sales(): JSX.Element {
       )}
 
       {/* Transactions Table */}
-      {stats.hasData && (
+      {activeTab === 'sales' && stats.hasData && (
         <div className="glass-card overflow-hidden">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h2>
@@ -672,6 +1076,16 @@ export default function Sales(): JSX.Element {
                               <Eye size={14} />
                               View
                             </button>
+                            {transaction.installments && transaction.installments.length > 0 && (
+                              <button 
+                                onClick={() => handleInstallmentManager(transaction)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-purple-200 dark:border-purple-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
+                                title="Manage installments"
+                              >
+                                <CreditCard size={14} />
+                                Installments
+                              </button>
+                            )}
                             {(transaction.status === 'completed' || transaction.status === 'partially_refunded') && refundsEnabled && (
                               <>
                                 {isWithinRefundPeriod(transaction.createdAt) ? (
@@ -945,6 +1359,131 @@ export default function Sales(): JSX.Element {
                 </div>
               </div>
 
+              {/* Deposits */}
+              {selectedTransaction.deposits && selectedTransaction.deposits.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{t('deposits')}</p>
+                  <div className="space-y-2">
+                    {selectedTransaction.deposits.map((deposit, idx) => (
+                      <div key={deposit.id || idx} className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-green-900 dark:text-green-100">
+                              {t('deposit')} #{deposit.id}
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                              {t('dateLabel')}: {new Date(deposit.date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-green-900 dark:text-green-100">${deposit.amount.toFixed(2)}</div>
+                            <div className="text-xs text-green-700 dark:text-green-300 mt-1 capitalize">
+                              {deposit.status || 'completed'}
+                            </div>
+                          </div>
+                        </div>
+                        {deposit.note && (
+                          <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+                            <div className="text-xs text-green-700 dark:text-green-300">
+                              <span className="font-semibold">{t('notes')}:</span> {deposit.note}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Installments */}
+              {selectedTransaction.installments && selectedTransaction.installments.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{t('installments')}</p>
+                  <div className="space-y-2">
+                    {selectedTransaction.installments.map((installment, idx) => (
+                      <div key={installment.id || idx} className={`border rounded-lg p-4 ${
+                        installment.status === 'paid' 
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : installment.status === 'overdue'
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                      }`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className={`font-medium ${
+                              installment.status === 'paid' 
+                                ? 'text-green-900 dark:text-green-100'
+                                : installment.status === 'overdue'
+                                ? 'text-red-900 dark:text-red-100'
+                                : 'text-blue-900 dark:text-blue-100'
+                            }`}>
+                              {t('installment')}
+                            </p>
+                            <p className={`text-xs mt-1 ${
+                              installment.status === 'paid' 
+                                ? 'text-green-700 dark:text-green-300'
+                                : installment.status === 'overdue'
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-blue-700 dark:text-blue-300'
+                            }`}>
+                              {t('dueDate')}: {new Date(installment.dueDate).toLocaleDateString()}
+                            </p>
+                            {installment.paidDate && (
+                              <p className={`text-xs ${
+                                installment.status === 'paid' 
+                                  ? 'text-green-700 dark:text-green-300'
+                                  : 'text-red-700 dark:text-red-300'
+                              }`}>
+                                {t('paidOn')}: {new Date(installment.paidDate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${
+                              installment.status === 'paid' 
+                                ? 'text-green-900 dark:text-green-100'
+                                : installment.status === 'overdue'
+                                ? 'text-red-900 dark:text-red-100'
+                                : 'text-blue-900 dark:text-blue-100'
+                            }`}>
+                              ${installment.amount.toFixed(2)}
+                            </div>
+                            <div className={`text-xs mt-1 capitalize font-semibold ${
+                              installment.status === 'paid' 
+                                ? 'text-green-700 dark:text-green-300'
+                                : installment.status === 'overdue'
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-blue-700 dark:text-blue-300'
+                            }`}>
+                              {installment.status}
+                            </div>
+                          </div>
+                        </div>
+                        {installment.note && (
+                          <div className={`mt-3 pt-3 border-t ${
+                            installment.status === 'paid' 
+                              ? 'border-green-200 dark:border-green-700'
+                              : installment.status === 'overdue'
+                              ? 'border-red-200 dark:border-red-700'
+                              : 'border-blue-200 dark:border-blue-700'
+                          }`}>
+                            <div className={`text-xs ${
+                              installment.status === 'paid' 
+                                ? 'text-green-700 dark:text-green-300'
+                                : installment.status === 'overdue'
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-blue-700 dark:text-blue-300'
+                            }`}>
+                              <span className="font-semibold">{t('notes')}:</span> {installment.note}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Transaction Summary */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between">
@@ -1079,6 +1618,19 @@ export default function Sales(): JSX.Element {
         onClose={() => setShowRefundModal(false)}
         onRefund={handleRefundItems}
       />
+
+      {/* Installment Manager Modal */}
+      {showInstallmentManager && selectedTransactionForInstallments && (
+        <InstallmentManager
+          isOpen={showInstallmentManager}
+          onClose={() => {
+            setShowInstallmentManager(false)
+            setSelectedTransactionForInstallments(null)
+          }}
+          transactionId={selectedTransactionForInstallments.id}
+          customerName={selectedTransactionForInstallments.customerName || 'Walk-in Customer'}
+        />
+      )}
     </div>
   )
 }

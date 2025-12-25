@@ -123,6 +123,7 @@ export interface Sale {
   discount?: number
   paymentMethod?: string
   customerId?: string
+  status?: string
   createdAt: Date | string
   updatedAt?: Date | string
 }

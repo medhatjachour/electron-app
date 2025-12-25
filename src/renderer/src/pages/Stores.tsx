@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Store, MapPin, Phone, Clock, Settings, ArrowRightLeft, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Store, MapPin, Phone, Clock, ArrowRightLeft, Edit2, Trash2 } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import { ipc } from '../utils/ipc'
 import { useLanguage } from '../contexts/LanguageContext'

@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Calculator, TrendingUp, TrendingDown, DollarSign, Percent, Users, Zap, AlertCircle, CheckCircle, Download, HelpCircle, Search } from 'lucide-react'
+import { Calculator, TrendingUp, TrendingDown, DollarSign, Percent, Users, AlertCircle, CheckCircle, Download, HelpCircle, Search } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useLanguage } from '../../../contexts/LanguageContext'
 

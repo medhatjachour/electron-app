@@ -145,7 +145,7 @@ export class ProductService implements IBaseService<Product> {
       const products = await this.getAll()
       return products.filter((p) =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
-        p.sku?.toLowerCase().includes(query.toLowerCase())
+        p.baseSKU?.toLowerCase().includes(query.toLowerCase())
       )
     } catch (error) {
       console.error('ProductService.search failed:', error)

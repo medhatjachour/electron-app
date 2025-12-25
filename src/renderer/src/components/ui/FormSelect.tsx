@@ -15,7 +15,7 @@ export interface FormSelectProps extends Omit<SelectHTMLAttributes<HTMLSelectEle
   value: string | number
   onChange: (value: string) => void
   onBlur?: () => void
-  options: Array<{ value: string | number; label: string }>
+  options: Array<{ value: string | number; label: string; icon?: React.ComponentType<{ size?: number; className?: string }> }>
   placeholder?: string
   showValidIcon?: boolean
 }

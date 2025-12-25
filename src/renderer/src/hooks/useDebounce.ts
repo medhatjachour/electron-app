@@ -59,6 +59,7 @@ export function useThrottle<T>(value: T, interval: number = 300): T {
     if (timeSinceLastUpdate >= interval) {
       setThrottledValue(value)
       setLastUpdated(now)
+      return () => {} // No-op cleanup when immediate update
     } else {
       const timeoutId = setTimeout(() => {
         setThrottledValue(value)

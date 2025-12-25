@@ -17,6 +17,7 @@ export default function Toast({ id, type, message, duration = 5000, onClose }: T
       const timer = setTimeout(() => onClose(id), duration)
       return () => clearTimeout(timer)
     }
+    return () => {} // No-op cleanup when duration <= 0
   }, [id, duration, onClose])
 
   const getIcon = () => {

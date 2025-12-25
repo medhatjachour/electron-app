@@ -3,7 +3,7 @@
  * Allows admin to manage system users, roles, and passwords
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { UserPlus, Edit2, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, UserX } from 'lucide-react'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
 import { useAuth } from '../../../hooks/useAuth'
@@ -248,7 +248,7 @@ export default function UserManagementSettings() {
     }
   }
   
-  const handleDeactivateUser = async (reason?: string) => {
+  const handleDeactivateUser = async () => {
     if (!userToDelete) return
     
     try {

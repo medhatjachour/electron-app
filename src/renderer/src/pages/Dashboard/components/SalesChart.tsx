@@ -26,7 +26,6 @@ export default function SalesChart() {
       const days = period === '7days' ? 7 : 30
 
       // Fetch double the range so we can compare with previous period
-      const endDate = new Date()
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - (days * 2) + 1)
       startDate.setHours(0, 0, 0, 0)

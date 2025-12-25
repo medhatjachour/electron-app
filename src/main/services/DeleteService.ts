@@ -301,4 +301,66 @@ export class DeleteService {
       orderBy: { deactivatedAt: 'desc' }
     })
   }
+  
+  /**
+   * Delete unlinked deposits and installments for a customer
+   * Used when customer selection changes in POS to prevent showing old payment data
+   */
+  static async deleteUnlinkedDeposits(customerId: string) {
+    try {
+      // Find deposits that are not linked to any sale for this customer
+      const deposits = await DeleteService.prisma.deposit.findMany({
+        where: {
+          customerId: customerId,
+          saleId: null
+        }
+      })
+      
+      if (deposits.length > 0) {
+        // Delete them individually
+        const deletePromises = deposits.map(deposit => 
+          DeleteService.prisma.deposit.delete({
+            where: { id: deposit.id }
+          })
+        )
+        await Promise.all(deletePromises)
+        console.log(`✅ Deleted ${deposits.length} unlinked deposits for customer ${customerId}`)
+        return deposits.length
+      }
+      
+      return 0
+    } catch (error) {
+      console.error('❌ Error deleting unlinked deposits:', error)
+      throw error
+    }
+  }
+  
+  static async deleteUnlinkedInstallments(customerId: string) {
+    try {
+      // Find installments that are not linked to any sale for this customer
+      const installments = await DeleteService.prisma.installment.findMany({
+        where: {
+          customerId: customerId,
+          saleId: null
+        }
+      })
+      
+      if (installments.length > 0) {
+        // Delete them individually
+        const deletePromises = installments.map(installment => 
+          DeleteService.prisma.installment.delete({
+            where: { id: installment.id }
+          })
+        )
+        await Promise.all(deletePromises)
+        console.log(`✅ Deleted ${installments.length} unlinked installments for customer ${customerId}`)
+        return installments.length
+      }
+      
+      return 0
+    } catch (error) {
+      console.error('❌ Error deleting unlinked installments:', error)
+      throw error
+    }
+  }
 }

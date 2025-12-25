@@ -161,7 +161,7 @@ export function usePOS() {
 
   const clearCart = useCallback(() => {
     setCart([])
-    setPaymentMethod(null)
+    setPaymentMethod('cash') // Reset to default cash payment
     setCustomerQuery('')
     setSelectedCustomer(null)
   }, [])
@@ -272,6 +272,41 @@ export function usePOS() {
         throw new Error(result.error || 'Failed to create transaction')
       }
       
+      // Link any deposits and installments created for this customer to the new sale
+      if (finalCustomerId) {
+        try {
+          // Get deposits and installments for this customer that don't have a saleId
+          const [customerDeposits, customerInstallments] = await Promise.all([
+            window.api.deposits.getByCustomer(finalCustomerId),
+            window.api.installments.getByCustomer(finalCustomerId)
+          ])
+          
+          // Filter for deposits/installments without saleId (created during this POS session)
+          const unlinkedDeposits = customerDeposits.filter((d: any) => !d.saleId)
+          const unlinkedInstallments = customerInstallments.filter((i: any) => !i.saleId)
+          
+          // Link them to the newly created sale
+          if (unlinkedDeposits.length > 0) {
+            await window.api.deposits.linkToSale({
+              depositIds: unlinkedDeposits.map((d: any) => d.id),
+              saleId: result.transaction.id
+            })
+          }
+          
+          if (unlinkedInstallments.length > 0) {
+            await window.api.installments.linkToSale({
+              installmentIds: unlinkedInstallments.map((i: any) => i.id),
+              saleId: result.transaction.id
+            })
+          }
+          
+          console.log(`✅ Linked ${unlinkedDeposits.length} deposits and ${unlinkedInstallments.length} installments to sale ${result.transaction.id}`)
+        } catch (linkError) {
+          console.error('⚠️ Failed to link deposits/installments to sale:', linkError)
+          // Don't fail the sale for this - it's not critical
+        }
+      }
+      
       setShowSuccess(true)
       await loadProducts()
       
@@ -356,6 +391,17 @@ export function usePOS() {
     
     if (quickCartItems.length === 0) {
       alert('Cart is empty. Please add items first.')
+      return
+    }
+
+    // For installment payments, we don't create the sale here - the PaymentFlowSelector handles it
+    if (payment === 'installment') {
+      // Just validate that we have a customer for installments
+      if (!customer) {
+        alert('Customer selection is required for installment plans')
+        return
+      }
+      // The PaymentFlowSelector will handle creating the sale after deposits/installments are set up
       return
     }
 

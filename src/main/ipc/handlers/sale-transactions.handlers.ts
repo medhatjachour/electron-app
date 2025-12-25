@@ -211,7 +211,9 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               }
             }
-          }
+          },
+          deposits: true,
+          installments: true
         },
         orderBy: { createdAt: 'desc' }
       })
@@ -295,7 +297,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
         })
         
         await Promise.all(
-          transaction.items.map(async (item: any, index: number) => {
+          transaction.items.map(async (item: any) => {
             
             if (item.variantId) {
               // Get current stock before update
@@ -313,13 +315,13 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 const newStock = previousStock + item.quantity
                 
                 // Update stock
-                const updated = await tx.productVariant.update({
+                await tx.productVariant.update({
                   where: { id: item.variantId },
                   data: { stock: newStock }
                 })
                 
                 // Record stock movement as RETURN
-                const movement = await tx.stockMovement.create({
+                await tx.stockMovement.create({
                   data: {
                     variantId: item.variantId,
                     type: 'RETURN',
@@ -502,13 +504,13 @@ export function registerSaleTransactionHandlers(prisma: any) {
               const newStock = previousStock + refundItem.quantityToRefund
               
               // Update stock
-              const updatedVariant = await tx.productVariant.update({
+              await tx.productVariant.update({
                 where: { id: saleItem.variantId },
                 data: { stock: newStock }
               })
               
               // Record stock movement as RETURN
-              const movement = await tx.stockMovement.create({
+              await tx.stockMovement.create({
                 data: {
                   variantId: saleItem.variantId,
                   type: 'RETURN',
@@ -678,6 +680,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
               product: {
                 select: {
                   name: true,
+                  baseCost: true,
                   category: {
                     select: {
                       name: true
@@ -686,7 +689,9 @@ export function registerSaleTransactionHandlers(prisma: any) {
                 }
               }
             }
-          }
+          },
+          deposits: true,
+          installments: true
         },
         orderBy: { createdAt: 'desc' }
       })

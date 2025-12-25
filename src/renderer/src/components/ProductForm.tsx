@@ -571,7 +571,7 @@ export default function ProductForm({
             {formData.variants.length > 0 && (
               <div className="space-y-2">
                 {formData.variants.map((variant, index) => {
-                  const isExistingVariant = isEditMode && variant.id && !variant.id.startsWith('temp-')
+                  const isExistingVariant: boolean = isEditMode && !!variant.id && !variant.id.startsWith('temp-')
                   
                   return (
                     <div key={variant.id} className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all">

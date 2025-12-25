@@ -88,6 +88,19 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
     }
   }
 
+  const handleRestoreClick = async () => {
+    // Open file dialog to select backup file
+    const result = await window.electron.ipcRenderer.invoke('dialog:openFile', {
+      title: 'Select Backup File',
+      filters: [{ name: 'Database Backup', extensions: ['db'] }],
+      properties: ['openFile']
+    })
+
+    if (result && result.length > 0) {
+      await handleRestore(result[0])
+    }
+  }
+
   const handleRestore = async (backupPath: string) => {
     if (!confirm('Are you sure you want to restore from this backup? Your current database will be replaced.')) {
       return
@@ -186,7 +199,7 @@ export default function BackupSettingsPanel({ settings, onChange }: Props) {
             <Download size={18} />
             {t('createBackupNow')}
           </button>
-          <button onClick={handleRestore} className="btn-secondary flex items-center gap-2">
+          <button onClick={handleRestoreClick} className="btn-secondary flex items-center gap-2">
             <Upload size={18} />
             {t('restoreFromBackup')}
           </button>

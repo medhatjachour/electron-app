@@ -19,13 +19,12 @@ import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearc
 import { useDebounce } from '../../hooks/useDebounce'
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts'
 import { useOptimisticUpdate } from '../../hooks/useOptimisticUpdate'
-import { useToast } from '../../hooks/useToast'
+import { useToast } from '../../contexts/ToastContext'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useAuth } from '../../../hooks/useAuth'
 import { useLanguage } from '../../contexts/LanguageContext'
 import InventoryTable from './components/InventoryTable'
 import Pagination from './components/Pagination'
-import ToastContainer from '../../components/ui/ToastContainer'
 import * as XLSX from 'xlsx'
 
 // Lazy load heavy components - only load when tabs are clicked
@@ -137,10 +136,10 @@ export default function InventoryPage() {
   // Optimistic updates for delete operations
   const { execute: executeDelete, isOptimistic: isDeleting } = useOptimisticUpdate({
     onSuccess: () => {
-      toast.success('Item deleted successfully', 'The item has been removed from inventory')
+      toast.success('Item deleted successfully - The item has been removed from inventory')
     },
     onError: (error) => {
-      toast.error('Failed to delete item', error.message)
+      toast.error(`Failed to delete item: ${error.message}`)
     }
   })
 
@@ -205,10 +204,10 @@ export default function InventoryPage() {
       // Download file
       XLSX.writeFile(wb, filename)
 
-      toast.success('Export completed', `${items.length} items exported to ${filename}`)
+      toast.success(`Export completed: ${items.length} items exported to ${filename}`)
     } catch (error) {
       logger.error('Export error:', error)
-      toast.error('Export failed', error instanceof Error ? error.message : 'Unknown error')
+      toast.error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsExporting(false)
     }
@@ -569,9 +568,6 @@ export default function InventoryPage() {
         variantLabel={stockMovementDialog.variantLabel}
         currentStock={stockMovementDialog.currentStock}
       />
-      
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toast.toasts} onClose={toast.dismiss} />
     </div>
   )
 }

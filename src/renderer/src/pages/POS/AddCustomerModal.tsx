@@ -81,7 +81,7 @@ export default function AddCustomerModal({ show, onClose, onCustomerAdded }: Pro
   }
 
   return (
-    <Modal isOpen={show} onClose={handleClose} title={t('addNewCustomer')} size="md">
+    <Modal isOpen={show} onClose={handleClose} title={t('addNewCustomer')} size="md" >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Name */}
           <div>

@@ -3,7 +3,7 @@
  * Reusable input with validation feedback
  */
 
-import { InputHTMLAttributes, forwardRef } from 'react'
+import { InputHTMLAttributes, forwardRef, ReactNode } from 'react'
 import { AlertCircle, Check } from 'lucide-react'
 
 export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
@@ -16,6 +16,7 @@ export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   onChange: (value: string) => void
   onBlur?: () => void
   showValidIcon?: boolean
+  icon?: ReactNode
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
@@ -30,6 +31,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       onChange,
       onBlur,
       showValidIcon = true,
+      icon,
       className = '',
       ...props
     },
@@ -48,13 +50,18 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
         )}
 
         <div className="relative">
+          {icon && (
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+              {icon}
+            </div>
+          )}
           <input
             ref={ref}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onBlur={onBlur}
             className={`
-              w-full px-4 py-2.5 rounded-lg border transition-all
+              w-full ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 rounded-lg border transition-all
               ${hasError
                 ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50 dark:bg-red-900/10'
                 : isValid && showValidIcon
