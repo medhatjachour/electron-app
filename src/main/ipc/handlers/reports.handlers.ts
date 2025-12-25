@@ -291,12 +291,17 @@ export function registerReportsHandlers(prisma: any) {
           status: { in: ['completed', 'partially_refunded'] }
         },
         include: {
-          items: true
+          items: {
+            include: {
+              product: true
+            }
+          }
         }
       })
 
-      // Calculate revenue accounting for refunds
+      // Calculate revenue and COGS accounting for refunds
       let totalRevenue = 0
+      let totalCOGS = 0
       let totalRefunded = 0
       
       saleTransactions.forEach(sale => {
@@ -307,6 +312,15 @@ export function registerReportsHandlers(prisma: any) {
         
         totalRefunded += refundedAmount
         totalRevenue += (sale.total - refundedAmount)
+        
+        // Calculate COGS for non-refunded items
+        sale.items.forEach(item => {
+          const refundedQty = item.refundedQuantity || 0
+          const netQty = item.quantity - refundedQty
+          if (netQty > 0 && item.product?.baseCost) {
+            totalCOGS += netQty * item.product.baseCost
+          }
+        })
       })
 
       // Get financial transactions (expenses)
@@ -364,7 +378,7 @@ export function registerReportsHandlers(prisma: any) {
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0)
 
-      const totalExpenses = expensesFromTransactions + salaryExpenseForPeriod
+      const totalExpenses = expensesFromTransactions + salaryExpenseForPeriod + totalCOGS
       const netProfit = totalRevenue + income - totalExpenses
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
@@ -372,10 +386,10 @@ export function registerReportsHandlers(prisma: any) {
       const dailyFinancials = saleTransactions.reduce((acc, sale) => {
         const date = new Date(sale.createdAt).toISOString().split('T')[0]
         if (!acc[date]) {
-          acc[date] = { date, revenue: 0, expenses: 0, profit: 0, refunded: 0 }
+          acc[date] = { date, revenue: 0, expenses: 0, cogs: 0, profit: 0, refunded: 0 }
         }
         
-        // Calculate net revenue for this sale
+        // Calculate net revenue and COGS for this sale
         const refundedAmount = sale.items.reduce((sum, item) => {
           const refunded = item.refundedQuantity || 0
           return sum + (refunded * item.price)
@@ -384,6 +398,18 @@ export function registerReportsHandlers(prisma: any) {
         const netRevenue = sale.total - refundedAmount
         acc[date].revenue += netRevenue
         acc[date].refunded += refundedAmount
+        
+        // Calculate COGS for non-refunded items
+        let saleCOGS = 0
+        sale.items.forEach(item => {
+          const refundedQty = item.refundedQuantity || 0
+          const netQty = item.quantity - refundedQty
+          if (netQty > 0 && item.product?.baseCost) {
+            saleCOGS += netQty * item.product.baseCost
+          }
+        })
+        acc[date].cogs += saleCOGS
+        
         return acc
       }, {} as Record<string, any>)
 
@@ -396,6 +422,8 @@ export function registerReportsHandlers(prisma: any) {
           } else {
             dailyFinancials[date].revenue += transaction.amount
           }
+          // Include COGS in daily expenses
+          dailyFinancials[date].expenses += dailyFinancials[date].cogs
           dailyFinancials[date].profit = dailyFinancials[date].revenue - dailyFinancials[date].expenses
         }
       })
@@ -418,12 +446,16 @@ export function registerReportsHandlers(prisma: any) {
       
       // Add salary expense as a category
       expensesByDescription['Employee Salaries'] = salaryExpenseForPeriod
+      
+      // Add COGS as a category
+      expensesByDescription['Cost of Goods Sold'] = totalCOGS
 
       return {
         success: true,
         data: {
           summary: {
             totalRevenue: totalRevenue + income,
+            totalCOGS,
             totalExpenses: totalExpenses,
             salaryExpense: salaryExpenseForPeriod,
             otherExpenses: expensesFromTransactions,

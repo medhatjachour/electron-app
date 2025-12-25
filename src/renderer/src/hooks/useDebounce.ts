@@ -50,13 +50,13 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
  */
 export function useThrottle<T>(value: T, interval: number = 300): T {
   const [throttledValue, setThrottledValue] = useState<T>(value)
-  const [lastUpdated, setLastUpdated] = useState<number>(Date.now())
+  const [lastUpdated, setLastUpdated] = useState<number>(0) // Start at 0 to allow first update
 
   useEffect(() => {
     const now = Date.now()
     const timeSinceLastUpdate = now - lastUpdated
 
-    if (timeSinceLastUpdate >= interval) {
+    if (lastUpdated === 0 || timeSinceLastUpdate >= interval) {
       setThrottledValue(value)
       setLastUpdated(now)
       return () => {} // No-op cleanup when immediate update

@@ -90,6 +90,7 @@ export default function Expenses() {
   const [dateRange, setDateRange] = useState<'7days' | '30days' | '90days' | 'all'>('30days')
   const [totalSalaries, setTotalSalaries] = useState<number>(0)
   const [employeeCount, setEmployeeCount] = useState<number>(0)
+  const [totalCOGS, setTotalCOGS] = useState<number>(0)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -101,6 +102,7 @@ export default function Expenses() {
   useEffect(() => {
     loadExpenses()
     loadSalaryData()
+    loadCOGSData()
   }, [dateRange])
 
   const loadSalaryData = async () => {
@@ -114,6 +116,53 @@ export default function Expenses() {
       setEmployeeCount(employees.length)
     } catch (err) {
       console.error('Failed to load salary data:', err)
+    }
+  }
+
+  const loadCOGSData = async () => {
+    try {
+      // Calculate date range
+      const endDate = new Date()
+      endDate.setHours(23, 59, 59, 999)
+      let startDate = new Date()
+      
+      switch (dateRange) {
+        case '7days':
+          startDate.setDate(startDate.getDate() - 7)
+          break
+        case '30days':
+          startDate.setDate(startDate.getDate() - 30)
+          break
+        case '90days':
+          startDate.setDate(startDate.getDate() - 90)
+          break
+        case 'all':
+          startDate = new Date('2000-01-01')
+          break
+      }
+      startDate.setHours(0, 0, 0, 0)
+
+      // Get sales data to calculate COGS
+      const salesData = await window.api.saleTransactions.getByDateRange({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
+
+      // Calculate COGS accounting for refunds
+      let totalCOGS = 0
+      salesData.forEach((sale: any) => {
+        sale.items?.forEach((item: any) => {
+          const refundedQty = item.refundedQuantity || 0
+          const netQty = item.quantity - refundedQty
+          if (netQty > 0 && item.product?.baseCost) {
+            totalCOGS += netQty * item.product.baseCost
+          }
+        })
+      })
+
+      setTotalCOGS(totalCOGS)
+    } catch (err) {
+      console.error('Failed to load COGS data:', err)
     }
   }
 
@@ -285,7 +334,8 @@ export default function Expenses() {
   })
 
   // Calculate statistics
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
+  const operationalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalExpenses = operationalExpenses + totalCOGS
   const totalWithSalaries = totalExpenses + totalSalaries
   const expensesByCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
@@ -304,6 +354,17 @@ export default function Expenses() {
         total: totalSalaries
       }]
     : expensesByCategory
+
+  // Add COGS as a virtual category if there is any
+  const categoriesWithCOGS = totalCOGS > 0
+    ? [...categoriesWithSalaries, {
+        id: 'cogs' as const,
+        nameKey: 'costOfGoodsSold',
+        icon: Package,
+        color: 'bg-green-500',
+        total: totalCOGS
+      }]
+    : categoriesWithSalaries
 
   const getCategoryName = (categoryId: ExpenseCategory) => {
     const cat = EXPENSE_CATEGORIES.find(c => c.id === categoryId)
@@ -357,18 +418,44 @@ export default function Expenses() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalExpenses')}</h3>
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('operationalExpenses')}</h3>
             <div className="p-2 bg-red-500/10 rounded-lg">
               <DollarSign size={20} className="text-red-600 dark:text-red-400" />
             </div>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
-            ${totalExpenses.toFixed(2)}
+            ${operationalExpenses.toFixed(2)}
           </p>
           <p className="text-sm text-slate-500 mt-1">{filteredExpenses.length} {t('expenseTransactions')}</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('costOfGoodsSold')}</h3>
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <Package size={20} className="text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">
+            ${totalCOGS.toFixed(2)}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">{t('fromSales')}</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalExpenses')}</h3>
+            <div className="p-2 bg-orange-500/10 rounded-lg">
+              <TrendingUp size={20} className="text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">
+            ${totalExpenses.toFixed(2)}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">{t('includingCOGS')}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
@@ -387,27 +474,14 @@ export default function Expenses() {
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('totalWithSalaries')}</h3>
-            <div className="p-2 bg-orange-500/10 rounded-lg">
-              <TrendingUp size={20} className="text-orange-600 dark:text-orange-400" />
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Filter size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalWithSalaries.toFixed(2)}
           </p>
           <p className="text-sm text-slate-500 mt-1">{t('completeOverview')}</p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('categories')}</h3>
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Filter size={20} className="text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-900 dark:text-white">
-            {categoriesWithSalaries.length}
-          </p>
-          <p className="text-sm text-slate-500 mt-1">{t('activeCategories')}</p>
         </div>
       </div>
 
@@ -453,17 +527,17 @@ export default function Expenses() {
       </div>
 
       {/* Charts */}
-      {categoriesWithSalaries.length > 0 && (
+      {categoriesWithCOGS.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Pie Chart */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">{t('expensesByCategoryIncludingSalaries')}</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">{t('expensesByCategoryIncludingSalariesAndCOGS')}</h3>
             <div className="h-64">
               <Pie
                 data={{
-                  labels: categoriesWithSalaries.map(c => t(c.nameKey)),
+                  labels: categoriesWithCOGS.map(c => t(c.nameKey)),
                   datasets: [{
-                    data: categoriesWithSalaries.map(c => c.total),
+                    data: categoriesWithCOGS.map(c => c.total),
                     backgroundColor: [
                       'rgba(59, 130, 246, 0.8)',
                       'rgba(234, 179, 8, 0.8)',
@@ -474,7 +548,8 @@ export default function Expenses() {
                       'rgba(239, 68, 68, 0.8)',
                       'rgba(99, 102, 241, 0.8)',
                       'rgba(100, 116, 139, 0.8)',
-                      'rgba(147, 51, 234, 0.8)'
+                      'rgba(147, 51, 234, 0.8)',
+                      'rgba(34, 197, 94, 0.8)' // Extra color for COGS
                     ],
                     borderWidth: 2,
                     borderColor: '#fff'
@@ -506,17 +581,19 @@ export default function Expenses() {
             <div className="h-64">
               <Bar
                 data={{
-                  labels: categoriesWithSalaries.map(c => t(c.nameKey)),
+                  labels: categoriesWithCOGS.map(c => t(c.nameKey)),
                   datasets: [{
                     label: 'Amount ($)',
-                    data: categoriesWithSalaries.map(c => c.total),
-                    backgroundColor: categoriesWithSalaries.map(c => {
-                      // Use different colors for salaries
+                    data: categoriesWithCOGS.map(c => c.total),
+                    backgroundColor: categoriesWithCOGS.map(c => {
+                      // Use different colors for salaries and COGS
                       if (c.id === 'salaries') return 'rgba(147, 51, 234, 0.8)'
+                      if (c.id === 'cogs') return 'rgba(34, 197, 94, 0.8)'
                       return 'rgba(239, 68, 68, 0.8)'
                     }),
-                    borderColor: categoriesWithSalaries.map(c => {
+                    borderColor: categoriesWithCOGS.map(c => {
                       if (c.id === 'salaries') return 'rgb(147, 51, 234)'
+                      if (c.id === 'cogs') return 'rgb(34, 197, 94)'
                       return 'rgb(239, 68, 68)'
                     }),
                     borderWidth: 1

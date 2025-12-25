@@ -35,6 +35,12 @@ const createLocalStorageMock = () => {
 // Setup localStorage before each test
 beforeEach(() => {
   global.localStorage = createLocalStorageMock() as Storage
+  
+  // Ensure timer functions are available globally
+  global.setTimeout = global.setTimeout || setTimeout
+  global.clearTimeout = global.clearTimeout || clearTimeout
+  global.setInterval = global.setInterval || setInterval
+  global.clearInterval = global.clearInterval || clearInterval
 })
 
 // Mock window.api (IPC)

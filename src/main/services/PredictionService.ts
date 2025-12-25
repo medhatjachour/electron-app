@@ -58,6 +58,7 @@ export interface ProductInsight {
 
 export interface FinancialHealth {
   score: number // 0-100
+  grade: string // A, B, C, D, F
   indicators: {
     profitMargin: { value: number; status: 'good' | 'fair' | 'poor' }
     inventoryTurnover: { value: number; status: 'good' | 'fair' | 'poor' }
@@ -106,7 +107,7 @@ export class PredictionService {
         // Not enough data - return simple prediction based on any available data
         const avgRevenue = dataPoints.length > 0 
           ? this.average(dataPoints.map(p => p.y))
-          : 1000 // Default baseline
+          : 0 // No data available
         
         const simplePredictions: Array<{
           date: string
@@ -306,7 +307,8 @@ export class PredictionService {
       
       // Calculate average daily operational expenses
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
-      const avgDailyExpenses = totalExpenses / 30
+      const expenseDays = expenses.length > 0 ? expenses.length : 30
+      const avgDailyExpenses = totalExpenses / expenseDays
 
 
       // Calculate current cash position from recent revenue minus all costs
@@ -332,7 +334,7 @@ export class PredictionService {
 
       // Calculate burn rate (average daily loss)
       const avgNetCashFlow = this.average(projections.map(p => p.netCashFlow))
-      const burnRate = avgNetCashFlow < 0 ? Math.abs(avgNetCashFlow) : 0
+      const burnRate = avgDailyExpenses
 
       // Calculate runway
       let runway: number | null = null
@@ -704,12 +706,15 @@ export class PredictionService {
       // Calculate overall score
       const weights = { profitMargin: 30, inventoryTurnover: 25, growthRate: 25, cashPosition: 20 }
       const statusScores = { good: 100, fair: 60, poor: 30 }
-      const score = Math.round(
+      
+      // If no data available, score is 0
+      const hasData = totalRevenue > 0 || totalExpenses > 0 || totalUnitsSold > 0
+      const score = hasData ? Math.round(
         (statusScores[indicators.profitMargin.status] * weights.profitMargin +
          statusScores[indicators.inventoryTurnover.status] * weights.inventoryTurnover +
          statusScores[indicators.growthRate.status] * weights.growthRate +
          statusScores[indicators.cashPosition.status] * weights.cashPosition) / 100
-      )
+      ) : 0
 
       // Generate comprehensive alerts and recommendations
       const alerts: string[] = []
@@ -785,8 +790,12 @@ export class PredictionService {
         recommendations.push('Consider alternative suppliers')
       }
 
+      // Determine grade based on score
+      const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : score >= 20 ? 'D' : 'F'
+
       return {
         score,
+        grade,
         indicators,
         alerts,
         recommendations

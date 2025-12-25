@@ -44,20 +44,10 @@ export default function Employees(): JSX.Element {
       setLoading(true)
       const data = await ipc.employees.getAll()
       setEmployees(data)
-      
-      if (data.length === 0) {
-        const localEmployees = localStorage.getItem('employees')
-        if (localEmployees) {
-          setEmployees(JSON.parse(localEmployees))
-        }
-      }
     } catch (error) {
       console.error('Failed to load employees:', error)
-      const localEmployees = localStorage.getItem('employees')
-      if (localEmployees) {
-        setEmployees(JSON.parse(localEmployees))
-        toast.warning('Using local backup data')
-      }
+      toast.error('Failed to load employees')
+      setEmployees([])
     } finally {
       setLoading(false)
     }
@@ -131,7 +121,7 @@ export default function Employees(): JSX.Element {
     if (!validateForm() || !selectedEmployee) return
 
     try {
-      const result = await ipc.employees.update(selectedEmployee.id, { employeeData: formData })
+      const result = await ipc.employees.update(selectedEmployee.id, formData)
       
       if (result.success) {
         await loadEmployees()
