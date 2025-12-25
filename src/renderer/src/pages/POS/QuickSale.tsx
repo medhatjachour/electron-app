@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ShoppingCart, Trash2, X, User, DollarSign, UserPlus, Percent } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, X, DollarSign, Percent } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'

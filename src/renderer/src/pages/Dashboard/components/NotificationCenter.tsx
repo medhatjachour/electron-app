@@ -123,8 +123,8 @@ export default function NotificationCenter() {
             timestamp: new Date(),
             read: false,
             action: {
-              label: 'View POS',
-              link: '/pos'
+              label: 'View Installments',
+              link: '/sales?tab=installments'
             }
           })
         })
@@ -141,8 +141,8 @@ export default function NotificationCenter() {
             timestamp: new Date(),
             read: false,
             action: {
-              label: 'View POS',
-              link: '/pos'
+              label: 'View Installments',
+              link: '/sales?tab=installments'
             }
           })
         })

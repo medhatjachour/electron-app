@@ -90,7 +90,7 @@ const api = {
       description: string
       userId: string
     }) => ipcRenderer.invoke('finance:addTransaction', data),
-    getTransactions: (data: { startDate: Date; endDate: Date }) =>
+    getTransactions: (data: { startDate: string; endDate: string }) =>
       ipcRenderer.invoke('finance:getTransactions', data),
     getStats: () => ipcRenderer.invoke('finance:getStats'),
     updateTransaction: (id: string, data: {

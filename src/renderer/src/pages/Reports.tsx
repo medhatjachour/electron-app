@@ -87,40 +87,61 @@ const EnhancedReports: React.FC = () => {
 
   const loadTodayStats = async () => {
     try {
+      // Get data for the last 7 days instead of just today for more meaningful stats
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      today.setHours(23, 59, 59, 999); // End of today
 
-      // Fetch today's transactions
+      // Fetch transactions for the last 7 days
       const [salesData, financeData] = await Promise.all([
         window.api.saleTransactions.getByDateRange({
-          startDate: today.toISOString(),
-          endDate: tomorrow.toISOString()
+          startDate: sevenDaysAgo.toISOString(),
+          endDate: today.toISOString()
         }),
         window.api.finance.getTransactions({
-          startDate: today,
-          endDate: tomorrow
+          startDate: sevenDaysAgo,
+          endDate: today
         })
       ]);
 
-      // Calculate revenue accounting for refunds
-      const revenue = salesData.reduce((sum: number, sale: any) => {
+      // Calculate revenue and cost of goods sold accounting for refunds
+      let totalRevenue = 0;
+      let totalCOGS = 0;
+      
+      salesData.forEach((sale: any) => {
         // Calculate refunded amount for this sale
         const refundedAmount = calculateRefundedAmount(sale.items || []);
+        const netSaleTotal = sale.total - refundedAmount;
         
-        // Net revenue = total - refunded
-        return sum + (sale.total - refundedAmount);
-      }, 0);
+        // Calculate COGS for non-refunded items
+        let saleCOGS = 0;
+        sale.items?.forEach((item: any) => {
+          const refundedQty = item.refundedQuantity || 0;
+          const netQty = item.quantity - refundedQty;
+          if (netQty > 0 && item.product?.baseCost) {
+            saleCOGS += netQty * item.product.baseCost;
+          }
+        });
+        
+        totalRevenue += netSaleTotal;
+        totalCOGS += saleCOGS;
+      });
+      
+      const grossProfit = totalRevenue - totalCOGS;
       
       const expenses = financeData
         .filter((t: any) => t.type === 'expense')
         .reduce((sum: number, t: any) => sum + t.amount, 0);
 
+      const netProfit = grossProfit - expenses;
+
       setTodayStats({
-        revenue,
-        expenses,
-        profit: revenue - expenses,
+        revenue: totalRevenue,
+        expenses: totalCOGS + expenses,
+        profit: netProfit,
         salesCount: salesData.length,
         expensesCount: financeData.filter((t: any) => t.type === 'expense').length,
         topProduct: 'Product X', // TODO: Calculate from sales data
@@ -133,19 +154,22 @@ const EnhancedReports: React.FC = () => {
 
   const loadActivityFeed = async () => {
     try {
+      // Get data for the last 7 days for activity feed
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      today.setHours(23, 59, 59, 999);
 
       const [salesData, financeData] = await Promise.all([
         window.api.saleTransactions.getByDateRange({
-          startDate: today.toISOString(),
-          endDate: tomorrow.toISOString()
+          startDate: sevenDaysAgo.toISOString(),
+          endDate: today.toISOString()
         }),
         window.api.finance.getTransactions({
-          startDate: today,
-          endDate: tomorrow
+          startDate: sevenDaysAgo,
+          endDate: today
         })
       ]);
 
@@ -583,7 +607,7 @@ const EnhancedReports: React.FC = () => {
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-6 rounded-xl border border-primary/20">
         <div className="flex items-center gap-2 mb-4">
           <Activity size={24} className="text-primary" />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('todaysActivity')}</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Last 7 Days Activity</h2>
           <span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             {t('live')}
@@ -680,7 +704,7 @@ const EnhancedReports: React.FC = () => {
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('todaysActivityFeed')}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Last 7 Days Activity Feed</h3>
               <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>

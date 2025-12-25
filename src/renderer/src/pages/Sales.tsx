@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard, CheckCircle } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
@@ -8,6 +8,7 @@ import { InstallmentManager } from '../components/InstallmentManager'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLocation } from 'react-router-dom'
 
 type SaleItem = {
   id: string
@@ -83,7 +84,21 @@ type SaleTransaction = {
 }
 
 export default function Sales(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<'sales' | 'installments'>('sales')
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState<'sales' | 'installments'>(() => {
+    // Check URL search params for tab
+    const searchParams = new URLSearchParams(location.search)
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'installments') {
+      return 'installments'
+    }
+    // Check navigation state
+    const state = location.state as any
+    if (state?.activeTab === 'installments') {
+      return 'installments'
+    }
+    return 'sales'
+  })
   const [installments, setInstallments] = useState<Installment[]>([])
   const [installmentsLoading, setInstallmentsLoading] = useState(false)
   const { t } = useLanguage()
@@ -129,6 +144,32 @@ export default function Sales(): JSX.Element {
   // Check if refunds are enabled in settings
   const refundsEnabled = refundPeriodDays > 0
 
+  // Debounced search for installments
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  
+  const debouncedLoadInstallments = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadInstallments(1)
+    }, 300)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'installments') {
+      loadInstallments(1)
+    }
+  }, [activeTab])
+
   useEffect(() => {
     loadTransactions()
   }, [])
@@ -137,7 +178,7 @@ export default function Sales(): JSX.Element {
     if (activeTab === 'installments') {
       loadInstallments(1)
     }
-  }, [activeTab])
+  }, [activeTab, installmentStatusFilter, installmentDateFilter])
 
   const loadTransactions = async () => {
     try {
@@ -683,8 +724,7 @@ export default function Sales(): JSX.Element {
                   onChange={(e) => {
                     setInstallmentSearchQuery(e.target.value)
                     setInstallmentCurrentPage(1) // Reset to first page
-                    // Debounce the search to avoid too many API calls
-                    setTimeout(() => loadInstallments(1), 300)
+                    debouncedLoadInstallments()
                   }}
                 />
               </div>

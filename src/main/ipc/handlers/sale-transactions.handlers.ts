@@ -680,6 +680,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
               product: {
                 select: {
                   name: true,
+                  baseCost: true,
                   category: {
                     select: {
                       name: true

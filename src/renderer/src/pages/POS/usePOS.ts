@@ -178,7 +178,7 @@ export function usePOS() {
       cartLength: cart.length 
     })
     
-    if (!paymentMethod || paymentMethod === '') {
+    if (!paymentMethod) {
       alert('Please select a payment method (Cash or Card)')
       return
     }

@@ -25,7 +25,12 @@ export function registerFinanceHandlers(prisma: any) {
     try {
       if (prisma) {
         const transactions = await prisma.financialTransaction.findMany({ 
-          where: { createdAt: { gte: startDate, lte: endDate } }, 
+          where: { 
+            createdAt: { 
+              gte: new Date(startDate), 
+              lte: new Date(endDate) 
+            } 
+          }, 
           orderBy: { createdAt: 'desc' }, 
           include: { user: { select: { username: true } } } 
         })
