@@ -7,13 +7,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/renderer/src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'src/renderer/src/test/',
+        'src/test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData/',
@@ -24,7 +24,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@renderer': path.resolve(__dirname, './src/renderer/src')
+      '@renderer': path.resolve(__dirname, './src/renderer/src'),
+      '@test': path.resolve(__dirname, './src/test')
     }
   }
 })

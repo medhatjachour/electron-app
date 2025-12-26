@@ -14,7 +14,8 @@ import {
   Monitor,
   Tag,
   Users,
-  Archive
+  Archive,
+  Mail
 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -29,6 +30,7 @@ import TaxReceiptSettings from './TaxReceiptSettings'
 import NotificationsSettings from './NotificationsSettings'
 import BackupSettings from './BackupSettings'
 import ArchiveManagementSettings from './ArchiveManagementSettings'
+import EmailSettings from './EmailSettings'
 import type { SettingsTab } from './types'
 
 export default function Settings() {
@@ -66,15 +68,21 @@ export default function Settings() {
     { id: 'payments' as SettingsTab, name: t('payments'), icon: CreditCard },
     { id: 'tax' as SettingsTab, name: t('taxReceipt'), icon: Receipt },
     { id: 'notifications' as SettingsTab, name: t('notifications'), icon: Bell },
+    { id: 'email' as SettingsTab, name: 'Email Reports', icon: Mail },
     { id: 'backup' as SettingsTab, name: t('backup'), icon: Database },
     { id: 'archive' as SettingsTab, name: t('archive'), icon: Archive },
   ]
 
   const handleSave = () => {
-    const success = saveSettings()
-    if (success) {
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+    try {
+      const success = saveSettings()
+      if (success) {
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      // Could show toast here if needed
     }
   }
 
@@ -183,6 +191,10 @@ export default function Settings() {
               settings={notificationSettings}
               onChange={setNotificationSettings}
             />
+          )}
+
+          {activeTab === 'email' && (
+            <EmailSettings onSave={handleSave} />
           )}
 
           {activeTab === 'backup' && (

@@ -26,11 +26,13 @@ import { registerStockMovementHandlers } from './stock-movements.handlers'
 import { registerDepositsHandlers } from './deposits.handlers'
 import { registerInstallmentsHandlers } from './installments.handlers'
 import { registerReceiptHandlers } from './receipts.handlers'
+import { registerEmailHandlers } from './email.handlers'
 import './backup.handlers' // Import backup handlers (self-contained, no registration needed)
+import { setupReorderHandlers } from './reorder.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
-let prisma: any = null
+export let prisma: any = null
 try {
   // In dev mode, use generated Prisma from src/generated/prisma
   // In production, use the packed src/generated/prisma (unpacked by electron-builder)
@@ -134,6 +136,12 @@ export function registerAllHandlers() {
   registerReceiptHandlers(prisma)
   // Register analytics handlers (self-contained with own Prisma instance)
   registerAnalyticsHandlers()
+  
+  // Register email handlers
+  registerEmailHandlers(prisma)
+  
+  // Register reorder analysis handlers
+  setupReorderHandlers()
   
   // Register delete handlers (archive/restore functionality)
   registerDeleteHandlers(prisma)

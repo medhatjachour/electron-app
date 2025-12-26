@@ -5,13 +5,14 @@
  * @returns Formatted string (e.g., "1.2K", "5.3M", "2.1B")
  */
 export function formatLargeNumber(value: number, decimals: number = 1): string {
-  if (value >= 1e9) {
+  const absValue = Math.abs(value)
+  if (absValue >= 1e9) {
     return `${(value / 1e9).toFixed(decimals)}B`
   }
-  if (value >= 1e6) {
+  if (absValue >= 1e6) {
     return `${(value / 1e6).toFixed(decimals)}M`
   }
-  if (value >= 1e3) {
+  if (absValue >= 1e3) {
     return `${(value / 1e3).toFixed(decimals)}K`
   }
   return value.toLocaleString()
@@ -24,13 +25,14 @@ export function formatLargeNumber(value: number, decimals: number = 1): string {
  * @returns Formatted currency string (e.g., "$1.2K", "$5.3M", "$2.1B")
  */
 export function formatCurrency(value: number, decimals: number = 1): string {
-  if (value >= 1e9) {
+  const absValue = Math.abs(value)
+  if (absValue >= 1e9) {
     return `$${(value / 1e9).toFixed(decimals)}B`
   }
-  if (value >= 1e6) {
+  if (absValue >= 1e6) {
     return `$${(value / 1e6).toFixed(decimals)}M`
   }
-  if (value >= 1e3) {
+  if (absValue >= 1e3) {
     return `$${(value / 1e3).toFixed(decimals)}K`
   }
   return `$${value.toLocaleString()}`

@@ -45,6 +45,7 @@ interface SearchOptions {
   includeMetrics?: boolean
   enrichData?: boolean
   initialPage?: number
+  abortControllerFactory?: () => AbortController
 }
 
 interface SearchParams {
@@ -84,7 +85,8 @@ export function useBackendSearch<T = any>(params: SearchParams): SearchResult<T>
     includeImages = false,
     includeMetrics = false,
     enrichData = false,
-    initialPage = 1
+    initialPage = 1,
+    abortControllerFactory = () => new AbortController()
   } = options
 
   // State
@@ -114,7 +116,7 @@ export function useBackendSearch<T = any>(params: SearchParams): SearchResult<T>
     }
 
     // Create new abort controller
-    abortControllerRef.current = new AbortController()
+    abortControllerRef.current = abortControllerFactory()
 
     try {
       setLoading(true)
@@ -178,16 +180,6 @@ export function useBackendSearch<T = any>(params: SearchParams): SearchResult<T>
   }, [debouncedFilters, sort])
 
   /**
-   * Effect: Fetch data when page changes
-   */
-  useEffect(() => {
-    if (currentPage !== 1) {
-      fetchData(currentPage)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage])
-
-  /**
    * Cleanup on unmount
    */
   useEffect(() => {
@@ -207,20 +199,25 @@ export function useBackendSearch<T = any>(params: SearchParams): SearchResult<T>
   const setPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
+      fetchData(page)
     }
-  }, [totalPages])
+  }, [totalPages, fetchData])
 
   const nextPage = useCallback(() => {
     if (hasMore) {
-      setCurrentPage(prev => prev + 1)
+      const newPage = currentPage + 1
+      setCurrentPage(newPage)
+      fetchData(newPage)
     }
-  }, [hasMore])
+  }, [hasMore, currentPage, fetchData])
 
   const prevPage = useCallback(() => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1)
+      const newPage = currentPage - 1
+      setCurrentPage(newPage)
+      fetchData(newPage)
     }
-  }, [currentPage])
+  }, [currentPage, fetchData])
 
   /**
    * Manual refetch
