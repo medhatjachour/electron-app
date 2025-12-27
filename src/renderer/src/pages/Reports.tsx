@@ -87,23 +87,22 @@ const EnhancedReports: React.FC = () => {
 
   const loadTodayStats = async () => {
     try {
-      // Get data for the last 7 days instead of just today for more meaningful stats
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
+      // Get data for today only
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0); // Start of today
       
-      const today = new Date();
-      today.setHours(23, 59, 59, 999); // End of today
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999); // End of today
 
-      // Fetch transactions for the last 7 days
+      // Fetch transactions for today
       const [salesData, financeData] = await Promise.all([
         window.api.saleTransactions.getByDateRange({
-          startDate: sevenDaysAgo.toISOString(),
-          endDate: today.toISOString()
+          startDate: todayStart.toISOString(),
+          endDate: todayEnd.toISOString()
         }),
         window.api.finance.getTransactions({
-          startDate: sevenDaysAgo,
-          endDate: today
+          startDate: todayStart,
+          endDate: todayEnd
         })
       ]);
 
@@ -154,22 +153,21 @@ const EnhancedReports: React.FC = () => {
 
   const loadActivityFeed = async () => {
     try {
-      // Get data for the last 7 days for activity feed
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
+      // Get data for today only for activity feed
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0); // Start of today
       
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999); // End of today
 
       const [salesData, financeData] = await Promise.all([
         window.api.saleTransactions.getByDateRange({
-          startDate: sevenDaysAgo.toISOString(),
-          endDate: today.toISOString()
+          startDate: todayStart.toISOString(),
+          endDate: todayEnd.toISOString()
         }),
         window.api.finance.getTransactions({
-          startDate: sevenDaysAgo,
-          endDate: today
+          startDate: todayStart,
+          endDate: todayEnd
         })
       ]);
 
@@ -607,7 +605,7 @@ const EnhancedReports: React.FC = () => {
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-6 rounded-xl border border-primary/20">
         <div className="flex items-center gap-2 mb-4">
           <Activity size={24} className="text-primary" />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Last 7 Days Activity</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Activity</h2>
           <span className="px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             {t('live')}
@@ -704,7 +702,7 @@ const EnhancedReports: React.FC = () => {
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Last 7 Days Activity Feed</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Activity Feed</h3>
               <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>

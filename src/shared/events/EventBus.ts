@@ -40,6 +40,14 @@ export interface EventTypes {
   'customer:created': { customerId: string; email: string }
   'customer:updated': { customerId: string; changes: Record<string, unknown> }
   
+  // Supplier events
+  'supplier:created': { supplierId: string; name: string }
+  'supplier:updated': { supplierId: string; name: string }
+  'supplier:deleted': { supplierId: string; name: string }
+  'supplier:product-added': { supplierId: string; productId: string }
+  'supplier:product-updated': { supplierId: string; productId: string }
+  'supplier:product-removed': { supplierProductId: string }
+  
   // System events
   'system:error': { error: Error; context?: Record<string, unknown> }
   'system:warning': { message: string; context?: Record<string, unknown> }

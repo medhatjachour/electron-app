@@ -22,6 +22,9 @@ export default function Login() {
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     
+    // Prevent multiple login attempts
+    if (loading) return
+    
     // Validation
     if (!username.trim() || !password.trim()) {
       setError(t('enterBothFields'))
@@ -45,6 +48,9 @@ export default function Login() {
   }
 
   const handleSetupLogin = async () => {
+    // Prevent multiple login attempts
+    if (loading) return
+    
     setUsername('setup')
     setPassword('setup123')
     // Directly call login with the setup credentials

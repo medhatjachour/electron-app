@@ -195,6 +195,7 @@ export default function Sales(): JSX.Element {
       setTransactions(data)
     } catch (error) {
       console.error('Failed to load transactions:', error)
+      showToast('error', 'Failed to load transactions')
     } finally {
       setLoading(false)
     }
@@ -376,7 +377,7 @@ export default function Sales(): JSX.Element {
       revenueChange,
       salesChange,
       weeklyRevenueChange,
-      hasData: transactions.length > 0
+      hasData: filteredTransactions.length > 0
     }
   }, [filteredTransactions, transactions])
 
@@ -889,7 +890,7 @@ export default function Sales(): JSX.Element {
       )}
 
       {/* Empty State - Only for sales tab */}
-      {activeTab === 'sales' && !stats.hasData && !loading && (
+      {activeTab === 'sales' && transactions.length === 0 && !loading && (
         <div className="glass-card p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">

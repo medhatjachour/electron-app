@@ -136,7 +136,10 @@ export default function Stores(): JSX.Element {
           <p className="text-slate-600 dark:text-slate-400 mt-1">{t('storeManagementDesc')}</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            resetForm()
+            setShowAddModal(true)
+          }}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} />

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import DiscountModal from '../DiscountModal'
+import DiscountModal from '../../../renderer/src/components/DiscountModal'
 
 describe('DiscountModal', () => {
   const mockOnClose = vi.fn()

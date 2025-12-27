@@ -21,3 +21,9 @@ prisma/*.db-journal
 # Prisma images (product images)
 prisma/images/
 /*.db-journal
+
+# coverage unit  test
+coverage/
+.nyc_output/
+*.lcov
+coverage-reports/

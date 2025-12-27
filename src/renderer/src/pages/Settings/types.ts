@@ -104,6 +104,7 @@ export type SettingsTab =
   | 'payments' 
   | 'tax' 
   | 'notifications' 
+  | 'email'
   | 'security' 
   | 'backup'
   | 'archive'

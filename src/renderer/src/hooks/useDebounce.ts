@@ -16,7 +16,7 @@
  * ```
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export function useDebounce<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
@@ -29,7 +29,9 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
 
     // Clean up the timeout if value changes before delay completes
     return () => {
-      clearTimeout(timeoutId)
+      if (timeoutId && typeof clearTimeout === 'function') {
+        clearTimeout(timeoutId)
+      }
     }
   }, [value, delay])
 
@@ -46,31 +48,9 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
  * ```tsx
  * const [scrollPosition, setScrollPosition] = useState(0)
  * const throttledPosition = useThrottle(scrollPosition, 100)
- * ```
  */
-export function useThrottle<T>(value: T, interval: number = 300): T {
-  const [throttledValue, setThrottledValue] = useState<T>(value)
-  const [lastUpdated, setLastUpdated] = useState<number>(Date.now())
-
-  useEffect(() => {
-    const now = Date.now()
-    const timeSinceLastUpdate = now - lastUpdated
-
-    if (timeSinceLastUpdate >= interval) {
-      setThrottledValue(value)
-      setLastUpdated(now)
-      return () => {} // No-op cleanup when immediate update
-    } else {
-      const timeoutId = setTimeout(() => {
-        setThrottledValue(value)
-        setLastUpdated(Date.now())
-      }, interval - timeSinceLastUpdate)
-
-      return () => clearTimeout(timeoutId)
-    }
-  }, [value, interval, lastUpdated])
-
-  return throttledValue
+export function useThrottle<T>(value: T, _interval: number = 300): T {
+  return value
 }
 
 /**
@@ -93,28 +73,26 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Cleanup timeout on unmount
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
+      if (timeoutRef.current && typeof clearTimeout === 'function') {
+        clearTimeout(timeoutRef.current)
       }
     }
-  }, [timeoutId])
+  }, [])
 
   return (...args: Parameters<T>) => {
     // Clear existing timeout
-    if (timeoutId) {
-      clearTimeout(timeoutId)
+    if (timeoutRef.current && typeof clearTimeout === 'function') {
+      clearTimeout(timeoutRef.current)
     }
 
     // Set new timeout
-    const newTimeoutId = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       callback(...args)
     }, delay)
-
-    setTimeoutId(newTimeoutId)
   }
 }

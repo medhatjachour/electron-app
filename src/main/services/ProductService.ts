@@ -80,7 +80,12 @@ export class ProductService {
       return ProductMapper.toResponseDTO(product)
     } catch (error) {
       logger.error('Failed to create product', { error, dto })
-      throw error
+      if (error instanceof EntityNotFoundError || error instanceof DuplicateEntityError || error instanceof ProductServiceError) {
+        throw error
+      }
+      const code = (error as any).code || 'CREATE_FAILED'
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new ProductServiceError(`Failed to create product: ${errorMessage}`, code)
     }
   }
 

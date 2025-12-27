@@ -320,4 +320,17 @@ export const IPC_CHANNELS = {
     DELETE: 'employees:delete',
     GET_ALL: 'employees:getAll',
   },
+  SUPPLIERS: {
+    CREATE: 'suppliers:create',
+    UPDATE: 'suppliers:update',
+    DELETE: 'suppliers:delete',
+    GET_ALL: 'suppliers:getAll',
+    GET_BY_ID: 'suppliers:getById',
+    GET_PRODUCTS: 'suppliers:getProducts',
+    ADD_PRODUCT: 'suppliers:addProduct',
+    UPDATE_PRODUCT: 'suppliers:updateProduct',
+    REMOVE_PRODUCT: 'suppliers:removeProduct',
+    GET_PREFERRED_FOR_PRODUCT: 'suppliers:getPreferredForProduct',
+    SEARCH: 'suppliers:search',
+  },
 } as const

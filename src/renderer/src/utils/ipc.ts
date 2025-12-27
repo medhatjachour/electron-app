@@ -244,6 +244,176 @@ const mockIPC = {
       })
     }
   },
+  suppliers: {
+    getAll: async (options?: any) => {
+      const allSuppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const { search, pageSize = 20 } = options || {}
+      
+      let filtered = allSuppliers
+      if (search) {
+        const term = search.toLowerCase()
+        filtered = allSuppliers.filter((s: any) => 
+          s.name?.toLowerCase().includes(term) ||
+          s.contactName?.toLowerCase().includes(term) ||
+          s.email?.toLowerCase().includes(term)
+        )
+      }
+      
+      const suppliers = filtered.slice(0, pageSize)
+      return {
+        success: true,
+        data: {
+          data: suppliers,
+          total: filtered.length,
+          page: 1,
+          pageSize,
+          totalPages: Math.ceil(filtered.length / pageSize)
+        }
+      }
+    },
+    getById: async (id: string) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      return suppliers.find((s: any) => s.id === id) || null
+    },
+    create: async (data: any) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const newSupplier = { id: Date.now().toString(), ...data, createdAt: new Date().toISOString() }
+      suppliers.push(newSupplier)
+      localStorage.setItem('suppliers', JSON.stringify(suppliers))
+      return { success: true, supplier: newSupplier }
+    },
+    update: async (id: string, data: any) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const index = suppliers.findIndex((s: any) => s.id === id)
+      if (index !== -1) {
+        suppliers[index] = { ...suppliers[index], ...data, updatedAt: new Date().toISOString() }
+        localStorage.setItem('suppliers', JSON.stringify(suppliers))
+        return { success: true, supplier: suppliers[index] }
+      }
+      return { success: false, message: 'Supplier not found' }
+    },
+    delete: async (id: string) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const filtered = suppliers.filter((s: any) => s.id !== id)
+      localStorage.setItem('suppliers', JSON.stringify(filtered))
+      return { success: true }
+    },
+    addSupplierProduct: async (supplierId: string, productData: any) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const supplier = suppliers.find((s: any) => s.id === supplierId)
+      if (supplier) {
+        if (!supplier.products) supplier.products = []
+        supplier.products.push({ id: Date.now().toString(), ...productData })
+        localStorage.setItem('suppliers', JSON.stringify(suppliers))
+        return { success: true }
+      }
+      return { success: false, message: 'Supplier not found' }
+    },
+    getSupplierProducts: async (supplierId: string) => {
+      const suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]')
+      const supplier = suppliers.find((s: any) => s.id === supplierId)
+      return supplier?.products || []
+    }
+  },
+  purchaseOrders: {
+    getAll: async (filters?: any) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      let filtered = purchaseOrders
+      
+      if (filters) {
+        if (filters.supplierId) {
+          filtered = filtered.filter((po: any) => po.supplierId === filters.supplierId)
+        }
+        if (filters.status) {
+          filtered = filtered.filter((po: any) => po.status === filters.status)
+        }
+        if (filters.startDate) {
+          filtered = filtered.filter((po: any) => new Date(po.orderDate) >= new Date(filters.startDate))
+        }
+        if (filters.endDate) {
+          filtered = filtered.filter((po: any) => new Date(po.orderDate) <= new Date(filters.endDate))
+        }
+      }
+      
+      return filtered
+    },
+    getById: async (id: string) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      return purchaseOrders.find((po: any) => po.id === id) || null
+    },
+    getByPoNumber: async (poNumber: string) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      return purchaseOrders.find((po: any) => po.poNumber === poNumber) || null
+    },
+    create: async (data: any) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      const newPO = {
+        id: Date.now().toString(),
+        poNumber: `PO-${Date.now()}`,
+        ...data,
+        status: 'draft',
+        orderDate: new Date().toISOString(),
+        totalAmount: data.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitCost), 0),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      purchaseOrders.push(newPO)
+      localStorage.setItem('purchaseOrders', JSON.stringify(purchaseOrders))
+      return newPO
+    },
+    update: async (id: string, data: any) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      const index = purchaseOrders.findIndex((po: any) => po.id === id)
+      if (index !== -1) {
+        purchaseOrders[index] = { ...purchaseOrders[index], ...data, updatedAt: new Date().toISOString() }
+        localStorage.setItem('purchaseOrders', JSON.stringify(purchaseOrders))
+        return purchaseOrders[index]
+      }
+      throw new Error('Purchase order not found')
+    },
+    delete: async (id: string) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      const filtered = purchaseOrders.filter((po: any) => po.id !== id)
+      localStorage.setItem('purchaseOrders', JSON.stringify(filtered))
+      return { success: true }
+    },
+    receive: async (id: string, receivedDate?: Date) => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      const index = purchaseOrders.findIndex((po: any) => po.id === id)
+      if (index !== -1) {
+        purchaseOrders[index].status = 'received'
+        purchaseOrders[index].receivedDate = (receivedDate || new Date()).toISOString()
+        localStorage.setItem('purchaseOrders', JSON.stringify(purchaseOrders))
+        return purchaseOrders[index]
+      }
+      throw new Error('Purchase order not found')
+    },
+    getSummary: async () => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      return {
+        total: purchaseOrders.length,
+        draft: purchaseOrders.filter((po: any) => po.status === 'draft').length,
+        ordered: purchaseOrders.filter((po: any) => po.status === 'ordered').length,
+        received: purchaseOrders.filter((po: any) => po.status === 'received').length,
+        cancelled: purchaseOrders.filter((po: any) => po.status === 'cancelled').length,
+        totalValue: purchaseOrders.reduce((sum: number, po: any) => sum + po.totalAmount, 0),
+        pendingValue: purchaseOrders.filter((po: any) => ['draft', 'ordered'].includes(po.status)).reduce((sum: number, po: any) => sum + po.totalAmount, 0)
+      }
+    },
+    getOverdue: async () => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      const now = new Date()
+      return purchaseOrders.filter((po: any) => 
+        po.status === 'ordered' && 
+        po.expectedDate && 
+        new Date(po.expectedDate) < now
+      )
+    },
+    getPending: async () => {
+      const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]')
+      return purchaseOrders.filter((po: any) => po.status === 'ordered')
+    }
+  },
   installments: {
     list: async () => [],
     getByCustomer: async (_customerId: string) => [],
@@ -312,6 +482,31 @@ export const ipc = isElectron ? {
       }>
     }) => window.electron.ipcRenderer.invoke('saleTransactions:refundItems', data),
     getByDateRange: (data: { startDate: Date, endDate: Date }) => window.electron.ipcRenderer.invoke('saleTransactions:getByDateRange', data)
+  },
+
+  // Supplier operations
+  suppliers: {
+    getAll: (options?: any) => window.electron.ipcRenderer.invoke('suppliers:getAll', options),
+    getById: (id: string) => window.electron.ipcRenderer.invoke('suppliers:getById', id),
+    create: (data: any) => window.electron.ipcRenderer.invoke('suppliers:create', data),
+    update: (id: string, data: any) => window.electron.ipcRenderer.invoke('suppliers:update', id, data),
+    delete: (id: string) => window.electron.ipcRenderer.invoke('suppliers:delete', id),
+    addSupplierProduct: (supplierId: string, productData: any) => window.electron.ipcRenderer.invoke('suppliers:addSupplierProduct', supplierId, productData),
+    getSupplierProducts: (supplierId: string) => window.electron.ipcRenderer.invoke('suppliers:getSupplierProducts', supplierId)
+  },
+
+  // Purchase order operations
+  purchaseOrders: {
+    getAll: (filters?: any) => window.electron.ipcRenderer.invoke('purchase-orders:get-all', filters),
+    getById: (id: string) => window.electron.ipcRenderer.invoke('purchase-orders:get-by-id', id),
+    getByPoNumber: (poNumber: string) => window.electron.ipcRenderer.invoke('purchase-orders:get-by-po-number', poNumber),
+    create: (data: any) => window.electron.ipcRenderer.invoke('purchase-orders:create', data),
+    update: (id: string, data: any) => window.electron.ipcRenderer.invoke('purchase-orders:update', id, data),
+    delete: (id: string) => window.electron.ipcRenderer.invoke('purchase-orders:delete', id),
+    receive: (id: string, receivedDate?: Date) => window.electron.ipcRenderer.invoke('purchase-orders:receive', id, receivedDate),
+    getSummary: () => window.electron.ipcRenderer.invoke('purchase-orders:get-summary'),
+    getOverdue: () => window.electron.ipcRenderer.invoke('purchase-orders:get-overdue'),
+    getPending: () => window.electron.ipcRenderer.invoke('purchase-orders:get-pending')
   },
 
   // Installment operations

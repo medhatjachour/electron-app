@@ -128,6 +128,26 @@ const api = {
       ipcRenderer.invoke('categories:update', data),
     delete: (id: string) => ipcRenderer.invoke('categories:delete', id)
   },
+  suppliers: {
+    getAll: (options?: {
+      page?: number
+      pageSize?: number
+      search?: string
+      isActive?: boolean
+      sortBy?: string
+      sortOrder?: string
+    }) => ipcRenderer.invoke('suppliers:getAll', options),
+    getById: (id: string) => ipcRenderer.invoke('suppliers:getById', id),
+    create: (supplierData: any) => ipcRenderer.invoke('suppliers:create', supplierData),
+    update: (id: string, updateData: any) => ipcRenderer.invoke('suppliers:update', id, updateData),
+    delete: (id: string) => ipcRenderer.invoke('suppliers:delete', id),
+    getProducts: (supplierId: string) => ipcRenderer.invoke('suppliers:getProducts', supplierId),
+    addProduct: (supplierProductData: any) => ipcRenderer.invoke('suppliers:addProduct', supplierProductData),
+    updateProduct: (id: string, updateData: any) => ipcRenderer.invoke('suppliers:updateProduct', id, updateData),
+    removeProduct: (id: string) => ipcRenderer.invoke('suppliers:removeProduct', id),
+    getPreferredForProduct: (productId: string) => ipcRenderer.invoke('suppliers:getPreferredForProduct', productId),
+    search: (query: string) => ipcRenderer.invoke('suppliers:search', query)
+  },
   employees: {
     getAll: () => ipcRenderer.invoke('employees:getAll'),
     getById: (id: string) => ipcRenderer.invoke('employees:getById', id),

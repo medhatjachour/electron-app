@@ -2,11 +2,49 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { schedule } from 'node-cron'
 import icon from '../../resources/icon.png?asset'
 
 // Import IPC handlers registration function
-import { registerAllHandlers } from './ipc/handlers/index'
+import { registerAllHandlers, prisma } from './ipc/handlers/index'
 import { initializeDatabase } from './database/init'
+
+// Setup daily email reports cron job
+function setupDailyEmailReports() {
+  // Run at 11:00 PM every day
+  schedule('0 23 * * *', async () => {
+    console.log('[Cron] Starting daily email reports...')
+
+    try {
+      // Import here to avoid circular dependencies
+      const { EmailReportService } = await import('./services/EmailReportService')
+
+      // Get all enabled email reports
+      const enabledReports = await prisma.emailReport.findMany({
+        where: { enabled: true }
+      })
+
+      console.log(`[Cron] Found ${enabledReports.length} enabled email reports`)
+
+      for (const report of enabledReports) {
+        try {
+          const emailService = new EmailReportService(prisma)
+          const data = await emailService.generateDailyReport(report.userId)
+          await emailService.sendEmailReport(report.userId, data)
+          console.log(`[Cron] Sent daily report to ${report.email}`)
+        } catch (error) {
+          console.error(`[Cron] Failed to send report to ${report.email}:`, error)
+        }
+      }
+
+      console.log('[Cron] Daily email reports completed')
+    } catch (error) {
+      console.error('[Cron] Failed to run daily email reports:', error)
+    }
+  })
+
+  console.log('[Cron] Daily email reports scheduled for 11:00 PM daily')
+}
 
 // Setup logging to file
 const logDir = join(app.getPath('userData'), 'logs')
@@ -162,6 +200,10 @@ app.whenReady().then(async () => {
     // Register all IPC handlers BEFORE creating windows
     console.log('[Main] Registering IPC handlers...')
     registerAllHandlers()
+
+    // Setup daily email reports cron job (runs at 11 PM every day)
+    console.log('[Main] Setting up daily email reports cron job...')
+    setupDailyEmailReports()
 
     console.log('[Main] ✅ Setup complete, creating window...')
   } catch (error) {

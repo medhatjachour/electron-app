@@ -25,6 +25,7 @@ model User {
   saleTransactions      SaleTransaction[]      // New transaction-based sales
   financialTransactions FinancialTransaction[] // Financial records
   stockMovements        StockMovement[]        // Inventory changes made by this user
+  emailReports          EmailReport[]          // Email report subscriptions
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   
@@ -67,6 +68,8 @@ model Product {
   variants      ProductVariant[]
   sales         Sale[]           // Old sales (backward compatibility)
   saleItems     SaleItem[]       // New transaction-based sale items
+  supplierProducts SupplierProduct[] // Supplier offerings for this product
+  purchaseOrderItems PurchaseOrderItem[] // Purchase order items for this product
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   
@@ -333,4 +336,100 @@ model Installment {
   @@index([saleId])
   @@index([dueDate])
   @@index([status])
+}
+
+model EmailReport {
+  id          String   @id @default(uuid())
+  userId      String
+  email       String
+  frequency   String   @default("daily") // daily, weekly, monthly
+  enabled     Boolean  @default(true)
+  lastSent    DateTime?
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, enabled])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  paymentTerms String? // e.g., "Net 30", "Net 60"
+  isActive    Boolean  @default(true)
+  notes       String?
+  products    SupplierProduct[]
+  purchaseOrders PurchaseOrder[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model SupplierProduct {
+  id         String   @id @default(uuid())
+  supplierId String
+  productId  String
+  sku        String?  // Supplier's SKU for this product
+  cost       Float    // Cost from this supplier
+  leadTime   Int?     // Days to receive order
+  minOrderQty Int     @default(1)
+  isPreferred Boolean @default(false)
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([supplierId, productId])
+  @@index([supplierId])
+  @@index([productId])
+  @@index([isPreferred])
+}
+
+model PurchaseOrder {
+  id            String             @id @default(uuid())
+  poNumber      String             @unique
+  supplierId    String
+  status        String             @default("draft") // draft, ordered, received, cancelled
+  orderDate     DateTime           @default(now())
+  expectedDate  DateTime?
+  receivedDate  DateTime?
+  totalAmount   Float              @default(0)
+  taxAmount     Float              @default(0)
+  shippingCost  Float              @default(0)
+  notes         String?
+  orderedBy     String
+  approvedBy    String?
+  supplier      Supplier           @relation(fields: [supplierId], references: [id])
+  items         PurchaseOrderItem[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([orderDate])
+  @@index([poNumber])
+}
+
+model PurchaseOrderItem {
+  id             String        @id @default(uuid())
+  purchaseOrderId String
+  productId      String
+  variantId      String?
+  quantity       Int
+  unitCost       Float
+  totalCost      Float
+  receivedQty    Int           @default(0)
+  purchaseOrder  PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product        Product       @relation(fields: [productId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([productId])
 }
