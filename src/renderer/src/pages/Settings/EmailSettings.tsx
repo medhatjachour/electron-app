@@ -5,8 +5,6 @@
 
 import { useState, useEffect } from 'react'
 import { Mail, Send, Eye, TestTube, Clock, CheckCircle, XCircle } from 'lucide-react'
-import { useLanguage } from '../../contexts/LanguageContext'
-import { useAuth } from '../../../hooks/useAuth'
 
 interface EmailSettingsData {
   userId: string
@@ -20,11 +18,9 @@ type Props = {
 }
 
 export default function EmailSettings({ onSave }: Props) {
-  const { t } = useLanguage()
-  const { user } = useAuth()
   const [settings, setSettings] = useState<EmailSettingsData>({
-    userId: user?.id || '',
-    email: user?.email || '',
+    userId: '',
+    email: '',
     frequency: 'daily',
     enabled: false
   })
@@ -36,17 +32,13 @@ export default function EmailSettings({ onSave }: Props) {
 
   // Load current settings on mount
   useEffect(() => {
-    if (user?.id) {
-      loadSettings()
-    }
-  }, [user?.id])
+    loadSettings()
+  }, [])
 
   const loadSettings = async () => {
-    if (!user?.id) return
-
     setLoading(true)
     try {
-      const result = await window.electronAPI.invoke('email:getConfig', user.id)
+      const result = await window.electron.ipcRenderer.invoke('email:getConfig', 'default-user')
       if (result.success && result.config) {
         setSettings(result.config)
       }
@@ -58,13 +50,11 @@ export default function EmailSettings({ onSave }: Props) {
   }
 
   const handleSave = async () => {
-    if (!user?.id) return
-
     setSaving(true)
     setMessage(null)
 
     try {
-      const result = await window.electronAPI.invoke('email:configure', settings)
+      const result = await window.electron.ipcRenderer.invoke('email:configure', settings)
       if (result.success) {
         setMessage({ type: 'success', text: 'Email settings saved successfully!' })
         onSave?.()
@@ -89,7 +79,7 @@ export default function EmailSettings({ onSave }: Props) {
     setMessage(null)
 
     try {
-      const result = await window.electronAPI.invoke('email:testSend', settings.email)
+      const result = await window.electron.ipcRenderer.invoke('email:testSend', settings.email)
       if (result.success) {
         setMessage({ type: 'success', text: 'Test email sent successfully! Check your inbox.' })
       } else {
@@ -104,11 +94,9 @@ export default function EmailSettings({ onSave }: Props) {
   }
 
   const handlePreview = async () => {
-    if (!user?.id) return
-
     setLoading(true)
     try {
-      const result = await window.electronAPI.invoke('email:generatePreview', user.id)
+      const result = await window.electron.ipcRenderer.invoke('email:generatePreview', 'default-user')
       if (result.success) {
         setPreview(result.data)
       } else {
@@ -123,13 +111,11 @@ export default function EmailSettings({ onSave }: Props) {
   }
 
   const handleSendNow = async () => {
-    if (!user?.id) return
-
     setLoading(true)
     setMessage(null)
 
     try {
-      const result = await window.electronAPI.invoke('email:sendReport', user.id)
+      const result = await window.electron.ipcRenderer.invoke('email:sendReport', 'default-user')
       if (result.success) {
         setMessage({ type: 'success', text: 'Daily report sent successfully!' })
       } else {

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Package, TrendingDown, Clock, DollarSign, RefreshCw, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, Package, TrendingDown, Clock, RefreshCw, ShoppingCart } from 'lucide-react';
 import { useToast } from '../../../contexts/ToastContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
 
 interface ReorderAlert {
   productId: string;
@@ -38,7 +37,6 @@ export default function ReorderAlerts() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('all');
   const { showToast } = useToast();
-  const { t } = useLanguage();
 
   useEffect(() => {
     loadReorderAlerts();
@@ -47,15 +45,15 @@ export default function ReorderAlerts() {
   const loadReorderAlerts = async () => {
     try {
       setLoading(true);
-      const result = await window.electronAPI.invoke('reorder:getAlerts');
+      const result = await window.electron.ipcRenderer.invoke('reorder:getAlerts');
       if (result.success) {
         setAnalysis(result.data);
       } else {
-        showToast(result.error || 'Failed to load reorder alerts', 'error');
+        showToast('error', result.error || 'Failed to load reorder alerts');
       }
     } catch (error) {
       console.error('Error loading reorder alerts:', error);
-      showToast('Failed to load reorder alerts', 'error');
+      showToast('error', 'Failed to load reorder alerts');
     } finally {
       setLoading(false);
     }

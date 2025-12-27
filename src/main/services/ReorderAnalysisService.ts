@@ -197,7 +197,7 @@ export class ReorderAnalysisService {
    * Generate a human-readable variant name
    */
   private getVariantName(variant: any): string {
-    const parts = [];
+    const parts: string[] = [];
     if (variant.color) parts.push(variant.color);
     if (variant.size) parts.push(variant.size);
     return parts.length > 0 ? parts.join(' / ') : 'Default';

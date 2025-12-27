@@ -1,11 +1,8 @@
 import { ipcMain } from 'electron';
-import { PrismaClient } from '../../generated/prisma';
-import { ReorderAnalysisService } from '../services/ReorderAnalysisService';
+import { ReorderAnalysisService } from '../../services/ReorderAnalysisService';
 
-const prisma = new PrismaClient();
-const reorderService = new ReorderAnalysisService(prisma);
-
-export function setupReorderHandlers() {
+export function setupReorderHandlers(prisma: any) {
+  const reorderService = new ReorderAnalysisService(prisma);
   // Get all reorder alerts
   ipcMain.handle('reorder:getAlerts', async () => {
     try {
@@ -13,7 +10,7 @@ export function setupReorderHandlers() {
       return { success: true, data: analysis };
     } catch (error) {
       console.error('Error getting reorder alerts:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 
@@ -24,7 +21,7 @@ export function setupReorderHandlers() {
       return { success: true, data: alerts };
     } catch (error) {
       console.error('Error getting product reorder alerts:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 
@@ -35,7 +32,7 @@ export function setupReorderHandlers() {
       return { success: true, data: alerts };
     } catch (error) {
       console.error('Error getting alerts by priority:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 
@@ -46,7 +43,7 @@ export function setupReorderHandlers() {
       return { success: true, data: alerts };
     } catch (error) {
       console.error('Error getting urgent alerts:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 
@@ -57,7 +54,7 @@ export function setupReorderHandlers() {
       return { success: true, data: analysis.summary };
     } catch (error) {
       console.error('Error getting reorder summary:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 }

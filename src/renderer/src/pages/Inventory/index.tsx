@@ -31,6 +31,8 @@ import * as XLSX from 'xlsx'
 const ProductAnalytics = lazy(() => import('./components/ProductAnalytics'))
 const StockHistory = lazy(() => import('./components/StockHistory'))
 const ReorderAlerts = lazy(() => import('./components/ReorderAlerts'))
+const Suppliers = lazy(() => import('./components/Suppliers'))
+const PurchaseOrders = lazy(() => import('./components/PurchaseOrders'))
 
 import type { InventoryFilters as Filters, InventorySortOptions } from './types'
 import InventoryFilters from './components/InventoryFilters'
@@ -42,7 +44,7 @@ import logger from '../../../../shared/utils/logger'
 
 const ITEMS_PER_PAGE = 50
 
-type TabType = 'products' | 'analytics' | 'history' | 'reorder'
+type TabType = 'products' | 'analytics' | 'history' | 'reorder' | 'suppliers' | 'purchase-orders'
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState<TabType>('products')
@@ -437,6 +439,28 @@ export default function InventoryPage() {
             <AlertTriangle size={18} />
             {t('inventoryReorder')}
           </button>
+          <button
+            onClick={() => setActiveTab('suppliers')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'suppliers'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Package size={18} />
+            {t('inventorySuppliers')}
+          </button>
+          <button
+            onClick={() => setActiveTab('purchase-orders')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'purchase-orders'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Package size={18} />
+            Purchase Orders
+          </button>
         </div>
 
         {/* Search and Filters - Only show for products tab */}
@@ -559,6 +583,32 @@ export default function InventoryPage() {
               </div>
             }>
               <ReorderAlerts />
+            </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'suppliers' && (
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
+            <Suspense fallback={
+              <div className="text-center">
+                <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-600 dark:text-slate-400">Loading Suppliers...</p>
+              </div>
+            }>
+              <Suppliers />
+            </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'purchase-orders' && (
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
+            <Suspense fallback={
+              <div className="text-center">
+                <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-600 dark:text-slate-400">Loading Purchase Orders...</p>
+              </div>
+            }>
+              <PurchaseOrders />
             </Suspense>
           </div>
         )}

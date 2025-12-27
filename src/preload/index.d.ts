@@ -74,6 +74,26 @@ interface API {
     update: (data: { id: string; categoryData: { name: string; description?: string; icon?: string; color?: string } }) => Promise<any>
     delete: (id: string) => Promise<any>
   }
+  suppliers: {
+    getAll: (options?: {
+      page?: number
+      pageSize?: number
+      search?: string
+      isActive?: boolean
+      sortBy?: string
+      sortOrder?: string
+    }) => Promise<any>
+    getById: (id: string) => Promise<any>
+    create: (supplierData: any) => Promise<any>
+    update: (id: string, updateData: any) => Promise<any>
+    delete: (id: string) => Promise<any>
+    getProducts: (supplierId: string) => Promise<any>
+    addProduct: (supplierProductData: any) => Promise<any>
+    updateProduct: (id: string, updateData: any) => Promise<any>
+    removeProduct: (id: string) => Promise<any>
+    getPreferredForProduct: (productId: string) => Promise<any>
+    search: (query: string) => Promise<any>
+  }
   users: {
     getAll: () => Promise<any>
     getById: (id: string) => Promise<any>

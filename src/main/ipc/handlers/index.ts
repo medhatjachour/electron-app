@@ -29,6 +29,8 @@ import { registerReceiptHandlers } from './receipts.handlers'
 import { registerEmailHandlers } from './email.handlers'
 import './backup.handlers' // Import backup handlers (self-contained, no registration needed)
 import { setupReorderHandlers } from './reorder.handlers'
+import { registerSupplierHandlers } from './suppliers.handlers'
+import { setupPurchaseOrderHandlers } from './purchase-orders.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
@@ -141,7 +143,13 @@ export function registerAllHandlers() {
   registerEmailHandlers(prisma)
   
   // Register reorder analysis handlers
-  setupReorderHandlers()
+  setupReorderHandlers(prisma)
+  
+  // Register supplier handlers
+  registerSupplierHandlers(prisma)
+  
+  // Register purchase order handlers
+  setupPurchaseOrderHandlers(prisma)
   
   // Register delete handlers (archive/restore functionality)
   registerDeleteHandlers(prisma)
