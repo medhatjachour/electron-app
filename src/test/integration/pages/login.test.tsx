@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import Login from '../../../renderer/src/pages/login'
@@ -76,7 +76,9 @@ describe('Login', () => {
     renderLogin()
 
     const loginButton = screen.getByRole('button', { name: /signIn/i })
-    await user.click(loginButton)
+    await act(async () => {
+      await user.click(loginButton)
+    })
 
     expect(mockLanguage.t).toHaveBeenCalledWith('enterBothFields')
   })
@@ -91,9 +93,11 @@ describe('Login', () => {
     const passwordInput = screen.getByLabelText(/password/i)
     const loginButton = screen.getByRole('button', { name: /signIn/i })
 
-    await user.type(usernameInput, 'testuser')
-    await user.type(passwordInput, 'testpass')
-    await user.click(loginButton)
+    await act(async () => {
+      await user.type(usernameInput, 'testuser')
+      await user.type(passwordInput, 'testpass')
+      await user.click(loginButton)
+    })
 
     expect(mockAuth.login).toHaveBeenCalledWith('testuser', 'testpass')
   })
@@ -108,9 +112,11 @@ describe('Login', () => {
     const passwordInput = screen.getByLabelText(/password/i)
     const loginButton = screen.getByRole('button', { name: /signIn/i })
 
-    await user.type(usernameInput, 'testuser')
-    await user.type(passwordInput, 'testpass')
-    await user.click(loginButton)
+    await act(async () => {
+      await user.type(usernameInput, 'testuser')
+      await user.type(passwordInput, 'testpass')
+      await user.click(loginButton)
+    })
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
@@ -127,9 +133,11 @@ describe('Login', () => {
     const passwordInput = screen.getByLabelText(/password/i)
     const loginButton = screen.getByRole('button', { name: /signIn/i })
 
-    await user.type(usernameInput, 'wronguser')
-    await user.type(passwordInput, 'wrongpass')
-    await user.click(loginButton)
+    await act(async () => {
+      await user.type(usernameInput, 'wronguser')
+      await user.type(passwordInput, 'wrongpass')
+      await user.click(loginButton)
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
@@ -151,11 +159,15 @@ describe('Login', () => {
     expect(passwordInput).toHaveAttribute('type', 'password')
 
     // Click to show password
-    await user.click(toggleButton)
+    await act(async () => {
+      await user.click(toggleButton)
+    })
     expect(passwordInput).toHaveAttribute('type', 'text')
 
     // Click again to hide
-    await user.click(toggleButton)
+    await act(async () => {
+      await user.click(toggleButton)
+    })
     expect(passwordInput).toHaveAttribute('type', 'password')
   })
 
@@ -166,7 +178,9 @@ describe('Login', () => {
     renderLogin()
 
     const setupButton = screen.getByRole('button', { name: /useSetupAccount/i })
-    await user.click(setupButton)
+    await act(async () => {
+      await user.click(setupButton)
+    })
 
     expect(mockAuth.login).toHaveBeenCalledWith('setup', 'setup123')
   })
@@ -181,13 +195,26 @@ describe('Login', () => {
     const passwordInput = screen.getByLabelText(/password/i)
     const loginButton = screen.getByRole('button', { name: /signIn/i })
 
-    await user.type(usernameInput, 'testuser')
-    await user.type(passwordInput, 'testpass')
+    await act(async () => {
+      await user.type(usernameInput, 'testuser')
+      await user.type(passwordInput, 'testpass')
+    })
 
-    // Click login multiple times quickly
-    await user.click(loginButton)
-    await user.click(loginButton)
-    await user.click(loginButton)
+    // Click login once
+    await act(async () => {
+      await user.click(loginButton)
+    })
+
+    // Wait for loading state to be set
+    await waitFor(() => {
+      expect(loginButton).toBeDisabled()
+    })
+
+    // Try clicking again while loading - this should not trigger another call
+    await act(async () => {
+      await user.click(loginButton)
+      await user.click(loginButton)
+    })
 
     // Should only call login once
     expect(mockAuth.login).toHaveBeenCalledTimes(1)

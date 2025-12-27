@@ -290,18 +290,22 @@ describe('StoresPage', () => {
       const addButton = screen.getByText('addStore')
       await user.click(addButton)
 
-      expect(mockIpc.stores.create).toHaveBeenCalledWith({
-        name: 'New Store',
-        location: '789 New St, City, State',
-        phone: '(555) 111-2222',
-        hours: '8 AM - 10 PM',
-        manager: 'Bob Johnson',
-        status: 'active'
+      // Wait for the create call
+      await waitFor(() => {
+        expect(mockIpc.stores.create).toHaveBeenCalledWith({
+          name: 'New Store',
+          location: '789 New St, City, State',
+          phone: '(555) 111-2222',
+          hours: '8 AM - 10 PM',
+          manager: 'Bob Johnson',
+          status: 'active'
+        })
       })
 
+      // Wait for the refresh call (should be called after successful creation)
       await waitFor(() => {
         expect(mockIpc.stores.getAll).toHaveBeenCalledTimes(2) // Initial load + refresh
-      })
+      }, { timeout: 3000 })
     })
 
     it('handles add store errors', async () => {

@@ -43,39 +43,43 @@ Object.defineProperty(window, 'api', {
 
 // Mock all settings components - define mocks inline to avoid hoisting issues
 vi.mock('@renderer/pages/Settings/GeneralSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>General Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/DisplaySettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Display Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/CategorySettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Category Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/UserManagementSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>User Management Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/PaymentMethodsSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Payment Methods Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/TaxReceiptSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Tax Receipt Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/NotificationsSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Notifications Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/BackupSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Backup Settings</div>)
 }))
 
 vi.mock('@renderer/pages/Settings/ArchiveManagementSettings', () => ({
-  default: vi.fn()
+  default: vi.fn(() => <div>Archive Management Settings</div>)
+}))
+
+vi.mock('@renderer/pages/Settings/EmailSettings', () => ({
+  default: () => <div>Email Reports</div>
 }))
 
 vi.mock('@renderer/contexts/ThemeContext', () => ({
@@ -202,8 +206,9 @@ vi.mock('@renderer/pages/Settings/useSettings', () => ({
 }))
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import SettingsPage from '@renderer/pages/Settings/index'
 import { ThemeProvider } from '@renderer/contexts/ThemeContext'
 import { LanguageProvider } from '@renderer/contexts/LanguageContext'
@@ -261,15 +266,7 @@ describe('SettingsPage', () => {
     const BackupSettings = vi.mocked(await import('@renderer/pages/Settings/BackupSettings')).default
     const ArchiveManagementSettings = vi.mocked(await import('@renderer/pages/Settings/ArchiveManagementSettings')).default
 
-    GeneralSettings.mockReturnValue(<div>General Settings</div>)
-    DisplaySettings.mockReturnValue(<div>Display Settings</div>)
-    CategorySettings.mockReturnValue(<div>Category Settings</div>)
-    UserManagementSettings.mockReturnValue(<div>User Management Settings</div>)
-    PaymentMethodsSettings.mockReturnValue(<div>Payment Methods Settings</div>)
-    TaxReceiptSettings.mockReturnValue(<div>Tax Receipt Settings</div>)
-    NotificationsSettings.mockReturnValue(<div>Notifications Settings</div>)
-    BackupSettings.mockReturnValue(<div>Backup Settings</div>)
-    ArchiveManagementSettings.mockReturnValue(<div>Archive Management Settings</div>)
+    // Components are already mocked to return JSX, no need to call mockReturnValue
 
     // Set up saveSettings mock to return true by default
     mockSettings.saveSettings.mockReturnValue(true)
@@ -331,24 +328,34 @@ describe('SettingsPage', () => {
       renderSettingsPage()
 
       // Test display tab
-      await user.click(screen.getByText('display'))
-      expect(screen.getByText('display')).toBeInTheDocument()
+      await act(async () => {
+        await user.click(screen.getByText('display'))
+      })
+      expect(screen.getByText('Display Settings')).toBeInTheDocument()
 
       // Test payments tab
-      await user.click(screen.getByText('payments'))
-      expect(screen.getByText('payments')).toBeInTheDocument()
+      await act(async () => {
+        await user.click(screen.getByText('payments'))
+      })
+      expect(screen.getByText('Payment Methods Settings')).toBeInTheDocument()
 
       // Test tax tab
-      await user.click(screen.getByText('taxReceipt'))
-      expect(screen.getByText('taxReceipt')).toBeInTheDocument()
+      await act(async () => {
+        await user.click(screen.getByText('taxReceipt'))
+      })
+      expect(screen.getByText('Tax Receipt Settings')).toBeInTheDocument()
 
       // Test notifications tab
-      await user.click(screen.getByText('notifications'))
-      expect(screen.getByText('notifications')).toBeInTheDocument()
+      await act(async () => {
+        await user.click(screen.getByText('notifications'))
+      })
+      expect(screen.getByText('Notifications Settings')).toBeInTheDocument()
 
       // Test backup tab
-      await user.click(screen.getByText('backup'))
-      expect(screen.getByText('backup')).toBeInTheDocument()
+      await act(async () => {
+        await user.click(screen.getByText('backup'))
+      })
+      expect(screen.getByText('Backup Settings')).toBeInTheDocument()
     })
 
     it('passes correct props to GeneralSettings component', () => {
@@ -365,7 +372,9 @@ describe('SettingsPage', () => {
       renderSettingsPage()
 
       const saveButton = screen.getByText('saveChanges')
-      await user.click(saveButton)
+      await act(async () => {
+        await user.click(saveButton)
+      })
 
       expect(mockSettings.saveSettings).toHaveBeenCalled()
     })
@@ -378,7 +387,9 @@ describe('SettingsPage', () => {
       mockSettings.saveSettings.mockReturnValue(true)
 
       const saveButton = screen.getByText('saveChanges')
-      await user.click(saveButton)
+      await act(async () => {
+        await user.click(saveButton)
+      })
 
       // Just verify the save function was called
       expect(mockSettings.saveSettings).toHaveBeenCalled()
@@ -392,7 +403,9 @@ describe('SettingsPage', () => {
       mockSettings.saveSettings.mockReturnValue(true)
 
       const saveButton = screen.getByText('saveChanges')
-      await user.click(saveButton)
+      await act(async () => {
+        await user.click(saveButton)
+      })
 
       // Verify the save function was called
       expect(mockSettings.saveSettings).toHaveBeenCalled()
@@ -406,7 +419,9 @@ describe('SettingsPage', () => {
       mockSettings.saveSettings.mockReturnValue(false)
 
       const saveButton = screen.getByText('saveChanges')
-      await user.click(saveButton)
+      await act(async () => {
+        await user.click(saveButton)
+      })
 
       // Should not show success message
       expect(screen.queryByText('settingsSavedSuccess')).not.toBeInTheDocument()
@@ -418,7 +433,9 @@ describe('SettingsPage', () => {
       const user = userEvent.setup()
       renderSettingsPage()
 
-      await user.click(screen.getByText('display'))
+      await act(async () => {
+        await user.click(screen.getByText('display'))
+      })
 
       expect(screen.getByText('Display Settings')).toBeInTheDocument()
     })
@@ -461,7 +478,9 @@ describe('SettingsPage', () => {
       renderSettingsPage()
 
       const displayTab = screen.getByText('display')
-      await user.click(displayTab)
+      await act(async () => {
+        await user.click(displayTab)
+      })
 
       expect(displayTab.closest('button')).toHaveFocus()
     })
@@ -472,27 +491,33 @@ describe('SettingsPage', () => {
       const user = userEvent.setup()
       renderSettingsPage()
 
-      await user.click(screen.getByText('categories'))
+      await act(async () => {
+        await user.click(screen.getByText('categories'))
+      })
 
-      expect(screen.getByText('categories')).toBeInTheDocument()
+      expect(screen.getByText('Category Settings')).toBeInTheDocument()
     })
 
     it('allows navigation to users tab', async () => {
       const user = userEvent.setup()
       renderSettingsPage()
 
-      await user.click(screen.getByText('userManagement'))
+      await act(async () => {
+        await user.click(screen.getByText('userManagement'))
+      })
 
-      expect(screen.getByText('userManagement')).toBeInTheDocument()
+      expect(screen.getByText('User Management Settings')).toBeInTheDocument()
     })
 
     it('allows navigation to archive tab', async () => {
       const user = userEvent.setup()
       renderSettingsPage()
 
-      await user.click(screen.getByText('archive'))
+      await act(async () => {
+        await user.click(screen.getByText('archive'))
+      })
 
-      expect(screen.getByText('archive')).toBeInTheDocument()
+      expect(screen.getByText('Archive Management Settings')).toBeInTheDocument()
     })
   })
 
@@ -501,10 +526,14 @@ describe('SettingsPage', () => {
       const user = userEvent.setup()
       renderSettingsPage()
 
-      await user.click(screen.getByText('display'))
+      await act(async () => {
+        await user.click(screen.getByText('display'))
+      })
       expect(screen.getByText('display').closest('button')).toHaveClass('bg-primary')
 
-      await user.click(screen.getByText('general'))
+      await act(async () => {
+        await user.click(screen.getByText('general'))
+      })
       expect(screen.getByText('general').closest('button')).toHaveClass('bg-primary')
     })
   })
@@ -520,7 +549,9 @@ describe('SettingsPage', () => {
       })
 
       const saveButton = screen.getByText('saveChanges')
-      await user.click(saveButton)
+      await act(async () => {
+        await user.click(saveButton)
+      })
 
       // Should not crash and should handle error gracefully
       expect(mockSettings.saveSettings).toHaveBeenCalled()
