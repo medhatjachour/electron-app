@@ -1,48 +1,58 @@
 /**
- * Sales IPC Handlers
- * Handles sale transactions, refunds, and sales history
+ * Sales IPC Handlers (Legacy - mostly deprecated)
+ * Most sales now handled via SaleTransaction system
+ * These handlers kept for backward compatibility only
  */
 
 import { ipcMain } from 'electron'
 
 export function registerSalesHandlers(prisma: any) {
+  // Legacy handler - use sale-transactions:create instead
   ipcMain.handle('sales:create', async (_, saleData) => {
     try {
+      console.warn('sales:create is deprecated - use sale-transactions:create instead')
       const { productId, variantId, userId, quantity, price, total, paymentMethod, customerName } = saleData
       
       if (prisma) {
-        // Use transaction to create sale and decrease stock atomically
-        // Optimized: Removed unnecessary includes to speed up transaction
+        // Redirect to new SaleTransaction system
         const result = await prisma.$transaction(async (tx: any) => {
-          // Create the sale (without includes for speed)
-          const sale = await tx.sale.create({
+          // Create sale transaction
+          const transaction = await tx.saleTransaction.create({
             data: {
-              productId,
-              variantId,
               userId,
-              quantity,
-              price,
+              customerId: null,
+              subtotal: price * quantity,
+              tax: 0,
+              discount: 0,
               total,
               paymentMethod,
-              customerName,
               status: 'completed'
+            }
+          })
+          
+          // Create sale item
+          await tx.saleItem.create({
+            data: {
+              transactionId: transaction.id,
+              productId,
+              variantId,
+              quantity,
+              price,
+              cost: 0,
+              total
             }
           })
           
           // Decrease stock
           if (variantId) {
-            // Decrease variant stock
             await tx.productVariant.update({
               where: { id: variantId },
               data: { stock: { decrement: quantity } }
             })
           }
-          // Note: Simple products (without variants) don't have stock tracking in schema
-          // They use variant.stock even if hasVariants=false
           
-          return sale
+          return transaction
         }, {
-          // Transaction-specific timeout (overrides global setting if needed)
           maxWait: 30000,
           timeout: 30000
         })
@@ -60,13 +70,18 @@ export function registerSalesHandlers(prisma: any) {
 
   ipcMain.handle('sales:getAll', async () => {
     try {
+      console.warn('sales:getAll is deprecated - use sale-transactions:getAll instead')
       if (prisma) {
-        const sales = await prisma.sale.findMany({
+        const transactions = await prisma.saleTransaction.findMany({
           include: {
-            product: {
-              select: {
-                name: true,
-                category: true
+            items: {
+              include: {
+                product: {
+                  select: {
+                    name: true,
+                    category: true
+                  }
+                }
               }
             },
             user: {
@@ -77,7 +92,7 @@ export function registerSalesHandlers(prisma: any) {
           },
           orderBy: { createdAt: 'desc' }
         })
-        return sales
+        return transactions
       }
       return []
     } catch (error) {
@@ -92,6 +107,7 @@ export function registerSalesHandlers(prisma: any) {
    */
   ipcMain.handle('sales:getByDateRange', async (_, options = {}) => {
     try {
+      console.warn('sales:getByDateRange is deprecated - use sale-transactions:getByDateRange instead')
       const { startDate, endDate } = options
       
       if (!prisma) return []
@@ -104,21 +120,29 @@ export function registerSalesHandlers(prisma: any) {
         if (endDate) where.createdAt.lte = new Date(endDate)
       }
 
-      const sales = await prisma.sale.findMany({
+      const transactions = await prisma.saleTransaction.findMany({
         where,
         select: {
           id: true,
           total: true,
-          quantity: true,
           createdAt: true,
           paymentMethod: true,
           status: true,
-          customerName: true
+          customer: {
+            select: {
+              name: true
+            }
+          },
+          items: {
+            select: {
+              quantity: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       })
 
-      return sales
+      return transactions
     } catch (error) {
       console.error('Error fetching sales by date range:', error)
       throw error
@@ -130,6 +154,7 @@ export function registerSalesHandlers(prisma: any) {
    */
   ipcMain.handle('sales:getStats', async (_, options = {}) => {
     try {
+      console.warn('sales:getStats is deprecated - use analytics:getOverallStats instead')
       if (!prisma) return null
 
       const { startDate, endDate } = options
@@ -142,13 +167,13 @@ export function registerSalesHandlers(prisma: any) {
       }
 
       const [totalSales, completedSales, refundedSales] = await Promise.all([
-        prisma.sale.count({ where }),
-        prisma.sale.count({ where: { ...where, status: 'completed' } }),
-        prisma.sale.count({ where: { ...where, status: 'refunded' } })
+        prisma.saleTransaction.count({ where }),
+        prisma.saleTransaction.count({ where: { ...where, status: 'completed' } }),
+        prisma.saleTransaction.count({ where: { ...where, status: 'refunded' } })
       ])
 
       // Get revenue using aggregation
-      const revenue = await prisma.sale.aggregate({
+      const revenue = await prisma.saleTransaction.aggregate({
         where: { ...where, status: 'completed' },
         _sum: { total: true }
       })
@@ -167,12 +192,17 @@ export function registerSalesHandlers(prisma: any) {
 
   ipcMain.handle('sales:refund', async (_, saleId) => {
     try {
+      console.warn('sales:refund is deprecated - use sale-transactions:refund instead')
       if (prisma) {
-        const sale = await prisma.sale.update({
+        const transaction = await prisma.saleTransaction.update({
           where: { id: saleId },
           data: { status: 'refunded' },
           include: {
-            product: true,
+            items: {
+              include: {
+                product: true
+              }
+            },
             user: {
               select: {
                 username: true

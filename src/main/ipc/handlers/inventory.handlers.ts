@@ -101,4 +101,56 @@ export function registerInventoryHandlers(prisma: any) {
       throw error
     }
   })
+
+  // Search products by barcode - FAST lookup for POS
+  ipcMain.handle('inventory:searchByBarcode', async (_, barcode: string) => {
+    try {
+      if (!barcode || typeof barcode !== 'string') {
+        return null
+      }
+
+      // Direct barcode lookup on ProductVariant
+      const variant = await prisma.productVariant.findUnique({
+        where: { barcode: barcode.trim() },
+        include: {
+          product: {
+            include: {
+              category: true,
+              images: true
+            }
+          }
+        }
+      })
+
+      if (!variant) {
+        return null
+      }
+
+      // Return formatted product with variant info
+      return {
+        id: variant.product.id,
+        name: variant.product.name,
+        baseSKU: variant.product.baseSKU,
+        category: variant.product.category,
+        price: variant.product.price,
+        cost: variant.product.cost,
+        hasVariants: variant.product.hasVariants,
+        selectedVariant: {
+          id: variant.id,
+          sku: variant.sku,
+          barcode: variant.barcode,
+          color: variant.color,
+          size: variant.size,
+          stock: variant.stock,
+          price: variant.price,
+          cost: variant.cost
+        },
+        variants: [variant], // Include the matched variant
+        images: variant.product.images
+      }
+    } catch (error) {
+      console.error('Error searching by barcode:', error)
+      return null
+    }
+  })
 }

@@ -430,7 +430,7 @@ export function registerSearchHandlers(prisma: any) {
 
       // Execute queries
       const [sales, totalCount] = await Promise.all([
-        prisma.sale.findMany({
+        prisma.saleTransaction.findMany({
           where,
           include: {
             user: {
@@ -439,11 +439,15 @@ export function registerSearchHandlers(prisma: any) {
                 username: true
               }
             },
-            product: {
-              select: {
-                id: true,
-                name: true,
-                baseSKU: true
+            items: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    baseSKU: true
+                  }
+                }
               }
             }
           },
@@ -451,7 +455,7 @@ export function registerSearchHandlers(prisma: any) {
           skip: (pagination.page - 1) * pagination.limit,
           take: pagination.limit
         }),
-        prisma.sale.count({ where })
+        prisma.saleTransaction.count({ where })
       ])
 
       const totalPages = Math.ceil(totalCount / pagination.limit)

@@ -573,7 +573,7 @@ export function registerProductsHandlers(prisma: any) {
       }
 
       // Check if product has any sales
-      const salesCount = await prisma.sale.count({
+      const salesCount = await prisma.saleItem.count({
         where: { productId: id }
       })
 

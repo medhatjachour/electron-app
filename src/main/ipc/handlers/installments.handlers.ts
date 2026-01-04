@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { InstallmentService } from '../../services/InstallmentService'
+import { InstallmentPlanService } from '../../services/InstallmentPlanService'
 
 export function registerInstallmentsHandlers(prisma: any) {
   const installmentService = new InstallmentService(prisma)
@@ -90,6 +91,87 @@ export function registerInstallmentsHandlers(prisma: any) {
       return { success: true, result }
     } catch (error) {
       console.error('Error linking installments to sale:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // ============================================================================
+  // INSTALLMENT PLAN HANDLERS
+  // ============================================================================
+
+  const planService = InstallmentPlanService.getInstance(prisma)
+
+  // Get all active installment plans
+  ipcMain.handle('installment-plans:getActive', async () => {
+    try {
+      const plans = await planService.getActivePlans()
+      return plans
+    } catch (error) {
+      console.error('Error getting active plans:', error)
+      return []
+    }
+  })
+
+  // Calculate payment schedule for a sale
+  ipcMain.handle('installment-plans:calculateSchedule', async (_, { saleTotal, planId, customDownPayment }) => {
+    try {
+      const schedule = await planService.calculateSchedule(saleTotal, planId, customDownPayment)
+      // Convert dates to ISO strings for serialization
+      const serializedSchedule = {
+        ...schedule,
+        installments: schedule.installments.map(inst => ({
+          amount: inst.amount,
+          dueDate: inst.dueDate.toISOString(),
+          paymentNumber: inst.paymentNumber
+        }))
+      }
+      return { success: true, schedule: serializedSchedule }
+    } catch (error) {
+      console.error('Error calculating schedule:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Create installments from a schedule
+  ipcMain.handle('installment-plans:createInstallmentsForSale', async (_, { saleId, customerId, schedule }) => {
+    try {
+      await planService.createInstallmentsForSale(saleId, customerId, schedule)
+      return { success: true }
+    } catch (error) {
+      console.error('Error creating installments for sale:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Seed default plans
+  ipcMain.handle('installment-plans:seedDefaults', async () => {
+    try {
+      await planService.seedDefaultPlans()
+      return { success: true }
+    } catch (error) {
+      console.error('Error seeding default plans:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Calculate late fees
+  ipcMain.handle('installments:calculateLateFees', async (_, { installmentId, dailyLateFeePercent }) => {
+    try {
+      const lateFee = await planService.calculateLateFees(installmentId, dailyLateFeePercent)
+      return { success: true, lateFee }
+    } catch (error) {
+      console.error('Error calculating late fees:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Mark overdue installments (batch operation)
+  ipcMain.handle('installments:markOverdueBatch', async () => {
+    try {
+      const count = await planService.markOverdueInstallments()
+      return { success: true, count }
+    } catch (error) {
+      console.error('Error marking overdue installments:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })

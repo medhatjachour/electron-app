@@ -4,6 +4,7 @@ import { PaymentPlan } from '../../../components/PaymentPlan'
 import DepositForm from './DepositForm'
 import InstallmentForm from './InstallmentForm'
 import CustomerSelect from './CustomerSelect'
+import InstallmentPlanSelector from './InstallmentPlanSelector'
 import type { Customer } from './types'
 
 interface PaymentFlowSelectorProps {
@@ -300,6 +301,50 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
                 <span className="font-medium text-orange-600 dark:text-orange-400">${total.toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          {/* Installment Plan Selector */}
+          <div className="mb-4">
+            <InstallmentPlanSelector
+              totalAmount={total}
+              onPlanSelect={async (planId, schedule) => {
+                console.log('📋 Plan selected:', { planId, schedule })
+                // Auto-create deposit and installments based on schedule
+                if (selectedCustomer && !saleId) {
+                  try {
+                    // Create deposit for down payment
+                    if (schedule.downPayment > 0) {
+                      await (window as any).api.deposits.create({
+                        customerId: selectedCustomer.id,
+                        amount: schedule.downPayment,
+                        method: 'cash',
+                        status: 'pending',
+                        date: new Date().toISOString()
+                      })
+                    }
+                    
+                    // Create installments
+                    for (const installment of schedule.installments) {
+                      await (window as any).api.installments.create({
+                        customerId: selectedCustomer.id,
+                        amount: installment.amount,
+                        dueDate: installment.dueDate,
+                        status: 'pending'
+                      })
+                    }
+                    
+                    // Refresh the payment plan display
+                    setRefreshTrigger(prev => prev + 1)
+                  } catch (error) {
+                    console.error('Failed to create payment schedule:', error)
+                  }
+                }
+              }}
+              onManualEntry={() => {
+                // Show manual entry form
+                setShowDepositForm(true)
+              }}
+            />
           </div>
 
           {/* Current Payment Plan - Expanded height */}

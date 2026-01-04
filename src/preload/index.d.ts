@@ -41,6 +41,7 @@ interface API {
     getLowStock: (threshold?: number) => Promise<any>
     getOutOfStock: () => Promise<any>
     search: (query: string) => Promise<any>
+    searchByBarcode: (barcode: string) => Promise<any>
     getStockHistory: (productId: string) => Promise<any>
     updateStock: (data: { variantId: string; stock: number }) => Promise<any>
   }
@@ -183,6 +184,28 @@ interface API {
       endDate?: string
       search?: string
     }) => Promise<any>
+    // Store Comparison & Analytics
+    compareStores: (options?: {
+      storeIds?: string[]
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getStoreMetrics: (options: {
+      storeId: string
+      storeName: string
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getTopStores: (options?: {
+      limit?: number
+      startDate?: string
+      endDate?: string
+    }) => Promise<any>
+    getStoreTrends: (options: {
+      storeId: string
+      interval?: 'day' | 'week' | 'month'
+      days?: number
+    }) => Promise<any>
   }
   stockMovements: {
     record: (data: {
@@ -254,6 +277,14 @@ interface API {
     markAsOverdue: (installmentId: string) => Promise<any>
     getUpcomingReminders: (days: number) => Promise<any>
     getOverdue: () => Promise<any>
+    calculateLateFees: (data: { installmentId: string; dailyLateFeePercent?: number }) => Promise<any>
+    markOverdueBatch: () => Promise<any>
+  }
+  installmentPlans: {
+    getActive: () => Promise<any>
+    calculateSchedule: (data: { saleTotal: number; planId: string; customDownPayment?: number }) => Promise<any>
+    createInstallmentsForSale: (data: { saleId: string; customerId: string | null; schedule: any }) => Promise<any>
+    seedDefaults: () => Promise<any>
   }
   receipts: {
     generateDeposit: (depositId: string) => Promise<any>

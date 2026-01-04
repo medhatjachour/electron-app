@@ -19,9 +19,6 @@ model User {
   phone                 String?
   isActive              Boolean                @default(true) // Can disable users without deleting
   lastLogin             DateTime?              // Track last login time
-  deactivatedAt         DateTime?              // When user was deactivated
-  deactivatedBy         String?                // User ID who deactivated this user
-  sales                 Sale[]                 // Old sales (backward compatibility)
   saleTransactions      SaleTransaction[]      // New transaction-based sales
   financialTransactions FinancialTransaction[] // Financial records
   stockMovements        StockMovement[]        // Inventory changes made by this user
@@ -66,7 +63,6 @@ model Product {
   store         Store?           @relation(fields: [storeId], references: [id])
   images        ProductImage[]
   variants      ProductVariant[]
-  sales         Sale[]           // Old sales (backward compatibility)
   saleItems     SaleItem[]       // New transaction-based sale items
   supplierProducts SupplierProduct[] // Supplier offerings for this product
   purchaseOrderItems PurchaseOrderItem[] // Purchase order items for this product
@@ -107,7 +103,9 @@ model ProductVariant {
   color          String?
   size           String?
   sku            String          @unique
+  barcode        String?         @unique // Barcode for scanning
   price          Float
+  cost           Float?          // Cost per unit (for profit calculations)
   stock          Int             @default(0)
   reorderPoint   Int             @default(10) // Alert when stock reaches this level
   lastRestocked  DateTime?       // Track last restock date
@@ -120,6 +118,7 @@ model ProductVariant {
   @@index([productId])
   @@index([stock])
   @@index([sku])
+  @@index([barcode])
   @@index([price])
   
   // Composite indexes for filtering and analytics
@@ -208,29 +207,6 @@ model SaleItem {
   @@index([transactionId, productId])
 }
 
-// Keep old Sale model for backward compatibility (will be migrated)
-model Sale {
-  id            String   @id @default(uuid())
-  productId     String
-  variantId     String?
-  userId        String
-  quantity      Int
-  price         Float
-  total         Float
-  paymentMethod String   @default("cash")
-  status        String   @default("completed")
-  customerName  String?
-  product       Product  @relation(fields: [productId], references: [id])
-  user          User     @relation(fields: [userId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([createdAt])
-  @@index([userId])
-  @@index([productId])
-  @@index([status])
-}
-
 // Financial Transaction (renamed from Transaction to avoid confusion)
 model FinancialTransaction {
   id          String   @id @default(uuid())
@@ -267,11 +243,11 @@ model Employee {
   email       String   @unique
   phone       String
   salary      Float    @default(0) // Monthly salary
-  performance Float    @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   @@index([salary])
+  @@index([name])
 }
 
 model Customer {
@@ -291,6 +267,7 @@ model Customer {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   
+  @@index([name])
   @@index([email])
   @@index([phone])
   @@index([loyaltyTier])
@@ -327,15 +304,63 @@ model Installment {
   note           String?
   customerId     String?
   saleId         String?
+  planId         String?          // Link to installment plan template
   customer       Customer?        @relation(fields: [customerId], references: [id])
   sale           SaleTransaction? @relation(fields: [saleId], references: [id])
+  plan           InstallmentPlan? @relation(fields: [planId], references: [id])
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   
   @@index([customerId])
   @@index([saleId])
+  @@index([planId])
   @@index([dueDate])
   @@index([status])
+}
+
+// Installment Plan: Templates for payment schedules
+model InstallmentPlan {
+  id                  String        @id @default(uuid())
+  name                String        // e.g., "3 Months", "6 Months", "12 Months"
+  downPaymentPercent  Float         @default(30) // Percentage of total for deposit (e.g., 30 = 30%)
+  numberOfPayments    Int           // How many installments after deposit
+  intervalDays        Int           @default(30) // Days between payments (e.g., 30 = monthly)
+  interestRate        Float         @default(0) // Annual interest rate percentage (e.g., 5 = 5%)
+  description         String?       // Description of the plan
+  isActive            Boolean       @default(true)
+  minAmount           Float         @default(0) // Minimum sale amount to use this plan
+  maxAmount           Float?        // Maximum sale amount for this plan
+  installments        Installment[] // Installments created from this plan
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@index([name])
+  @@index([isActive])
+}
+
+// Receipt Template: Customizable receipt layouts
+model ReceiptTemplate {
+  id             String   @id @default(uuid())
+  name           String   // e.g., "Default", "Thermal", "A4"
+  type           String   // "thermal", "a4", "letter"
+  storeId        String?  // Store-specific template (null = global)
+  headerHTML     String?  // Custom header HTML
+  footerHTML     String?  // Custom footer HTML
+  showLogo       Boolean  @default(true)
+  showQRCode     Boolean  @default(false)
+  showBarcode    Boolean  @default(false)
+  fontSize       Int      @default(12)
+  layout         String   @default("standard") // "standard", "compact", "detailed"
+  customFields   String?  // JSON string of custom fields to show
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([type])
+  @@index([storeId])
+  @@index([isDefault])
+  @@index([isActive])
 }
 
 model EmailReport {

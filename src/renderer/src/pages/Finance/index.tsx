@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { RefreshCcw, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Percent, Calendar, BarChart3, Waves, Sparkles, Activity, HelpCircle, Calculator } from 'lucide-react'
+import { RefreshCcw, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Percent, Calendar, BarChart3, Waves, Sparkles, Activity, HelpCircle, Calculator, CreditCard } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { Line, Doughnut } from 'react-chartjs-2'
@@ -36,6 +36,8 @@ import CashFlowProjection from './components/CashFlowProjection'
 import ProductInsights from './components/ProductInsights'
 import FinancialHealthDashboard from './components/FinancialHealth'
 import PricingCalculator from './components/PricingCalculator'
+import StoreComparisonSection from './components/StoreComparisonSection'
+import InstallmentPlansSection from './components/InstallmentPlansSection'
 
 // Register ChartJS components
 ChartJS.register(
@@ -90,7 +92,7 @@ type SalesByCategory = {
   revenue: number
 }
 
-type TabType = 'overview' | 'forecasting' | 'cashflow' | 'insights' | 'health' | 'pricing'
+type TabType = 'overview' | 'forecasting' | 'cashflow' | 'insights' | 'health' | 'pricing' | 'installments'
 
 export default function Finance() {
   const toast = useToast()
@@ -313,6 +315,13 @@ export default function Finance() {
             onClick={() => setActiveTab('pricing')}
             icon={<Calculator size={18} />}
             label={t('financePricing')}
+            badge="NEW"
+          />
+          <TabButton
+            active={activeTab === 'installments'}
+            onClick={() => setActiveTab('installments')}
+            icon={<CreditCard size={18} />}
+            label="Installments"
             badge="NEW"
           />
         </div>
@@ -771,6 +780,12 @@ export default function Finance() {
               </div>
             </div>
           )}
+
+          {/* Store Comparison Section - Bottom of Overview Tab */}
+          <StoreComparisonSection 
+            startDate={new Date(currentDates.start)}
+            endDate={new Date(currentDates.end)}
+          />
         </div>
       )}
 
@@ -779,6 +794,7 @@ export default function Finance() {
       {activeTab === 'insights' && <ProductInsights />}
       {activeTab === 'health' && <FinancialHealthDashboard />}
       {activeTab === 'pricing' && <PricingCalculator />}
+      {activeTab === 'installments' && <InstallmentPlansSection />}
     </div>
   )
 }

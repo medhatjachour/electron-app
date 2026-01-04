@@ -201,6 +201,17 @@ app.whenReady().then(async () => {
     console.log('[Main] Registering IPC handlers...')
     registerAllHandlers()
 
+    // Seed default installment plans
+    console.log('[Main] Seeding default installment plans...')
+    try {
+      const { InstallmentPlanService } = await import('./services/InstallmentPlanService')
+      const planService = InstallmentPlanService.getInstance(prisma)
+      await planService.seedDefaultPlans()
+      console.log('[Main] ✅ Installment plans initialized')
+    } catch (error) {
+      console.error('[Main] ⚠️  Failed to seed installment plans:', error)
+    }
+
     // Setup daily email reports cron job (runs at 11 PM every day)
     console.log('[Main] Setting up daily email reports cron job...')
     setupDailyEmailReports()

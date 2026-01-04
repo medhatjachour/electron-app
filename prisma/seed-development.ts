@@ -20,8 +20,8 @@ const THREE_YEARS_AGO = new Date(NOW.getTime() - 3 * 365 * 24 * 60 * 60 * 1000)
 // Configuration - Optimized for speed
 const CONFIG = {
   TOTAL_PRODUCTS: 50000,
-  TOTAL_SALES: 100000,
-  CUSTOMER_COUNT: 1000,
+  TOTAL_SALES: 250000, // Increased from 100k to 250k for better analytics
+  CUSTOMER_COUNT: 2000, // Increased from 1k to 2k
   // Use larger batches with transactions for much better performance
   PRODUCT_BATCH_SIZE: 500, // Products per transaction
   VARIANT_BATCH_SIZE: 1000, // Variants per transaction
@@ -101,7 +101,10 @@ async function main() {
   await prisma.productVariant.deleteMany()
   await prisma.saleItem.deleteMany()
   await prisma.saleTransaction.deleteMany()
-  await prisma.sale.deleteMany()
+  await prisma.installment.deleteMany()
+  await prisma.deposit.deleteMany()
+  await prisma.installmentPlan.deleteMany()
+  await prisma.receiptTemplate.deleteMany()
   await prisma.financialTransaction.deleteMany()
   await prisma.product.deleteMany()
   await prisma.employee.deleteMany()
@@ -203,8 +206,7 @@ async function main() {
         role: 'Store Manager', 
         email: 'john.manager@bizflow.com',
         phone: '+1-555-1001',
-        salary: 5000,
-        performance: 95
+        salary: 5000
       } 
     }),
     prisma.employee.create({ 
@@ -213,8 +215,7 @@ async function main() {
         role: 'Cashier', 
         email: 'sarah.cashier@bizflow.com',
         phone: '+1-555-1002',
-        salary: 2500,
-        performance: 88
+        salary: 2500
       } 
     }),
     prisma.employee.create({ 
@@ -223,8 +224,7 @@ async function main() {
         role: 'Stock Clerk', 
         email: 'mike.stock@bizflow.com',
         phone: '+1-555-1003',
-        salary: 2200,
-        performance: 82
+        salary: 2200
       } 
     }),
     prisma.employee.create({ 
@@ -233,8 +233,7 @@ async function main() {
         role: 'Sales Associate', 
         email: 'lisa.sales@bizflow.com',
         phone: '+1-555-2001',
-        salary: 2800,
-        performance: 91
+        salary: 2800
       } 
     }),
     prisma.employee.create({ 
@@ -243,8 +242,7 @@ async function main() {
         role: 'Assistant Manager', 
         email: 'tom.assistant@bizflow.com',
         phone: '+1-555-2002',
-        salary: 4000,
-        performance: 89
+        salary: 4000
       } 
     })
   ])
@@ -317,21 +315,30 @@ async function main() {
         const basePrice = randomPrice(5, 500)
         const baseCost = basePrice * (0.5 + Math.random() * 0.2) // 50-70% of price
         
-        // Generate variant data
+        // Generate variant data with barcodes
         const variantData = hasVariants ? 
-          Array.from({ length: randomInt(2, 5) }, (_, vIdx) => ({
-            color: COLORS[randomInt(0, COLORS.length - 1)],
-            size: SIZES[randomInt(0, SIZES.length - 1)],
-            sku: `${generateSKU(categoryName, productIndex + 1)}-V${vIdx + 1}`,
-            price: basePrice + randomPrice(-10, 20),
-            stock: randomInt(50, 200),
-            reorderPoint: randomInt(10, 30)
-          })) :
+          Array.from({ length: randomInt(2, 5) }, (_, vIdx) => {
+            const sku = `${generateSKU(categoryName, productIndex + 1)}-V${vIdx + 1}`
+            const variantPrice = basePrice + randomPrice(-10, 20)
+            const variantCost = variantPrice * (0.5 + Math.random() * 0.2) // 50-70% of variant price
+            return {
+              color: COLORS[randomInt(0, COLORS.length - 1)],
+              size: SIZES[randomInt(0, SIZES.length - 1)],
+              sku,
+              barcode: `BAR${sku.replace(/-/g, '')}`,
+              price: variantPrice,
+              cost: variantCost,
+              stock: randomInt(50, 200),
+              reorderPoint: randomInt(10, 30)
+            }
+          }) :
           [{
             color: 'Default',
             size: 'One Size',
             sku: generateSKU(categoryName, productIndex + 1),
+            barcode: `BAR${generateSKU(categoryName, productIndex + 1).replace(/-/g, '')}`,
             price: basePrice,
+            cost: baseCost,
             stock: randomInt(100, 500),
             reorderPoint: randomInt(20, 50)
           }]
@@ -447,13 +454,15 @@ async function main() {
         for (const variant of selectedVariants) {
           const quantity = randomInt(1, 2)
           const price = variant.price
-          const total = price * quantity
+          const finalPrice = price // No discount for seed data
+          const total = finalPrice * quantity
           
           items.push({
             productId: product.id,
             variantId: variant.id,
             quantity,
             price,
+            finalPrice,
             total
           })
           
@@ -522,46 +531,60 @@ async function main() {
   console.log(`📦 Creating stock movements for ${allSaleItems.length.toLocaleString()} sale items...`)
   
   let totalStockMovements = 0
-  const stockMovementBatchSize = 1000
+  const stockMovementBatchSize = 500  // Smaller batches to avoid transaction timeout
   
   for (let i = 0; i < allSaleItems.length; i += stockMovementBatchSize) {
     const batch = allSaleItems.slice(i, i + stockMovementBatchSize)
     
-    await prisma.$transaction(async (tx) => {
-      for (const item of batch) {
-        if (item.variantId) {
-          const variant = await tx.productVariant.findUnique({
-            where: { id: item.variantId }
+    // Batch create stock movements
+    const stockMovements = []
+    const variantUpdates = []
+    
+    for (const item of batch) {
+      if (item.variantId) {
+        const variant = await prisma.productVariant.findUnique({
+          where: { id: item.variantId }
+        })
+        
+        if (variant) {
+          const previousStock = variant.stock
+          const newStock = Math.max(0, previousStock - item.quantity)
+          
+          stockMovements.push({
+            variantId: item.variantId,
+            type: 'SALE',
+            quantity: -item.quantity,
+            previousStock,
+            newStock,
+            referenceId: item.transactionId,
+            userId: item.userId,
+            createdAt: item.createdAt
           })
           
-          if (variant) {
-            const previousStock = variant.stock
-            const newStock = Math.max(0, previousStock - item.quantity)
-            
-            await tx.stockMovement.create({
-              data: {
-                variantId: item.variantId,
-                type: 'SALE',
-                quantity: -item.quantity,
-                previousStock,
-                newStock,
-                referenceId: item.transactionId,
-                userId: item.userId,
-                createdAt: item.createdAt
-              }
-            })
-            
-            // Update variant stock
-            await tx.productVariant.update({
-              where: { id: item.variantId },
-              data: { stock: newStock }
-            })
-            
-            totalStockMovements++
-          }
+          variantUpdates.push({
+            id: item.variantId,
+            stock: newStock
+          })
+          
+          totalStockMovements++
         }
       }
-    })
+    }
+    
+    // Create stock movements in bulk
+    if (stockMovements.length > 0) {
+      await prisma.stockMovement.createMany({
+        data: stockMovements
+      })
+    }
+    
+    // Update variant stocks in bulk
+    for (const update of variantUpdates) {
+      await prisma.productVariant.update({
+        where: { id: update.id },
+        data: { stock: update.stock }
+      })
+    }
     
     if ((i + stockMovementBatchSize) % 10000 === 0 || (i + stockMovementBatchSize) >= allSaleItems.length) {
       const percent = (Math.min(i + stockMovementBatchSize, allSaleItems.length) / allSaleItems.length * 100).toFixed(1)
@@ -926,6 +949,59 @@ async function main() {
   
   console.log(`✅ Created ${financialTransactionCount} financial transactions\n`)
 
+  // ==================== INSTALLMENT PLANS ====================
+  console.log('💳 Creating installment plans...')
+  const installmentPlans = await prisma.installmentPlan.createMany({
+    data: [
+      {
+        name: '3-Month Plan',
+        downPaymentPercent: 30,
+        numberOfPayments: 3,
+        intervalDays: 30,
+        interestRate: 5,
+        description: '30% down payment, 3 monthly installments with 5% interest',
+        isActive: true
+      },
+      {
+        name: '6-Month Plan',
+        downPaymentPercent: 20,
+        numberOfPayments: 6,
+        intervalDays: 30,
+        interestRate: 8,
+        description: '20% down payment, 6 monthly installments with 8% interest',
+        isActive: true
+      },
+      {
+        name: '12-Month Plan',
+        downPaymentPercent: 10,
+        numberOfPayments: 12,
+        intervalDays: 30,
+        interestRate: 12,
+        description: '10% down payment, 12 monthly installments with 12% interest',
+        isActive: true
+      },
+      {
+        name: 'Weekly 4-Week Plan',
+        downPaymentPercent: 25,
+        numberOfPayments: 4,
+        intervalDays: 7,
+        interestRate: 2,
+        description: '25% down payment, 4 weekly installments with 2% interest',
+        isActive: true
+      },
+      {
+        name: 'No Interest 3-Month',
+        downPaymentPercent: 50,
+        numberOfPayments: 3,
+        intervalDays: 30,
+        interestRate: 0,
+        description: '50% down payment, 3 monthly installments with no interest',
+        isActive: true
+      }
+    ]
+  })
+  console.log(`✅ Created ${installmentPlans.count} installment plans\n`)
+
   // ==================== SUMMARY ====================
   const endTime = Date.now()
   const duration = ((endTime - startTime) / 1000).toFixed(2)
@@ -943,6 +1019,7 @@ async function main() {
   console.log(`   • ${totalStockMovements.toLocaleString()} sale-related stock movements`)
   console.log(`   • ${additionalStockMovements.toLocaleString()} additional stock movements`)
   console.log(`   • ${financialTransactionCount} financial transactions`)
+  console.log(`   • ${installmentPlans.count} installment plans`)
   console.log(`\n⏱️  Completed in ${duration}s`)
   console.log('\n🔐 Login Credentials:')
   console.log('   Setup: setup / setup123')
