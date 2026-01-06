@@ -312,7 +312,14 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
                 // Auto-create deposit and installments based on schedule
                 if (selectedCustomer && !saleId) {
                   try {
-                    // Create deposit for down payment
+                    // FIRST: Clean up any existing unlinked deposits/installments for this customer
+                    console.log('🧹 Cleaning up old unlinked payments before creating new plan...')
+                    await Promise.all([
+                      (window as any).api.delete.cleanupUnlinkedDeposits(selectedCustomer.id),
+                      (window as any).api.delete.cleanupUnlinkedInstallments(selectedCustomer.id)
+                    ])
+                    
+                    // THEN: Create deposit for down payment
                     if (schedule.downPayment > 0) {
                       await (window as any).api.deposits.create({
                         customerId: selectedCustomer.id,

@@ -8,11 +8,12 @@ import type { InventoryFilters } from '../types'
 
 interface Props {
   categories: string[]
+  stores?: Array<{ id: string; name: string }>
   filters: InventoryFilters
   onFiltersChange: (filters: InventoryFilters) => void
 }
 
-export default function InventoryFilters({ categories, filters, onFiltersChange }: Props) {
+export default function InventoryFilters({ categories, stores, filters, onFiltersChange }: Props) {
   const updateFilter = (key: keyof InventoryFilters, value: any) => {
     onFiltersChange({ ...filters, [key]: value })
   }
@@ -22,6 +23,7 @@ export default function InventoryFilters({ categories, filters, onFiltersChange 
       search: '',
       categories: [],
       stockStatus: [],
+      storeId: undefined,
       priceRange: { min: 0, max: Infinity },
       stockRange: { min: 0, max: Infinity }
     })
@@ -30,6 +32,7 @@ export default function InventoryFilters({ categories, filters, onFiltersChange 
   const hasActiveFilters = 
     filters.categories.length > 0 ||
     filters.stockStatus.length > 0 ||
+    filters.storeId ||
     filters.priceRange.min > 0 ||
     filters.priceRange.max < Infinity ||
     filters.stockRange.min > 0 ||
@@ -70,6 +73,28 @@ export default function InventoryFilters({ categories, filters, onFiltersChange 
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
           </div>
         </div>
+
+        {/* Store Dropdown */}
+        {stores && stores.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
+              Store
+            </label>
+            <div className="relative">
+              <select
+                value={filters.storeId || ''}
+                onChange={(e) => updateFilter('storeId', e.target.value || undefined)}
+                className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
+              >
+                <option value="">All Stores</option>
+                {stores.map(store => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            </div>
+          </div>
+        )}
 
         {/* Stock Status Dropdown - Single Select */}
         <div>

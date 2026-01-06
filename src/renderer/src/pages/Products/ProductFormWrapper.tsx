@@ -583,12 +583,14 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         basePrice: formData.basePrice,
         baseCost: formData.baseCost,
         hasVariants: formData.hasVariants,
+        storeId: formData.storeId || undefined, // Include storeId
         images: formData.images,
         variants: formData.hasVariants ? formData.variants.map(v => ({
           color: v.color,
           size: v.size,
           sku: v.sku,
           price: v.price,
+          cost: v.price * 0.6, // Default cost as 60% of price if not specified
           stock: v.stock
         })) : [],
         baseStock: formData.baseStock

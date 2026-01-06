@@ -85,6 +85,7 @@ export default function InventoryPage() {
     search: '',
     categories: [],
     stockStatus: [],
+    storeId: undefined,
     priceRange: { min: 0, max: Infinity },
     stockRange: { min: 0, max: Infinity }
   })
@@ -102,9 +103,10 @@ export default function InventoryPage() {
   const searchFilters = useMemo(() => ({
     query: debouncedSearch,
     categoryIds: filters.categories,
+    storeId: filters.storeId,
     stockStatus: filters.stockStatus.length > 0 ? filters.stockStatus as any : undefined,
     priceRange: filters.priceRange.min > 0 || filters.priceRange.max < Infinity ? filters.priceRange : undefined
-  }), [debouncedSearch, filters.categories, filters.stockStatus, filters.priceRange])
+  }), [debouncedSearch, filters.categories, filters.storeId, filters.stockStatus, filters.priceRange])
 
   // Memoize sort options
   const searchSort = useMemo(() => ({
@@ -500,6 +502,7 @@ export default function InventoryPage() {
               <section id="inventory-filters" aria-label="Inventory filters">
                 <InventoryFilters
                   categories={categories}
+                  stores={filterMetadata?.stores}
                   filters={filters}
                   onFiltersChange={handleFiltersChange}
                 />
