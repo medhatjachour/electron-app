@@ -11,7 +11,7 @@ export function registerSalesHandlers(prisma: any) {
   ipcMain.handle('sales:create', async (_, saleData) => {
     try {
       console.warn('sales:create is deprecated - use sale-transactions:create instead')
-      const { productId, variantId, userId, quantity, price, total, paymentMethod, customerName } = saleData
+      const { productId, variantId, userId, quantity, price, total, paymentMethod } = saleData
       
       if (prisma) {
         // Redirect to new SaleTransaction system
@@ -200,7 +200,8 @@ export function registerSalesHandlers(prisma: any) {
           include: {
             items: {
               include: {
-                product: true
+                product: true,
+                variant: true
               }
             },
             user: {
@@ -211,41 +212,43 @@ export function registerSalesHandlers(prisma: any) {
           }
         })
 
-        // Restore stock and record stock movement
-        if (sale.variantId) {
-          // Get current stock before update
-          const variant = await prisma.productVariant.findUnique({
-            where: { id: sale.variantId }
-          })
-          
-          if (variant) {
-            const previousStock = variant.stock
-            const newStock = previousStock + sale.quantity
-            
-            // Update stock
-            await prisma.productVariant.update({
-              where: { id: sale.variantId },
-              data: { stock: newStock }
+        // Restore stock and record stock movement for each item
+        for (const item of transaction.items) {
+          if (item.variantId) {
+            // Get current stock before update
+            const variant = await prisma.productVariant.findUnique({
+              where: { id: item.variantId }
             })
             
-            // Record stock movement as RETURN
-            await prisma.stockMovement.create({
-              data: {
-                variantId: sale.variantId,
-                type: 'RETURN',
-                quantity: sale.quantity, // Positive for returns
-                previousStock,
-                newStock,
-                referenceId: saleId,
-                userId: sale.userId,
-                reason: 'Refund/Return',
-                notes: `Refund of sale ${saleId}`
-              }
-            })
+            if (variant) {
+              const previousStock = variant.stock
+              const newStock = previousStock + item.quantity
+              
+              // Update stock
+              await prisma.productVariant.update({
+                where: { id: item.variantId },
+                data: { stock: newStock }
+              })
+              
+              // Record stock movement as RETURN
+              await prisma.stockMovement.create({
+                data: {
+                  variantId: item.variantId,
+                  type: 'RETURN',
+                  quantity: item.quantity, // Positive for returns
+                  previousStock,
+                  newStock,
+                  referenceId: saleId,
+                  userId: transaction.userId,
+                  reason: 'Refund/Return',
+                  notes: `Refund of sale ${saleId}`
+                }
+              })
+            }
           }
         }
 
-        return { success: true, sale }
+        return { success: true, transaction }
       }
       return { success: false, message: 'Database not available' }
     } catch (error) {

@@ -83,7 +83,7 @@ export class InstallmentPlanService {
       const installmentAmount = totalWithInterest / plan.numberOfPayments
 
       // Generate due dates
-      const installments = []
+      const installments: Array<{ amount: number; dueDate: Date; paymentNumber: number }> = []
       const startDate = new Date()
 
       for (let i = 0; i < plan.numberOfPayments; i++) {

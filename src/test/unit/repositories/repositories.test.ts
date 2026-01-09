@@ -29,6 +29,9 @@ const mockPrisma = {
   sale: {
     count: vi.fn()
   },
+  saleItem: {
+    count: vi.fn()
+  },
   purchaseOrder: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
@@ -372,7 +375,7 @@ describe('Repository Tests', () => {
 
     describe('delete', () => {
       it('should delete product successfully', async () => {
-        mockPrisma.sale.count.mockResolvedValue(0) // No sales
+        mockPrisma.saleItem.count.mockResolvedValue(0) // No sales
         mockPrisma.product.delete.mockResolvedValue(mockProduct)
 
         const result = await productRepo.delete('prod-1')
@@ -382,13 +385,13 @@ describe('Repository Tests', () => {
       })
 
       it('should throw error when product has sales', async () => {
-        mockPrisma.sale.count.mockResolvedValue(5) // Has sales
+        mockPrisma.saleItem.count.mockResolvedValue(5) // Has sales
 
         await expect(productRepo.delete('prod-1')).rejects.toThrow('Cannot delete product with 5 sales')
       })
 
       it('should throw error when product not found', async () => {
-        mockPrisma.sale.count.mockResolvedValue(0)
+        mockPrisma.saleItem.count.mockResolvedValue(0)
         const error = new Error('Product not found')
         ;(error as any).code = 'P2025'
         mockPrisma.product.delete.mockRejectedValue(error)

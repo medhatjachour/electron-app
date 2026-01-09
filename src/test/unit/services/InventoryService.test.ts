@@ -15,6 +15,9 @@ const mockPrisma = {
   sale: {
     findMany: vi.fn()
   },
+  stockMovement: {
+    findMany: vi.fn()
+  },
   $queryRaw: vi.fn()
 } as unknown as PrismaClient
 
@@ -349,42 +352,49 @@ describe('InventoryService', () => {
   })
 
   describe('getStockMovementHistory', () => {
-    const mockSales = [
+    const mockStockMovements = [
       {
-        id: 's1',
-        productId: 'p1',
+        id: 'sm1',
         variantId: 'v1',
-        quantity: 2,
+        type: 'SALE',
+        quantity: -2,
+        previousStock: 10,
+        newStock: 8,
         createdAt: new Date('2024-01-01'),
         userId: 'u1',
-        user: { username: 'testuser' }
+        notes: 'Sale transaction',
+        user: { username: 'testuser' },
+        productVariant: {
+          id: 'v1',
+          productId: 'p1'
+        }
       }
     ]
 
     it('should return stock movements from sales', async () => {
-      mockPrisma.sale.findMany.mockResolvedValue(mockSales)
+      mockPrisma.stockMovement.findMany.mockResolvedValue(mockStockMovements)
 
       const result = await inventoryService.getStockMovementHistory('p1')
 
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
-        id: 's1',
+        id: 'sm1',
         productId: 'p1',
         variantId: 'v1',
-        quantity: -2, // Negative for sales
-        type: 'sale',
-        timestamp: mockSales[0].createdAt,
+        quantity: -2,
+        type: 'SALE',
+        timestamp: mockStockMovements[0].createdAt,
         userId: 'u1',
-        notes: 'Sold by testuser'
+        notes: 'Sale transaction'
       })
     })
 
     it('should limit results to 50', async () => {
-      mockPrisma.sale.findMany.mockResolvedValue([])
+      mockPrisma.stockMovement.findMany.mockResolvedValue([])
 
       await inventoryService.getStockMovementHistory('p1')
 
-      expect(mockPrisma.sale.findMany).toHaveBeenCalledWith(
+      expect(mockPrisma.stockMovement.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           take: 50
         })

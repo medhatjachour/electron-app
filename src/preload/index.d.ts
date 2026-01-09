@@ -281,7 +281,11 @@ interface API {
     markOverdueBatch: () => Promise<any>
   }
   installmentPlans: {
+    getAll: () => Promise<any>
     getActive: () => Promise<any>
+    create: (data: any) => Promise<any>
+    update: (data: { id: string; data: any }) => Promise<any>
+    delete: (id: string) => Promise<any>
     calculateSchedule: (data: { saleTotal: number; planId: string; customDownPayment?: number }) => Promise<any>
     createInstallmentsForSale: (data: { saleId: string; customerId: string | null; schedule: any }) => Promise<any>
     seedDefaults: () => Promise<any>

@@ -355,7 +355,11 @@ const api = {
   },
   // Installment Plans
   installmentPlans: {
+    getAll: () => ipcRenderer.invoke('installment-plans:getAll'),
     getActive: () => ipcRenderer.invoke('installment-plans:getActive'),
+    create: (data: any) => ipcRenderer.invoke('installment-plans:create', data),
+    update: (data: { id: string; data: any }) => ipcRenderer.invoke('installment-plans:update', data),
+    delete: (id: string) => ipcRenderer.invoke('installment-plans:delete', id),
     calculateSchedule: (data: { saleTotal: number; planId: string; customDownPayment?: number }) => 
       ipcRenderer.invoke('installment-plans:calculateSchedule', data),
     createInstallmentsForSale: (data: { saleId: string; customerId: string | null; schedule: any }) => 

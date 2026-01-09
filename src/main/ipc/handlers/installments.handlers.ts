@@ -101,6 +101,22 @@ export function registerInstallmentsHandlers(prisma: any) {
 
   const planService = InstallmentPlanService.getInstance(prisma)
 
+  // Get all installment plans
+  ipcMain.handle('installment-plans:getAll', async () => {
+    try {
+      const plans = await prisma.installmentPlan.findMany({
+        orderBy: [
+          { isActive: 'desc' },
+          { name: 'asc' }
+        ]
+      })
+      return plans
+    } catch (error) {
+      console.error('Error getting all plans:', error)
+      return []
+    }
+  })
+
   // Get all active installment plans
   ipcMain.handle('installment-plans:getActive', async () => {
     try {
@@ -109,6 +125,46 @@ export function registerInstallmentsHandlers(prisma: any) {
     } catch (error) {
       console.error('Error getting active plans:', error)
       return []
+    }
+  })
+
+  // Create a new installment plan
+  ipcMain.handle('installment-plans:create', async (_, planData) => {
+    try {
+      const plan = await prisma.installmentPlan.create({
+        data: planData
+      })
+      return { success: true, plan }
+    } catch (error) {
+      console.error('Error creating plan:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Update an installment plan
+  ipcMain.handle('installment-plans:update', async (_, { id, data }) => {
+    try {
+      const plan = await prisma.installmentPlan.update({
+        where: { id },
+        data
+      })
+      return { success: true, plan }
+    } catch (error) {
+      console.error('Error updating plan:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Delete an installment plan
+  ipcMain.handle('installment-plans:delete', async (_, id) => {
+    try {
+      await prisma.installmentPlan.delete({
+        where: { id }
+      })
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting plan:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 

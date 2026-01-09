@@ -4,8 +4,8 @@
  * Shows at bottom of Finance Overview tab
  */
 
-import React, { useEffect, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
+import { useEffect, useState } from 'react'
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
 import { Store, TrendingUp, DollarSign, ShoppingCart, Package } from 'lucide-react'
 
 interface StoreMetrics {
@@ -374,7 +374,8 @@ export default function StoreComparisonSection({ startDate, endDate }: StoreComp
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
                   labelStyle={{ color: '#f3f4f6' }}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: number | undefined, name: string | undefined) => {
+                    if (value === undefined || name === undefined) return ['', '']
                     const metric = name as ChartMetric
                     if (metric === 'transactions') return [value.toLocaleString(), getMetricLabel(metric)]
                     if (metric === 'profitMargin') return [`${value.toFixed(1)}%`, getMetricLabel(metric)]

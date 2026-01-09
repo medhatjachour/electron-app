@@ -3,8 +3,8 @@
  * Allows selecting an installment plan and previews the payment schedule
  */
 
-import React, { useEffect, useState } from 'react'
-import { Calendar, DollarSign, Percent, CheckCircle, Edit } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calendar, DollarSign, CheckCircle, Edit } from 'lucide-react'
 
 interface InstallmentPlan {
   id: string

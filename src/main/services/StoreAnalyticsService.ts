@@ -69,12 +69,6 @@ export class StoreAnalyticsService {
 
       const activeStores = stores.filter((s: any) => s.status === 'active')
 
-      // Build date filter for SQL
-      const dateFilter = this.buildDateFilter(startDate, endDate)
-      const dateParams = []
-      if (startDate) dateParams.push(startDate.getTime())
-      if (endDate) dateParams.push(endDate.getTime())
-
       // Parallel queries for each store metric
       const metricsPromises = activeStores.map(async (store: any) => {
         return this.getStoreMetrics(store.id, store.name, startDate, endDate)
@@ -128,7 +122,7 @@ export class StoreAnalyticsService {
           ${dateFilter}
       `
 
-      const salesParams = [storeId]
+      const salesParams: (string | number)[] = [storeId]
       if (startDate) salesParams.push(startDate.getTime())
       if (endDate) salesParams.push(endDate.getTime())
 
@@ -266,7 +260,7 @@ export class StoreAnalyticsService {
    * Build date filter SQL clause
    */
   private buildDateFilter(startDate?: Date, endDate?: Date): string {
-    const filters = []
+    const filters: string[] = []
     if (startDate) filters.push('AND st.createdAt >= ?')
     if (endDate) filters.push('AND st.createdAt <= ?')
     return filters.join(' ')

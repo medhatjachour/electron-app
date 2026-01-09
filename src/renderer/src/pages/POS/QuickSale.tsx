@@ -19,6 +19,7 @@ type ProductVariant = {
   color?: string
   size?: string
   sku: string
+  barcode?: string
   price: number
   stock: number
 }
@@ -175,9 +176,13 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       return
     }
 
+    // Instant search for barcode patterns (starts with BAR or is numeric)
+    const isBarcodePattern = searchQuery.startsWith('BAR') || /^\d+$/.test(searchQuery)
+    const debounceTime = isBarcodePattern ? 0 : 100 // Instant for barcodes, 100ms for text
+
     const timer = setTimeout(async () => {
       await performSearch(searchQuery)
-    }, 150) // Faster debounce for better UX
+    }, debounceTime)
 
     return () => clearTimeout(timer)
   }, [searchQuery])
@@ -192,12 +197,19 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
     
     setIsSearching(true)
     try {
-      // Backend search via IPC with correct structure
+      // Check if it's a barcode pattern
+      const isBarcodeQuery = trimmedQuery.startsWith('BAR') || /^\d{8,13}$/.test(trimmedQuery)
+      
+      // Backend search via IPC with barcode support
       const response = await (window as any).api['search:products']({
-        filters: { query: trimmedQuery },
-        pagination: { page: 1, limit: 20 },
+        filters: { 
+          query: trimmedQuery,
+          // Add barcode-specific search if pattern detected
+          barcode: isBarcodeQuery ? trimmedQuery : undefined
+        },
+        pagination: { page: 1, limit: isBarcodeQuery ? 5 : 30 }, // Optimized limits
         includeImages: false,
-        enrichData: true
+        enrichData: false // Disabled for speed - we only need basic product info
       })
       
       const results = response?.items || []
@@ -205,6 +217,13 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       setSearchResults(results)
       setShowDropdown(results.length > 0)
       setSelectedIndex(-1) // Reset selection
+      
+      // Auto-select first result if exact barcode match and only one result
+      if (isBarcodeQuery && results.length === 1) {
+        handleProductSelect(results[0])
+        setSearchQuery('')
+        setShowDropdown(false)
+      }
     } catch (error) {
       console.error('Search error:', error)
       setSearchResults([])
@@ -669,12 +688,21 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
             onKeyDown={handleSearchKeyDown}
             onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
             placeholder={t('searchProductsPlaceholder')}
-            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full pl-10 pr-24 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             autoComplete="off"
           />
           {isSearching && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
+            <div className="absolute right-14 top-1/2 -translate-y-1/2 z-10">
               <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          )}
+          {/* Barcode Indicator */}
+          {(searchQuery.startsWith('BAR') || /^\d{8,13}$/.test(searchQuery)) && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded text-xs font-medium text-primary">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
+              </svg>
+              Barcode
             </div>
           )}
           
@@ -818,7 +846,15 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{variant.sku}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">{variant.sku}</p>
+                                  {variant.barcode && (
+                                    <>
+                                      <span className="text-xs text-slate-400">•</span>
+                                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{variant.barcode}</p>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${

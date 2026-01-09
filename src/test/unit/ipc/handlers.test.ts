@@ -47,7 +47,8 @@ describe('IPC Handlers Registration', () => {
       category: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn(), findFirst: vi.fn() },
       store: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn() },
       sale: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn(), aggregate: vi.fn() },
-      saleTransaction: { findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+      saleTransaction: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), aggregate: vi.fn() },
+      saleItem: { findMany: vi.fn(), create: vi.fn(), count: vi.fn() },
       inventory: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn(), aggregate: vi.fn() },
       finance: { findMany: vi.fn(), create: vi.fn(), aggregate: vi.fn() },
       employee: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn() },
@@ -208,15 +209,19 @@ describe('IPC Handlers Registration', () => {
     it('should handle dashboard metrics', async () => {
       const { registerDashboardHandlers } = await import('../../../main/ipc/handlers/dashboard.handlers')
 
-      mockPrisma.sale.aggregate = vi.fn().mockResolvedValue({ _sum: { total: 15000 } })
+      mockPrisma.saleTransaction.aggregate.mockResolvedValue({ 
+        _sum: { total: 15000 }, 
+        _count: 10 
+      })
+      mockPrisma.$queryRaw.mockResolvedValue([{ profit: 5000 }])
 
       registerDashboardHandlers(mockPrisma)
       const metricsCall = (ipcMain.handle as any).mock.calls.find(call => call[0] === 'dashboard:getMetrics')
       const result = await metricsCall[1](null)
 
       expect(result.sales).toBe(15000)
-      expect(result.orders).toBe(0)
-      expect(result.profit).toBe(0)
+      expect(result.orders).toBe(10)
+      expect(result.profit).toBe(5000)
     })
   })
 

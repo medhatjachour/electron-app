@@ -3,7 +3,7 @@
  * Manage payment plans and installment schedules
  */
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Calendar, CreditCard, Plus, Edit, Trash2, CheckCircle, XCircle, Percent, Clock } from 'lucide-react'
 
 interface InstallmentPlan {
@@ -40,7 +40,7 @@ export default function InstallmentPlansSection() {
   const loadPlans = async () => {
     setLoading(true)
     try {
-      const allPlans = await window.api.installmentPlans.getActive()
+      const allPlans = await window.api.installmentPlans.getAll()
       setPlans(allPlans)
     } catch (err) {
       console.error('Error loading installment plans:', err)
@@ -124,13 +124,40 @@ export default function InstallmentPlansSection() {
                 
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setEditingPlan(plan)}
+                    onClick={() => {
+                      setEditingPlan(plan)
+                      setFormData({
+                        name: plan.name,
+                        downPaymentPercent: plan.downPaymentPercent,
+                        numberOfPayments: plan.numberOfPayments,
+                        intervalDays: plan.intervalDays,
+                        interestRate: plan.interestRate,
+                        isActive: plan.isActive
+                      })
+                      setShowCreateModal(true)
+                    }}
                     className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors"
                     title="Edit plan"
                   >
                     <Edit className="w-4 h-4 text-gray-400" />
                   </button>
                   <button
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete the "${plan.name}" plan?`)) {
+                        try {
+                          const result = await window.api.installmentPlans.delete(plan.id)
+                          if (result.success) {
+                            alert('Plan deleted successfully!')
+                            await loadPlans()
+                          } else {
+                            throw new Error(result.error || 'Failed to delete plan')
+                          }
+                        } catch (err) {
+                          console.error('Error deleting plan:', err)
+                          alert(`Failed to delete plan: ${err instanceof Error ? err.message : 'Unknown error'}`)
+                        }
+                      }
+                    }}
                     className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Delete plan"
                   >
@@ -340,14 +367,37 @@ export default function InstallmentPlansSection() {
               <button
                 onClick={async () => {
                   try {
-                    // Here you would call the API to create/update the plan
-                    console.log('Creating plan:', formData)
-                    alert('Plan creation API not yet implemented. Check console for data.')
+                    console.log('Creating plan:', JSON.stringify(formData, null, 2))
+                    
+                    if (editingPlan) {
+                      // Update existing plan
+                      const result = await window.api.installmentPlans.update({
+                        id: editingPlan.id,
+                        data: formData
+                      })
+                      
+                      if (result.success) {
+                        alert('Plan updated successfully!')
+                      } else {
+                        throw new Error(result.error || 'Failed to update plan')
+                      }
+                    } else {
+                      // Create new plan
+                      const result = await window.api.installmentPlans.create(formData)
+                      
+                      if (result.success) {
+                        alert('Plan created successfully!')
+                      } else {
+                        throw new Error(result.error || 'Failed to create plan')
+                      }
+                    }
+                    
                     setShowCreateModal(false)
+                    setEditingPlan(null)
                     await loadPlans()
                   } catch (err) {
-                    console.error('Error creating plan:', err)
-                    alert('Failed to create plan')
+                    console.error('Error creating/updating plan:', err)
+                    alert(`Failed to ${editingPlan ? 'update' : 'create'} plan: ${err instanceof Error ? err.message : 'Unknown error'}`)
                   }
                 }}
                 className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
