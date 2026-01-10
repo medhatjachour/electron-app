@@ -13,6 +13,7 @@ import AddCustomerModal from './AddCustomerModal'
 import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
 import { PaymentFlowSelector } from './PaymentFlowSelector'
 import type { Customer } from './types'
+import { BARCODE_PATTERNS, SEARCH_CONFIG } from '../../../../shared/constants'
 
 type ProductVariant = {
   id: string
@@ -176,9 +177,9 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       return
     }
 
-    // Instant search for barcode patterns (starts with BAR or is numeric)
-    const isBarcodePattern = searchQuery.startsWith('BAR') || /^\d+$/.test(searchQuery)
-    const debounceTime = isBarcodePattern ? 0 : 100 // Instant for barcodes, 100ms for text
+    // Instant search for barcode patterns
+    const isBarcodePattern = BARCODE_PATTERNS.isBarcode(searchQuery)
+    const debounceTime = isBarcodePattern ? SEARCH_CONFIG.BARCODE_DEBOUNCE : SEARCH_CONFIG.TEXT_DEBOUNCE
 
     const timer = setTimeout(async () => {
       await performSearch(searchQuery)
@@ -198,7 +199,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
     setIsSearching(true)
     try {
       // Check if it's a barcode pattern
-      const isBarcodeQuery = trimmedQuery.startsWith('BAR') || /^\d{8,13}$/.test(trimmedQuery)
+      const isBarcodeQuery = BARCODE_PATTERNS.isBarcode(trimmedQuery)
       
       // Backend search via IPC with barcode support
       const response = await (window as any).api['search:products']({
@@ -207,9 +208,12 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
           // Add barcode-specific search if pattern detected
           barcode: isBarcodeQuery ? trimmedQuery : undefined
         },
-        pagination: { page: 1, limit: isBarcodeQuery ? 5 : 30 }, // Optimized limits
+        pagination: { 
+          page: 1, 
+          limit: isBarcodeQuery ? SEARCH_CONFIG.BARCODE_RESULT_LIMIT : SEARCH_CONFIG.TEXT_RESULT_LIMIT 
+        },
         includeImages: false,
-        enrichData: false // Disabled for speed - we only need basic product info
+        enrichData: SEARCH_CONFIG.ENRICH_DATA_DEFAULT // Configurable via constant
       })
       
       const results = response?.items || []
@@ -697,7 +701,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
             </div>
           )}
           {/* Barcode Indicator */}
-          {(searchQuery.startsWith('BAR') || /^\d{8,13}$/.test(searchQuery)) && (
+          {BARCODE_PATTERNS.isBarcode(searchQuery) && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded text-xs font-medium text-primary">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />

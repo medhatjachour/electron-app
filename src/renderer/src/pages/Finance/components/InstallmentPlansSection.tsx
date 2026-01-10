@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { Calendar, CreditCard, Plus, Edit, Trash2, CheckCircle, XCircle, Percent, Clock } from 'lucide-react'
+import { useToast } from '../../../contexts/ToastContext'
 
 interface InstallmentPlan {
   id: string
@@ -18,10 +19,13 @@ interface InstallmentPlan {
 }
 
 export default function InstallmentPlansSection() {
+  const { success, error } = useToast()
   const [loading, setLoading] = useState(true)
   const [plans, setPlans] = useState<InstallmentPlan[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingPlan, setEditingPlan] = useState<InstallmentPlan | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletingPlan, setDeletingPlan] = useState<InstallmentPlan | null>(null)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -142,21 +146,9 @@ export default function InstallmentPlansSection() {
                     <Edit className="w-4 h-4 text-gray-400" />
                   </button>
                   <button
-                    onClick={async () => {
-                      if (confirm(`Are you sure you want to delete the "${plan.name}" plan?`)) {
-                        try {
-                          const result = await window.api.installmentPlans.delete(plan.id)
-                          if (result.success) {
-                            alert('Plan deleted successfully!')
-                            await loadPlans()
-                          } else {
-                            throw new Error(result.error || 'Failed to delete plan')
-                          }
-                        } catch (err) {
-                          console.error('Error deleting plan:', err)
-                          alert(`Failed to delete plan: ${err instanceof Error ? err.message : 'Unknown error'}`)
-                        }
-                      }
+                    onClick={() => {
+                      setDeletingPlan(plan)
+                      setShowDeleteConfirm(true)
                     }}
                     className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Delete plan"
@@ -403,6 +395,53 @@ export default function InstallmentPlansSection() {
                 className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 {editingPlan ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deletingPlan && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              Delete Installment Plan
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Are you sure you want to delete "<strong>{deletingPlan.name}</strong>"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false)
+                  setDeletingPlan(null)
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const result = await window.api.installmentPlans.delete(deletingPlan.id)
+                    if (result.success) {
+                      success('Plan deleted successfully!')
+                      await loadPlans()
+                    } else {
+                      throw new Error(result.error || 'Failed to delete plan')
+                    }
+                  } catch (err) {
+                    console.error('Error deleting plan:', err)
+                    error(`Failed to delete plan: ${err instanceof Error ? err.message : 'Unknown error'}`)
+                  } finally {
+                    setShowDeleteConfirm(false)
+                    setDeletingPlan(null)
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                Delete
               </button>
             </div>
           </div>

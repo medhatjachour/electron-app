@@ -95,8 +95,31 @@ export class StoreAnalyticsService {
   }
 
   /**
+   * Build date filter with parameterized query placeholders
+   * Returns both the filter string and number of parameters added
+   */
+  private buildDateFilter(startDate?: Date, endDate?: Date): { filter: string; paramCount: number } {
+    const conditions: string[] = []
+    let paramCount = 0
+
+    if (startDate) {
+      conditions.push('AND st.createdAt >= ?')
+      paramCount++
+    }
+    if (endDate) {
+      conditions.push('AND st.createdAt <= ?')
+      paramCount++
+    }
+
+    return {
+      filter: conditions.join(' '),
+      paramCount
+    }
+  }
+
+  /**
    * Get comprehensive metrics for a single store
-   * Uses raw SQL for optimal performance
+   * Uses raw SQL for optimal performance with parameterized queries
    */
   async getStoreMetrics(
     storeId: string,
@@ -105,7 +128,7 @@ export class StoreAnalyticsService {
     endDate?: Date
   ): Promise<StoreMetrics> {
     try {
-      const dateFilter = this.buildDateFilter(startDate, endDate)
+      const dateFilterInfo = this.buildDateFilter(startDate, endDate)
 
       // Query 1: Sales metrics (revenue, profit, transactions)
       const salesQuery = `
@@ -119,7 +142,7 @@ export class StoreAnalyticsService {
         LEFT JOIN ProductVariant pv ON si.variantId = pv.id
         WHERE st.status = 'completed'
           AND (p.storeId = ? OR p.storeId IS NULL)
-          ${dateFilter}
+          ${dateFilterInfo.filter}
       `
 
       const salesParams: (string | number)[] = [storeId]
@@ -254,16 +277,6 @@ export class StoreAnalyticsService {
       console.error('Error getting store trends:', error)
       return []
     }
-  }
-
-  /**
-   * Build date filter SQL clause
-   */
-  private buildDateFilter(startDate?: Date, endDate?: Date): string {
-    const filters: string[] = []
-    if (startDate) filters.push('AND st.createdAt >= ?')
-    if (endDate) filters.push('AND st.createdAt <= ?')
-    return filters.join(' ')
   }
 
   /**

@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../../hooks/useAuth'
 import { useLanguage } from '../../contexts/LanguageContext'
 import ProductForm from '../../components/ProductForm'
+import { PRODUCT_DEFAULTS } from '../../../../shared/constants'
 import StockMovementDialog from '../../components/StockMovementDialog'
 import type { Product } from './types'
 
@@ -590,7 +591,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           size: v.size,
           sku: v.sku,
           price: v.price,
-          cost: v.price * 0.6, // Default cost as 60% of price if not specified
+          cost: PRODUCT_DEFAULTS.calculateDefaultCost(v.price), // Default cost from constant
           stock: v.stock
         })) : [],
         baseStock: formData.baseStock
