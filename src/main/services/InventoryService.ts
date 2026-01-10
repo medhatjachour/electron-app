@@ -277,25 +277,30 @@ export class InventoryService {
    * Get stock movement history for a product
    */
   async getStockMovementHistory(productId: string): Promise<StockMovement[]> {
-    // Get sales as stock movements
-    const sales = await this.prisma.sale.findMany({
-      where: { productId },
+    // Get stock movements from StockMovement table (includes sales, restocks, adjustments)
+    const movements = await this.prisma.stockMovement.findMany({
+      where: { 
+        product: {
+          id: productId
+        }
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
-        user: { select: { username: true } }
+        user: { select: { username: true } },
+        productVariant: true
       }
     })
 
-    return sales.map(sale => ({
-      id: sale.id,
-      productId: sale.productId,
-      variantId: sale.variantId || undefined,
-      quantity: -sale.quantity, // Negative for sales
-      type: 'sale' as const,
-      timestamp: sale.createdAt,
-      userId: sale.userId,
-      notes: `Sold by ${sale.user.username}`
+    return movements.map(movement => ({
+      id: movement.id,
+      productId: movement.productVariant?.productId || productId,
+      variantId: movement.variantId || undefined,
+      quantity: movement.quantity,
+      type: movement.type,
+      timestamp: movement.createdAt,
+      userId: movement.userId,
+      notes: movement.notes || `${movement.type} by ${movement.user?.username || 'system'}`
     }))
   }
 

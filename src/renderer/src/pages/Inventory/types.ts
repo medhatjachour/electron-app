@@ -15,6 +15,7 @@ export interface InventoryFilters {
   search: string
   categories: string[]
   stockStatus: StockStatus[]
+  storeId?: string
   priceRange: { min: number; max: number }
   stockRange: { min: number; max: number }
 }

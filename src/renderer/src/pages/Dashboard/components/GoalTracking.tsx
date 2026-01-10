@@ -19,35 +19,61 @@ type Goal = {
 
 export default function GoalTracking() {
   const { t } = useLanguage()
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: '1',
-      name: t('monthlyRevenue'),
-      target: 50000,
-      current: 0,
-      period: 'monthly',
-      type: 'revenue',
-      goalTypeId: 'revenue'
-    },
-    {
-      id: '2',
-      name: t('weeklySales'),
-      target: 100,
-      current: 0,
-      period: 'weekly',
-      type: 'sales',
-      goalTypeId: 'sales'
-    },
-    {
-      id: '3',
-      name: t('newCustomers'),
-      target: 50,
-      current: 0,
-      period: 'monthly',
-      type: 'customers',
-      goalTypeId: 'new-customers'
+  
+  // Load goals from localStorage or use defaults
+  const loadInitialGoals = (): Goal[] => {
+    try {
+      const saved = localStorage.getItem('dashboard-goals')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        return Array.isArray(parsed) ? parsed : []
+      }
+    } catch (error) {
+      console.error('Error loading goals from localStorage:', error)
     }
-  ])
+    
+    // Return default goals if nothing saved
+    return [
+      {
+        id: '1',
+        name: t('monthlyRevenue'),
+        target: 50000,
+        current: 0,
+        period: 'monthly',
+        type: 'revenue',
+        goalTypeId: 'revenue'
+      },
+      {
+        id: '2',
+        name: t('weeklySales'),
+        target: 100,
+        current: 0,
+        period: 'weekly',
+        type: 'sales',
+        goalTypeId: 'sales'
+      },
+      {
+        id: '3',
+        name: t('newCustomers'),
+        target: 50,
+        current: 0,
+        period: 'monthly',
+        type: 'customers',
+        goalTypeId: 'new-customers'
+      }
+    ]
+  }
+  
+  const [goals, setGoals] = useState<Goal[]>(loadInitialGoals)
+  
+  // Save goals to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('dashboard-goals', JSON.stringify(goals))
+    } catch (error) {
+      console.error('Error saving goals to localStorage:', error)
+    }
+  }, [goals])
 
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -80,6 +106,32 @@ export default function GoalTracking() {
         endDate: endOfMonth.toISOString()
       })
 
+      // Get new customers count for the current period
+      let newCustomersCount = 0
+      try {
+        // @ts-ignore
+        const customersResponse = await window.api.customers.getAll({
+          limit: 10000, // Get all customers
+          searchTerm: ''
+        })
+        
+        if (customersResponse?.customers) {
+          // Count customers created in current month
+          newCustomersCount = customersResponse.customers.filter((customer: any) => {
+            const createdAt = new Date(customer.createdAt)
+            return createdAt >= startOfMonth && createdAt <= endOfMonth
+          }).length
+          
+          console.log('📊 Goal Tracking - New Customers:', {
+            total: customersResponse.customers.length,
+            newInPeriod: newCustomersCount,
+            period: { start: startOfMonth, end: endOfMonth }
+          })
+        }
+      } catch (error) {
+        console.error('Error loading customer data for goals:', error)
+      }
+
       if (financeData) {
         setGoals(prev => prev.map(goal => {
           if (goal.type === 'revenue') {
@@ -87,6 +139,9 @@ export default function GoalTracking() {
           }
           if (goal.type === 'sales') {
             return { ...goal, current: financeData.currentMetrics.transactions || 0 }
+          }
+          if (goal.type === 'customers') {
+            return { ...goal, current: newCustomersCount }
           }
           return goal
         }))

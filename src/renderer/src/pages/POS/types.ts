@@ -7,6 +7,7 @@ export type ProductVariant = {
   color?: string
   size?: string
   sku: string
+  barcode?: string
   price: number
   stock: number
 }

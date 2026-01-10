@@ -52,7 +52,7 @@ export default function QuickActions({ userRole }: Props) {
     {
       label: t('viewReports'),
       icon: BarChart3,
-      href: '/finance',
+      href: '/reports',
       color: 'emerald',
       roles: ['admin', 'manager', 'finance'],
     },

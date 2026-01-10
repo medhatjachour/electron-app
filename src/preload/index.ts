@@ -79,6 +79,7 @@ const api = {
     getLowStock: (threshold?: number) => ipcRenderer.invoke('inventory:getLowStock', threshold),
     getOutOfStock: () => ipcRenderer.invoke('inventory:getOutOfStock'),
     search: (query: string) => ipcRenderer.invoke('inventory:search', query),
+    searchByBarcode: (barcode: string) => ipcRenderer.invoke('inventory:searchByBarcode', barcode),
     getStockHistory: (productId: string) => ipcRenderer.invoke('inventory:getStockHistory', productId),
     updateStock: (data: { variantId: string; stock: number }) => 
       ipcRenderer.invoke('inventory:updateStock', data)
@@ -264,7 +265,29 @@ const api = {
       startDate?: string
       endDate?: string
       search?: string
-    }) => ipcRenderer.invoke('analytics:getAllStockMovements', options)
+    }) => ipcRenderer.invoke('analytics:getAllStockMovements', options),
+    // Store Comparison & Analytics
+    compareStores: (options?: {
+      storeIds?: string[]
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:compareStores', options),
+    getStoreMetrics: (options: {
+      storeId: string
+      storeName: string
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getStoreMetrics', options),
+    getTopStores: (options?: {
+      limit?: number
+      startDate?: string
+      endDate?: string
+    }) => ipcRenderer.invoke('analytics:getTopStores', options),
+    getStoreTrends: (options: {
+      storeId: string
+      interval?: 'day' | 'week' | 'month'
+      days?: number
+    }) => ipcRenderer.invoke('analytics:getStoreTrends', options)
   },
   // Stock Movement Management (New System)
   stockMovements: {
@@ -326,7 +349,22 @@ const api = {
     getOverdue: () => ipcRenderer.invoke('installments:getOverdue'),
     markAsPaid: (data: { installmentId: string; paidDate?: string }) => ipcRenderer.invoke('installments:markAsPaid', data),
     markAsOverdue: (installmentId: string) => ipcRenderer.invoke('installments:markAsOverdue', installmentId),
-    linkToSale: (data: { installmentIds: string[]; saleId: string }) => ipcRenderer.invoke('installments:linkToSale', data)
+    linkToSale: (data: { installmentIds: string[]; saleId: string }) => ipcRenderer.invoke('installments:linkToSale', data),
+    calculateLateFees: (data: { installmentId: string; dailyLateFeePercent?: number }) => ipcRenderer.invoke('installments:calculateLateFees', data),
+    markOverdueBatch: () => ipcRenderer.invoke('installments:markOverdueBatch')
+  },
+  // Installment Plans
+  installmentPlans: {
+    getAll: () => ipcRenderer.invoke('installment-plans:getAll'),
+    getActive: () => ipcRenderer.invoke('installment-plans:getActive'),
+    create: (data: any) => ipcRenderer.invoke('installment-plans:create', data),
+    update: (data: { id: string; data: any }) => ipcRenderer.invoke('installment-plans:update', data),
+    delete: (id: string) => ipcRenderer.invoke('installment-plans:delete', id),
+    calculateSchedule: (data: { saleTotal: number; planId: string; customDownPayment?: number }) => 
+      ipcRenderer.invoke('installment-plans:calculateSchedule', data),
+    createInstallmentsForSale: (data: { saleId: string; customerId: string | null; schedule: any }) => 
+      ipcRenderer.invoke('installment-plans:createInstallmentsForSale', data),
+    seedDefaults: () => ipcRenderer.invoke('installment-plans:seedDefaults')
   },
   // Receipt generation
   receipts: {

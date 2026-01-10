@@ -4,6 +4,7 @@ import { PaymentPlan } from '../../../components/PaymentPlan'
 import DepositForm from './DepositForm'
 import InstallmentForm from './InstallmentForm'
 import CustomerSelect from './CustomerSelect'
+import InstallmentPlanSelector from './InstallmentPlanSelector'
 import type { Customer } from './types'
 
 interface PaymentFlowSelectorProps {
@@ -46,6 +47,7 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
   const [showDepositForm, setShowDepositForm] = useState(false)
   const [showInstallmentForm, setShowInstallmentForm] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   // Clean up unlinked deposits and installments when customer changes
   useEffect(() => {
@@ -302,28 +304,84 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
             </div>
           </div>
 
+          {/* Installment Plan Selector */}
+          <div className="mb-4">
+            <InstallmentPlanSelector
+              totalAmount={total}
+              onPlanSelect={async (planId, schedule) => {
+                console.log('📋 Plan selected:', { planId, schedule })
+                setSelectedPlanId(planId) // Track selected plan
+                // Auto-create deposit and installments based on schedule
+                if (selectedCustomer && !saleId) {
+                  try {
+                    // FIRST: Clean up any existing unlinked deposits/installments for this customer
+                    console.log('🧹 Cleaning up old unlinked payments before creating new plan...')
+                    await Promise.all([
+                      (window as any).api.delete.cleanupUnlinkedDeposits(selectedCustomer.id),
+                      (window as any).api.delete.cleanupUnlinkedInstallments(selectedCustomer.id)
+                    ])
+                    
+                    // THEN: Create deposit for down payment
+                    if (schedule.downPayment > 0) {
+                      await (window as any).api.deposits.create({
+                        customerId: selectedCustomer.id,
+                        amount: schedule.downPayment,
+                        method: 'cash',
+                        status: 'pending',
+                        date: new Date().toISOString()
+                      })
+                    }
+                    
+                    // Create installments
+                    for (const installment of schedule.installments) {
+                      await (window as any).api.installments.create({
+                        customerId: selectedCustomer.id,
+                        amount: installment.amount,
+                        dueDate: installment.dueDate,
+                        status: 'pending'
+                      })
+                    }
+                    
+                    // Refresh the payment plan display
+                    setRefreshTrigger(prev => prev + 1)
+                  } catch (error) {
+                    console.error('Failed to create payment schedule:', error)
+                  }
+                }
+              }}
+              onManualEntry={() => {
+                // Show manual entry form and clear selected plan
+                setSelectedPlanId(null)
+                setShowDepositForm(true)
+              }}
+            />
+          </div>
+
           {/* Current Payment Plan - Expanded height */}
           <div className="space-y-3 flex-1 min-h-[400px]">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide">
                 Current Plan
               </h4>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setShowDepositForm(true)}
-                  className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
-                  title="Add Deposit"
-                >
-                  <DollarSign size={14} />
-                </button>
-                <button
-                  onClick={() => setShowInstallmentForm(true)}
-                  className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                  title="Add Installment"
-                >
-                  <Calendar size={14} />
-                </button>
-              </div>
+              {/* Only show manual add buttons when no plan is selected */}
+              {!selectedPlanId && (
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setShowDepositForm(true)}
+                    className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                    title="Add Deposit"
+                  >
+                    <DollarSign size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowInstallmentForm(true)}
+                    className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    title="Add Installment"
+                  >
+                    <Calendar size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 min-h-[300px] overflow-auto">

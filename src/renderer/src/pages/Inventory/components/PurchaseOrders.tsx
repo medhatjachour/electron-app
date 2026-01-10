@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit, Trash2, Package, DollarSign, Truck, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, DollarSign, Truck, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react'
 import { useToast } from '../../../contexts/ToastContext'
 import { ipc } from '../../../utils/ipc'
 import Button from '../../../components/ui/Button'
@@ -55,6 +55,7 @@ export default function PurchaseOrders() {
   const [products, setProducts] = useState<ProductResponseDTO[]>([])
   const [summary, setSummary] = useState<PurchaseOrderSummaryDTO | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dataError, setDataError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
 
@@ -90,6 +91,7 @@ export default function PurchaseOrders() {
   const loadData = async () => {
     try {
       setLoading(true)
+      setDataError(null)
       const [ordersResult, suppliersResult, productsResult, summaryResult] = await Promise.all([
         ipc.purchaseOrders.getAll(),
         ipc.suppliers.getAll(),
@@ -97,12 +99,35 @@ export default function PurchaseOrders() {
         ipc.purchaseOrders.getSummary()
       ])
 
-      setPurchaseOrders(ordersResult)
-      setSuppliers(suppliersResult.data || suppliersResult)
-      setProducts(productsResult.data || productsResult)
+      // Handle purchase orders
+      setPurchaseOrders(Array.isArray(ordersResult) ? ordersResult : [])
+      
+      // Handle suppliers - paginated response
+      if (suppliersResult?.success && suppliersResult.data?.data) {
+        setSuppliers(Array.isArray(suppliersResult.data.data) ? suppliersResult.data.data : [])
+      } else if (Array.isArray(suppliersResult)) {
+        setSuppliers(suppliersResult)
+      } else {
+        console.warn('Unexpected suppliers format:', suppliersResult)
+        setSuppliers([])
+      }
+      
+      // Handle products - paginated response
+      if (productsResult?.success && productsResult.data?.data) {
+        setProducts(Array.isArray(productsResult.data.data) ? productsResult.data.data : [])
+      } else if (Array.isArray(productsResult?.data)) {
+        setProducts(productsResult.data)
+      } else if (Array.isArray(productsResult)) {
+        setProducts(productsResult)
+      } else {
+        console.warn('Unexpected products format:', productsResult)
+        setProducts([])
+      }
+      
       setSummary(summaryResult)
     } catch (error) {
       console.error('Error loading purchase orders data:', error)
+      setDataError('Failed to load purchase orders data')
       showToast('error', 'Failed to load purchase orders data')
     } finally {
       setLoading(false)
@@ -322,6 +347,21 @@ export default function PurchaseOrders() {
         <div className="text-center">
           <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-slate-600 dark:text-slate-400">Loading Purchase Orders...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 dark:text-red-400 font-semibold mb-2">{dataError}</p>
+          <Button onClick={loadData} variant="primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
         </div>
       </div>
     )

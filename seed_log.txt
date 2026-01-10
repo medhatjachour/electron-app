@@ -1,0 +1,10 @@
+
+> bizflow@1.0.0 prisma:seed:dev
+> ts-node prisma/seed-development.ts
+
+🌱 Starting comprehensive development seed...
+📊 Target: 50,000 products, 250,000 sales
+
+✅ Configured SQLite for bulk operations
+
+🗑️ Clearing existing data...

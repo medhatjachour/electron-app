@@ -218,7 +218,7 @@ export class ProductRepository implements IRepository<ProductWithRelations> {
   async delete(id: string): Promise<boolean> {
     try {
       // Check if product has sales
-      const salesCount = await this.prisma.sale.count({
+      const salesCount = await this.prisma.saleItem.count({
         where: { productId: id }
       })
 

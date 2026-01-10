@@ -6,11 +6,13 @@
  * 2. Product Sales Analytics - Units sold, revenue, trends
  * 3. Time-based Analysis - Daily, monthly, yearly charts
  * 4. Stockout History - Track when products run out
+ * 5. Store Comparison - Multi-store analytics and comparison
  */
 
 import { ipcMain } from 'electron'
 import path from 'node:path'
 import { getDatabasePath } from '../../database/init'
+import { StoreAnalyticsService } from '../../services/StoreAnalyticsService'
 
 // Initialize Prisma client
 function initializePrisma() {
@@ -638,6 +640,125 @@ ipcMain.handle('analytics:getAllStockMovements', async (_, options?: {
     }))
   } catch (error) {
     console.error('❌ Error fetching all stock movements:', error)
+    throw error
+  }
+})
+
+// ============================================================================
+// STORE ANALYTICS & COMPARISON HANDLERS
+// ============================================================================
+
+/**
+ * Compare multiple stores - SQL-optimized
+ * Returns revenue, profit, transactions, inventory metrics per store
+ */
+ipcMain.handle('analytics:compareStores', async (_, options: {
+  storeIds?: string[]
+  startDate?: string
+  endDate?: string
+}) => {
+  try {
+    if (!prisma) {
+      console.error('❌ Prisma not initialized for store comparison')
+      return { stores: [], dateRange: { startDate: new Date(), endDate: new Date() } }
+    }
+
+    const storeAnalytics = StoreAnalyticsService.getInstance(prisma)
+    const { storeIds = [], startDate, endDate } = options
+
+    const start = startDate ? new Date(startDate) : undefined
+    const end = endDate ? new Date(endDate) : undefined
+
+    const comparison = await storeAnalytics.compareStores(storeIds, start, end)
+    
+    return comparison
+  } catch (error) {
+    console.error('❌ Error comparing stores:', error)
+    throw error
+  }
+})
+
+/**
+ * Get metrics for a single store
+ */
+ipcMain.handle('analytics:getStoreMetrics', async (_, options: {
+  storeId: string
+  storeName: string
+  startDate?: string
+  endDate?: string
+}) => {
+  try {
+    if (!prisma) {
+      console.error('❌ Prisma not initialized for store metrics')
+      return null
+    }
+
+    const storeAnalytics = StoreAnalyticsService.getInstance(prisma)
+    const { storeId, storeName, startDate, endDate } = options
+
+    const start = startDate ? new Date(startDate) : undefined
+    const end = endDate ? new Date(endDate) : undefined
+
+    const metrics = await storeAnalytics.getStoreMetrics(storeId, storeName, start, end)
+    
+    return metrics
+  } catch (error) {
+    console.error('❌ Error getting store metrics:', error)
+    throw error
+  }
+})
+
+/**
+ * Get top performing stores
+ */
+ipcMain.handle('analytics:getTopStores', async (_, options: {
+  limit?: number
+  startDate?: string
+  endDate?: string
+}) => {
+  try {
+    if (!prisma) {
+      console.error('❌ Prisma not initialized for top stores')
+      return []
+    }
+
+    const storeAnalytics = StoreAnalyticsService.getInstance(prisma)
+    const { limit = 10, startDate, endDate } = options
+
+    const start = startDate ? new Date(startDate) : undefined
+    const end = endDate ? new Date(endDate) : undefined
+
+    const topStores = await storeAnalytics.getTopStores(limit, start, end)
+    
+    return topStores
+  } catch (error) {
+    console.error('❌ Error getting top stores:', error)
+    throw error
+  }
+})
+
+/**
+ * Get store performance trends over time
+ */
+ipcMain.handle('analytics:getStoreTrends', async (_, options: {
+  storeId: string
+  interval?: 'day' | 'week' | 'month'
+  days?: number
+}) => {
+  try {
+    if (!prisma) {
+      console.error('❌ Prisma not initialized for store trends')
+      return []
+    }
+
+    const storeAnalytics = StoreAnalyticsService.getInstance(prisma)
+    const { storeId, interval = 'day', days = 30 } = options
+
+    const trends = await storeAnalytics.getStoreTrends(storeId, interval, days)
+    
+    return trends
+  } catch (error) {
+    console.error('❌ Error getting store trends:', error)
     throw error
   }
 })

@@ -30,6 +30,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [stockFilter, setStockFilter] = useState<'all' | 'in-stock' | 'low-stock'>('in-stock')
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 10000 })
   const [sortBy, setSortBy] = useState<SortOption>('name')
@@ -49,13 +50,14 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   const searchFilters = useMemo(() => ({
     query: debouncedSearchQuery,
     categoryIds: selectedCategoryIds,
+    storeId: selectedStoreId || undefined,
     stockStatus: stockFilter === 'all' ? undefined : 
                  stockFilter === 'in-stock' ? ['low', 'normal', 'high'] as any : 
                  ['low'] as any,
     priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
     colors: selectedColors.length > 0 ? selectedColors : undefined,
     sizes: selectedSizes.length > 0 ? selectedSizes : undefined
-  }), [debouncedSearchQuery, selectedCategoryIds, stockFilter, priceRange, selectedColors, selectedSizes])
+  }), [debouncedSearchQuery, selectedCategoryIds, selectedStoreId, stockFilter, priceRange, selectedColors, selectedSizes])
 
   // Memoize sort options - if no sort selected, default to newest first
   const sortOptions = useMemo(() => {
@@ -126,13 +128,14 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     setSelectedCategoryIds([])
     setSelectedColors([])
     setSelectedSizes([])
+    setSelectedStoreId('')
     setStockFilter('in-stock')
     setPriceRange({ min: 0, max: filterOptions.maxPrice })
     setSortBy('name')
   }
 
   const hasActiveFilters = selectedCategoryIds.length > 0 || selectedColors.length > 0 || 
-                          selectedSizes.length > 0 || stockFilter !== 'in-stock' || 
+                          selectedSizes.length > 0 || selectedStoreId || stockFilter !== 'in-stock' || 
                           priceRange.min > 0 || priceRange.max < filterOptions.maxPrice
 
   const handleAddToCart = (product: Product, variant?: ProductVariant) => {
@@ -256,6 +259,28 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {/* Store Filter */}
+              {filterMetadata?.stores && filterMetadata.stores.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                    {t('store')}
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedStoreId}
+                      onChange={(e) => setSelectedStoreId(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm hover:border-primary focus:ring-2 focus:ring-primary transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">{t('allStores')}</option>
+                      {filterMetadata.stores.map((store: any) => (
+                        <option key={store.id} value={store.id}>{store.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                  </div>
+                </div>
+              )}
+              
               {/* Color Filter */}
               {filterOptions.colors.length > 0 && (
                 <div>

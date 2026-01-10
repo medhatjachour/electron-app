@@ -22,6 +22,7 @@ import { getImageService } from '../../services/ImageService'
 
 interface SearchFilters {
   query?: string
+  barcode?: string
   categoryIds?: string[]
   stockStatus?: ('out' | 'low' | 'normal' | 'high')[]
   priceRange?: { min: number; max: number }
@@ -93,6 +94,7 @@ export function registerSearchHandlers(prisma: any) {
                 color: true,
                 size: true,
                 sku: true,
+                barcode: true,
                 price: true,
                 stock: true,
                 createdAt: true,
@@ -207,6 +209,7 @@ export function registerSearchHandlers(prisma: any) {
                 color: true,
                 size: true,
                 sku: true,
+                barcode: true,
                 price: true,
                 stock: true,
                 createdAt: true,
@@ -430,7 +433,7 @@ export function registerSearchHandlers(prisma: any) {
 
       // Execute queries
       const [sales, totalCount] = await Promise.all([
-        prisma.sale.findMany({
+        prisma.saleTransaction.findMany({
           where,
           include: {
             user: {
@@ -439,11 +442,15 @@ export function registerSearchHandlers(prisma: any) {
                 username: true
               }
             },
-            product: {
-              select: {
-                id: true,
-                name: true,
-                baseSKU: true
+            items: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    baseSKU: true
+                  }
+                }
               }
             }
           },
@@ -451,7 +458,7 @@ export function registerSearchHandlers(prisma: any) {
           skip: (pagination.page - 1) * pagination.limit,
           take: pagination.limit
         }),
-        prisma.sale.count({ where })
+        prisma.saleTransaction.count({ where })
       ])
 
       const totalPages = Math.ceil(totalCount / pagination.limit)
@@ -860,14 +867,27 @@ function buildWhereClause(filters: SearchFilters): any {
   }
   // If includeArchived is true, don't filter by isArchived at all (show both)
 
-  // Text search across multiple fields (OR within this group)
-  if (filters.query && filters.query.trim()) {
+  // Barcode search - prioritize exact match (fastest lookup)
+  if ((filters as any).barcode && (filters as any).barcode.trim()) {
+    const barcode = (filters as any).barcode.trim()
+    andConditions.push({
+      variants: {
+        some: {
+          barcode: { equals: barcode }
+        }
+      }
+    })
+  }
+  // Text search across multiple fields including barcode (OR within this group)
+  else if (filters.query && filters.query.trim()) {
     const query = filters.query.trim()
     andConditions.push({
       OR: [
         { name: { contains: query } },
         { baseSKU: { contains: query } },
-        { description: { contains: query } }
+        { description: { contains: query } },
+        // Include barcode in text search
+        { variants: { some: { barcode: { contains: query } } } }
       ]
     })
   }

@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../../hooks/useAuth'
 import { useLanguage } from '../../contexts/LanguageContext'
 import ProductForm from '../../components/ProductForm'
+import { PRODUCT_DEFAULTS } from '../../../../shared/constants'
 import StockMovementDialog from '../../components/StockMovementDialog'
 import type { Product } from './types'
 
@@ -583,12 +584,14 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         basePrice: formData.basePrice,
         baseCost: formData.baseCost,
         hasVariants: formData.hasVariants,
+        storeId: formData.storeId || undefined, // Include storeId
         images: formData.images,
         variants: formData.hasVariants ? formData.variants.map(v => ({
           color: v.color,
           size: v.size,
           sku: v.sku,
           price: v.price,
+          cost: PRODUCT_DEFAULTS.calculateDefaultCost(v.price), // Default cost from constant
           stock: v.stock
         })) : [],
         baseStock: formData.baseStock
