@@ -47,6 +47,7 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
   const [showDepositForm, setShowDepositForm] = useState(false)
   const [showInstallmentForm, setShowInstallmentForm] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   // Clean up unlinked deposits and installments when customer changes
   useEffect(() => {
@@ -309,6 +310,7 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
               totalAmount={total}
               onPlanSelect={async (planId, schedule) => {
                 console.log('📋 Plan selected:', { planId, schedule })
+                setSelectedPlanId(planId) // Track selected plan
                 // Auto-create deposit and installments based on schedule
                 if (selectedCustomer && !saleId) {
                   try {
@@ -348,7 +350,8 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
                 }
               }}
               onManualEntry={() => {
-                // Show manual entry form
+                // Show manual entry form and clear selected plan
+                setSelectedPlanId(null)
                 setShowDepositForm(true)
               }}
             />
@@ -360,22 +363,25 @@ export const PaymentFlowSelector: React.FC<PaymentFlowSelectorProps> = ({
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide">
                 Current Plan
               </h4>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setShowDepositForm(true)}
-                  className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
-                  title="Add Deposit"
-                >
-                  <DollarSign size={14} />
-                </button>
-                <button
-                  onClick={() => setShowInstallmentForm(true)}
-                  className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                  title="Add Installment"
-                >
-                  <Calendar size={14} />
-                </button>
-              </div>
+              {/* Only show manual add buttons when no plan is selected */}
+              {!selectedPlanId && (
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setShowDepositForm(true)}
+                    className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                    title="Add Deposit"
+                  >
+                    <DollarSign size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowInstallmentForm(true)}
+                    className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    title="Add Installment"
+                  >
+                    <Calendar size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 min-h-[300px] overflow-auto">
