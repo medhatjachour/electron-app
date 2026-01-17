@@ -31,6 +31,7 @@ import './backup.handlers' // Import backup handlers (self-contained, no registr
 import { setupReorderHandlers } from './reorder.handlers'
 import { registerSupplierHandlers } from './suppliers.handlers'
 import { setupPurchaseOrderHandlers } from './purchase-orders.handlers'
+import { registerReceiptHandlers as registerThermalReceiptHandlers } from './receipt.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
@@ -147,6 +148,9 @@ export function registerAllHandlers() {
   
   // Register supplier handlers
   registerSupplierHandlers(prisma)
+  
+  // Register thermal receipt/printer handlers
+  registerThermalReceiptHandlers()
   
   // Register purchase order handlers
   setupPurchaseOrderHandlers(prisma)

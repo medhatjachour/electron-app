@@ -42,7 +42,23 @@ export function useSettings() {
       allowDiscounts: localStorage.getItem('allowDiscounts') === 'true',
       maxDiscountPercentage: parseFloat(localStorage.getItem('maxDiscountPercentage') || '50'),
       maxDiscountAmount: parseFloat(localStorage.getItem('maxDiscountAmount') || '100'),
-      requireDiscountReason: true // Always require reason
+      requireDiscountReason: true, // Always require reason
+      // Store information for receipt
+      storeName: localStorage.getItem('receiptStoreName') || localStorage.getItem('storeName') || 'My Store',
+      storeAddress: localStorage.getItem('receiptStoreAddress') || localStorage.getItem('storeAddress') || '',
+      storePhone: localStorage.getItem('receiptStorePhone') || localStorage.getItem('storePhone') || '',
+      storeEmail: localStorage.getItem('receiptStoreEmail') || localStorage.getItem('storeEmail') || '',
+      taxNumber: localStorage.getItem('taxNumber') || '',
+      commercialRegister: localStorage.getItem('commercialRegister') || '',
+      // Printer settings
+      printerType: (localStorage.getItem('printerType') as 'none' | 'usb' | 'network' | 'html') || 'none',
+      printerName: localStorage.getItem('printerName') || '',
+      printerIP: localStorage.getItem('printerIP') || '',
+      paperWidth: (localStorage.getItem('paperWidth') as '58mm' | '80mm') || '80mm',
+      printLogo: localStorage.getItem('printLogo') === 'true',
+      printQRCode: localStorage.getItem('printQRCode') === 'true',
+      printBarcode: localStorage.getItem('printBarcode') === 'true',
+      openCashDrawer: localStorage.getItem('openCashDrawer') === 'true'
     }
   })
 
