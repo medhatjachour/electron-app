@@ -12,7 +12,6 @@ export interface PrinterSettings {
   printerIP?: string
   paperWidth: '58mm' | '80mm'
   receiptBottomSpacing?: number
-  receiptLanguage?: 'english' | 'arabic'
   printLogo?: boolean
   printQRCode?: boolean
   printBarcode?: boolean
@@ -57,9 +56,9 @@ export interface ReceiptData {
 
 export class ThermalPrinterService {
   /**
-   * Print to CUPS printer using lp command
+   * Print to CUPS printer using lp command with raw ESC/POS data
    */
-  private static async printToCUPS(printerName: string, data: string): Promise<void> {
+  private static async printToCUPS(printerName: string, data: string, settings: PrinterSettings): Promise<void> {
     const { exec } = require('child_process')
     const { promisify } = require('util')
     const execAsync = promisify(exec)
@@ -67,13 +66,39 @@ export class ThermalPrinterService {
     const path = require('path')
     const os = require('os')
 
-    // Create temp file with text data
-    const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.txt`)
-    await fs.writeFile(tempFile, data, 'utf8')
+    // Create temp file with ESC/POS commands + text data + cut command
+    const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.bin`)
+    
+    // ESC/POS initialization commands
+    const initCommand = Buffer.from([0x1B, 0x40]) // ESC @ - Initialize printer
+    
+    // Set left margin to 0 (GS L)
+    const leftMargin = Buffer.from([0x1D, 0x4C, 0x00, 0x00])
+    
+    // Set print area width based on paper width
+    // GS W - Set printing area width
+    // For 80mm paper: 576 dots (0x40, 0x02) at 203 DPI
+    // For 58mm paper: 384 dots (0x80, 0x01) at 203 DPI
+    let printWidth: Buffer
+    if (settings.paperWidth === '80mm') {
+      printWidth = Buffer.from([0x1D, 0x57, 0x40, 0x02]) // 576 dots for 80mm
+    } else {
+      printWidth = Buffer.from([0x1D, 0x57, 0x80, 0x01]) // 384 dots for 58mm
+    }
+    
+    const textBuffer = Buffer.from(data, 'utf8')
+    
+    // Add ESC/POS cut command: GS V 0 (Full cut)
+    const cutCommand = Buffer.from([0x1D, 0x56, 0x00])
+    
+    // Combine all commands
+    const fullBuffer = Buffer.concat([initCommand, leftMargin, printWidth, textBuffer, cutCommand])
+    
+    await fs.writeFile(tempFile, fullBuffer)
 
     try {
-      // Print using lp command
-      await execAsync(`lp -d ${printerName} "${tempFile}"`)
+      // Print using lp command with raw option for ESC/POS commands
+      await execAsync(`lp -d ${printerName} -o raw "${tempFile}"`)
     } finally {
       // Clean up temp file
       try {
@@ -85,9 +110,9 @@ export class ThermalPrinterService {
   }
 
   /**
-   * Format receipt as plain text in English (for thermal printers without Arabic support)
+   * Format receipt as plain text for thermal printing
    */
-  private static formatReceiptTextEnglish(data: ReceiptData, settings: PrinterSettings): string {
+  private static formatReceiptText(data: ReceiptData, settings: PrinterSettings): string {
     const width = settings.paperWidth === '80mm' ? 48 : 32
     const line = '='.repeat(width)
     const dashes = '-'.repeat(width)
@@ -123,12 +148,12 @@ export class ThermalPrinterService {
     
     // Items with discount calculation
     data.items.forEach(item => {
-      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
+      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue !== undefined && item.discountValue > 0
       
       let originalPrice = item.price
       let itemDiscount = 0
       
-      if (hasDiscount) {
+      if (hasDiscount && item.discountValue !== undefined) {
         if (item.discountType === 'PERCENTAGE') {
           originalPrice = item.price / (1 - item.discountValue / 100)
           itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
@@ -178,101 +203,6 @@ export class ThermalPrinterService {
     return text
   }
 
-  /**
-   * Format receipt as plain text with Arabic
-   * Note: Most thermal printers don't support Arabic characters properly
-   */
-  private static formatReceiptTextArabic(data: ReceiptData, settings: PrinterSettings): string {
-    const width = settings.paperWidth === '80mm' ? 48 : 32
-    const line = '='.repeat(width)
-    const dashes = '-'.repeat(width)
-    
-    let text = '\n'
-    
-    // Store name (centered)
-    text += data.storeName.toUpperCase() + '\n'
-    text += data.storeAddress + '\n'
-    text += `ت: ${data.storePhone}\n`
-    if (data.storeEmail) text += data.storeEmail + '\n'
-    text += '\n'
-    
-    // Tax info
-    text += dashes + '\n'
-    text += `الرقم الضريبي: ${data.taxNumber}\n`
-    if (data.commercialRegister) text += `س.ت: ${data.commercialRegister}\n`
-    text += dashes + '\n'
-    text += '\n'
-    
-    // Receipt info
-    text += `رقم الفاتورة: ${data.receiptNumber}\n`
-    text += `التاريخ: ${data.date.toLocaleString('ar-EG', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })}\n`
-    if (data.customerName) text += `العميل: ${data.customerName}\n`
-    text += dashes + '\n'
-    
-    // Items with discount calculation
-    data.items.forEach(item => {
-      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
-      
-      let originalPrice = item.price
-      let itemDiscount = 0
-      
-      if (hasDiscount) {
-        if (item.discountType === 'PERCENTAGE') {
-          originalPrice = item.price / (1 - item.discountValue / 100)
-          itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
-        } else {
-          originalPrice = item.price + (item.discountValue / item.quantity)
-          itemDiscount = item.discountValue
-        }
-      }
-      
-      const originalTotal = originalPrice * item.quantity
-      const finalTotal = item.price * item.quantity
-      
-      // Item details
-      text += item.name + '\n'
-      text += `${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} ج.م\n`
-      
-      if (hasDiscount) {
-        const discountLabel = item.discountType === 'PERCENTAGE' 
-          ? `خصم ${item.discountValue}%` 
-          : 'خصم ثابت'
-        text += `${discountLabel}: -${itemDiscount.toFixed(2)} ج.م\n`
-        text += `بعد الخصم: ${finalTotal.toFixed(2)} ج.م\n`
-      }
-      
-      text += dashes + '\n'
-    })
-    
-    // Totals
-    text += '\n'
-    text += `الإجمالي الفرعي: ${data.subtotal.toFixed(2)} ج.م\n`
-    text += `ض.ق.م (${data.taxRate}%): ${data.tax.toFixed(2)} ج.م\n`
-    text += line + '\n'
-    text += `الإجمالي: ${data.total.toFixed(2)} ج.م\n`
-    text += line + '\n'
-    text += '\n'
-    
-    // Payment
-    text += `طريقة الدفع: ${data.paymentMethod}\n`
-    text += '\n'
-    text += 'شكراً لزيارتكم\n'
-    text += 'نسعد بخدمتكم دائماً\n'
-    
-    // Add blank lines for easy tearing
-    const blankLines = settings.receiptBottomSpacing ?? 4
-    text += '\n'.repeat(blankLines)
-    
-    return text
-  }
-
   private static createPrinter(settings: PrinterSettings): ThermalPrinter {
     let printerInterface: string
     
@@ -298,7 +228,6 @@ export class ThermalPrinterService {
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON, // ESC/POS compatible
       interface: printerInterface,
-      characterSet: 'ARABIC1', // Enable Arabic character set
       removeSpecialCharacters: false,
       lineCharacter: '-',
       width: settings.paperWidth === '80mm' ? 48 : 32
@@ -307,21 +236,19 @@ export class ThermalPrinterService {
   }
 
   /**
-   * Format and print receipt with proper Arabic support
+   * Format and print receipt
    */
   private static async formatAndPrintReceipt(printer: ThermalPrinter, data: ReceiptData, settings: PrinterSettings): Promise<void> {
-    // Set character encoding for Arabic
-    printer.setCharacterSet('ARABIC1')
     
     // Store info
     printer.alignCenter()
     printer.bold(true)
     printer.setTextSize(1, 1)
-    printer.println(data.storeName)
+    printer.println(data.storeName.toUpperCase())
     printer.bold(false)
     printer.setTextNormal()
     printer.println(data.storeAddress)
-    printer.println(`ت: ${data.storePhone}`)
+    printer.println(`Tel: ${data.storePhone}`)
     if (data.storeEmail) {
       printer.println(data.storeEmail)
     }
@@ -329,17 +256,17 @@ export class ThermalPrinterService {
 
     // Tax info
     printer.drawLine()
-    printer.println(`الرقم الضريبي: ${data.taxNumber}`)
+    printer.println(`Tax No: ${data.taxNumber}`)
     if (data.commercialRegister) {
-      printer.println(`س.ت: ${data.commercialRegister}`)
+      printer.println(`Comm Reg: ${data.commercialRegister}`)
     }
     printer.drawLine()
     printer.newLine()
 
     // Receipt info
     printer.alignLeft()
-    printer.println(`رقم الفاتورة: ${data.receiptNumber}`)
-    printer.println(`التاريخ: ${data.date.toLocaleString('ar-EG', {
+    printer.println(`Receipt #: ${data.receiptNumber}`)
+    printer.println(`Date: ${data.date.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -348,18 +275,18 @@ export class ThermalPrinterService {
       hour12: true
     })}`)
     if (data.customerName) {
-      printer.println(`العميل: ${data.customerName}`)
+      printer.println(`Customer: ${data.customerName}`)
     }
     printer.drawLine()
 
     // Items with discount calculation
     data.items.forEach(item => {
-      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
+      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue !== undefined && item.discountValue > 0
       
       let originalPrice = item.price
       let itemDiscount = 0
       
-      if (hasDiscount) {
+      if (hasDiscount && item.discountValue !== undefined) {
         if (item.discountType === 'PERCENTAGE') {
           originalPrice = item.price / (1 - item.discountValue / 100)
           itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
@@ -374,14 +301,14 @@ export class ThermalPrinterService {
       
       // Item name and details
       printer.println(item.name)
-      printer.println(`${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} ج.م`)
+      printer.println(`${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} EGP`)
       
-      if (hasDiscount) {
+      if (hasDiscount && item.discountValue !== undefined) {
         const discountLabel = item.discountType === 'PERCENTAGE' 
-          ? `خصم ${item.discountValue}%` 
-          : 'خصم ثابت'
-        printer.println(`${discountLabel}: -${itemDiscount.toFixed(2)} ج.م`)
-        printer.println(`بعد الخصم: ${finalTotal.toFixed(2)} ج.م`)
+          ? `Discount ${item.discountValue}%` 
+          : 'Fixed Discount'
+        printer.println(`${discountLabel}: -${itemDiscount.toFixed(2)} EGP`)
+        printer.println(`After Discount: ${finalTotal.toFixed(2)} EGP`)
       }
       
       printer.drawLine()
@@ -389,12 +316,12 @@ export class ThermalPrinterService {
 
     // Totals
     printer.newLine()
-    printer.println(`الإجمالي الفرعي: ${data.subtotal.toFixed(2)} ج.م`)
-    printer.println(`ض.ق.م (${data.taxRate}%): ${data.tax.toFixed(2)} ج.م`)
+    printer.println(`Subtotal: ${data.subtotal.toFixed(2)} EGP`)
+    printer.println(`VAT (${data.taxRate}%): ${data.tax.toFixed(2)} EGP`)
     printer.drawLine()
     printer.bold(true)
     printer.setTextSize(1, 1)
-    printer.println(`الإجمالي: ${data.total.toFixed(2)} ج.م`)
+    printer.println(`TOTAL: ${data.total.toFixed(2)} EGP`)
     printer.bold(false)
     printer.setTextNormal()
     printer.drawLine()
@@ -402,10 +329,10 @@ export class ThermalPrinterService {
     // Payment
     printer.alignCenter()
     printer.newLine()
-    printer.println(`طريقة الدفع: ${data.paymentMethod}`)
+    printer.println(`Payment: ${data.paymentMethod}`)
     printer.newLine()
-    printer.println('شكراً لزيارتكم')
-    printer.println('نسعد بخدمتكم دائماً')
+    printer.println('Thank you for your visit!')
+    printer.println('We appreciate your business')
 
     // Add spacing
     const blankLines = settings.receiptBottomSpacing ?? 4
@@ -430,13 +357,8 @@ export class ThermalPrinterService {
       if (settings.printerType === 'usb' && settings.printerName && 
           !settings.printerName.startsWith('/') && !settings.printerName.startsWith('tcp://')) {
         
-        // Choose language based on setting (default to English for thermal printers)
-        const useArabic = settings.receiptLanguage === 'arabic'
-        const text = useArabic 
-          ? this.formatReceiptTextArabic(data, settings)
-          : this.formatReceiptTextEnglish(data, settings)
-        
-        await this.printToCUPS(settings.printerName, text)
+        const text = this.formatReceiptText(data, settings)
+        await this.printToCUPS(settings.printerName, text, settings)
         return
       }
 
@@ -451,7 +373,7 @@ export class ThermalPrinterService {
           // Save to localStorage (will be picked up by renderer)
           // Note: This runs in main process, need to send back to renderer
         } else {
-          throw new Error('No USB thermal printers detected. Please connect your printer and try again.')
+          throw new Error('No thermal printers detected. Please connect your printer and configure it in Settings → Tax & Receipt Settings.')
         }
       }
 
@@ -488,7 +410,7 @@ export class ThermalPrinterService {
           'ZKT eco ZKP8012\n' +
           '\n\n\n\n'
 
-        await this.printToCUPS(settings.printerName, testText)
+        await this.printToCUPS(settings.printerName, testText, settings)
         
         return {
           success: true,
@@ -592,19 +514,11 @@ export class ThermalPrinterService {
         // lpstat command not available, silently fail
       }
 
-      // If no printers found, return default
-      if (printers.length === 0) {
-        return [
-          { path: 'ZKP8012', name: 'ZKP8012 (Default)' }
-        ]
-      }
-
+      // Return detected printers or empty array
       return printers
     } catch (error) {
       console.error('Error detecting USB printers:', error)
-      return [
-        { path: 'ZKP8012', name: 'ZKP8012 (Default)' }
-      ]
+      return []
     }
   }
 

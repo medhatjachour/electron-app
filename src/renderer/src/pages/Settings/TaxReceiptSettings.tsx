@@ -269,41 +269,6 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Receipt Language
-          </label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="receiptLanguage"
-                value="english"
-                checked={settings.receiptLanguage === 'english' || !settings.receiptLanguage}
-                onChange={(e) => handleChange('receiptLanguage', e.target.value)}
-                className="w-4 h-4 text-primary focus:ring-primary"
-              />
-              <span className="text-sm text-slate-700 dark:text-slate-300">English</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="receiptLanguage"
-                value="arabic"
-                checked={settings.receiptLanguage === 'arabic'}
-                onChange={(e) => handleChange('receiptLanguage', e.target.value)}
-                className="w-4 h-4 text-primary focus:ring-primary"
-              />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Arabic</span>
-            </label>
-          </div>
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-xs text-slate-700 dark:text-slate-300">
-              <span className="font-semibold">Recommended:</span> English - Most thermal printers (like ZKP8012) don't support Arabic characters. English ensures receipts print correctly.
-            </p>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input

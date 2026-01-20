@@ -25,7 +25,6 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
     const printerIP = localStorage.getItem('printerIP') || ''
     const paperWidth = localStorage.getItem('paperWidth') || '80mm'
     const receiptBottomSpacing = parseInt(localStorage.getItem('receiptBottomSpacing') || '4')
-    const receiptLanguage = localStorage.getItem('receiptLanguage') || 'english'
     const printLogo = localStorage.getItem('printLogo') === 'true'
     const printQRCode = localStorage.getItem('printQRCode') === 'true'
     const printBarcode = localStorage.getItem('printBarcode') === 'true'
@@ -43,7 +42,6 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
       printerIP,
       paperWidth,
       receiptBottomSpacing,
-      receiptLanguage,
       printLogo,
       printQRCode,
       printBarcode,
@@ -67,16 +65,12 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
         // Transaction info
         receiptNumber: transaction.id.substring(0, 8).toUpperCase(),
         date: new Date(transaction.createdAt),
-        paymentMethod: settings.receiptLanguage === 'arabic'
-          ? (transaction.paymentMethod === 'cash' ? 'نقدي' : 
-             transaction.paymentMethod === 'card' ? 'بطاقة' : 
-             transaction.paymentMethod === 'installment' ? 'تقسيط' : 'آخر')
-          : (transaction.paymentMethod === 'cash' ? 'Cash' : 
-             transaction.paymentMethod === 'card' ? 'Card' : 
-             transaction.paymentMethod === 'installment' ? 'Installment' : 'Other'),
+        paymentMethod: transaction.paymentMethod === 'cash' ? 'Cash' : 
+                      transaction.paymentMethod === 'card' ? 'Card' : 
+                      transaction.paymentMethod === 'installment' ? 'Installment' : 'Other',
 
         // Customer
-        customerName: transaction.Customer?.name || (settings.receiptLanguage === 'arabic' ? 'زبون نقدي' : 'Walk-in Customer'),
+        customerName: transaction.Customer?.name || 'Walk-in Customer',
 
         // Items
         items: (transaction.items || []).map((item: any) => ({
@@ -158,30 +152,27 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
           <div 
             className="bg-white shadow-lg mx-auto p-6 text-sm font-mono text-black"
-            style={{ 
-              width: settings.paperWidth === '80mm' ? '302px' : '203px',
-              direction: settings.receiptLanguage === 'arabic' ? 'rtl' : 'ltr'
-            }}
+            style={{ width: settings.paperWidth === '80mm' ? '302px' : '203px' }}
             id="receipt-preview"
           >
             {/* Store Name */}
             <div className="text-center mb-4">
               <h1 className="text-xl font-bold mb-1">{settings.storeName}</h1>
               <p className="text-xs">{settings.storeAddress}</p>
-              <p className="text-xs">{settings.receiptLanguage === 'arabic' ? 'ت:' : 'Tel:'} {settings.storePhone}</p>
+              <p className="text-xs">Tel: {settings.storePhone}</p>
               {settings.storeEmail && <p className="text-xs">{settings.storeEmail}</p>}
             </div>
 
             {/* Tax Info */}
             <div className="border-t border-b border-gray-300 py-2 mb-3 text-xs">
-              <p>{settings.receiptLanguage === 'arabic' ? 'الرقم الضريبي:' : 'Tax No:'} {settings.taxNumber}</p>
-              {settings.commercialRegister && <p>{settings.receiptLanguage === 'arabic' ? 'س.ت:' : 'Comm Reg:'} {settings.commercialRegister}</p>}
+              <p>Tax No: {settings.taxNumber}</p>
+              {settings.commercialRegister && <p>Comm Reg: {settings.commercialRegister}</p>}
             </div>
 
             {/* Receipt Details */}
             <div className="mb-3 text-xs space-y-1">
-              <p>{settings.receiptLanguage === 'arabic' ? 'رقم الفاتورة:' : 'Receipt #:'} {transaction.id.substring(0, 8).toUpperCase()}</p>
-              <p>{settings.receiptLanguage === 'arabic' ? 'التاريخ:' : 'Date:'} {new Date(transaction.createdAt).toLocaleString(settings.receiptLanguage === 'arabic' ? 'ar-EG' : 'en-US', {
+              <p>Receipt #: {transaction.id.substring(0, 8).toUpperCase()}</p>
+              <p>Date: {new Date(transaction.createdAt).toLocaleString('en-US', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -189,7 +180,7 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
                 minute: '2-digit',
                 hour12: true
               })}</p>
-              {transaction.Customer && <p>{settings.receiptLanguage === 'arabic' ? 'العميل:' : 'Customer:'} {transaction.Customer.name}</p>}
+              {transaction.Customer && <p>Customer: {transaction.Customer.name}</p>}
             </div>
 
             {/* Items Table */}
@@ -197,21 +188,10 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-300">
-                    {settings.receiptLanguage === 'arabic' ? (
-                      <>
-                        <th className="text-right pb-1">المجموع</th>
-                        <th className="text-center pb-1">السعر</th>
-                        <th className="text-center pb-1">الكمية</th>
-                        <th className="text-right pb-1">الصنف</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="text-left pb-1">Item</th>
-                        <th className="text-center pb-1">Qty</th>
-                        <th className="text-center pb-1">Price</th>
-                        <th className="text-right pb-1">Total</th>
-                      </>
-                    )}
+                    <th className="text-left pb-1">Item</th>
+                    <th className="text-center pb-1">Qty</th>
+                    <th className="text-center pb-1">Price</th>
+                    <th className="text-right pb-1">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,41 +221,18 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
                     return (
                       <React.Fragment key={idx}>
                         <tr className="border-b border-dashed border-gray-200">
-                          {settings.receiptLanguage === 'arabic' ? (
-                            <>
-                              <td className="text-right py-1">{originalTotal.toFixed(2)} ج.م</td>
-                              <td className="text-center py-1">{originalPrice.toFixed(2)}</td>
-                              <td className="text-center py-1">{item.quantity}</td>
-                              <td className="text-right py-1">{item.product?.name || item.ProductVariant?.Product?.name || 'Unknown Product'}</td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="text-left py-1">{item.product?.name || item.ProductVariant?.Product?.name || 'Unknown Product'}</td>
-                              <td className="text-center py-1">{item.quantity}</td>
-                              <td className="text-center py-1">{originalPrice.toFixed(2)}</td>
-                              <td className="text-right py-1">{originalTotal.toFixed(2)} EGP</td>
-                            </>
-                          )}
+                          <td className="text-left py-1">{item.product?.name || item.ProductVariant?.Product?.name || 'Unknown Product'}</td>
+                          <td className="text-center py-1">{item.quantity}</td>
+                          <td className="text-center py-1">{originalPrice.toFixed(2)}</td>
+                          <td className="text-right py-1">{originalTotal.toFixed(2)} EGP</td>
                         </tr>
                         {hasDiscount && (
                           <tr className="border-b border-dashed border-gray-200 text-red-600">
-                            {settings.receiptLanguage === 'arabic' ? (
-                              <>
-                                <td className="text-right py-1">-{itemDiscount.toFixed(2)} ج.م</td>
-                                <td colSpan={2} className="text-center py-1 text-xs italic">
-                                  خصم {item.discountType === 'PERCENTAGE' ? `${item.discountValue}%` : 'ثابت'}
-                                </td>
-                                <td className="text-right py-1 text-xs">بعد الخصم: {finalTotal.toFixed(2)} ج.م</td>
-                              </>
-                            ) : (
-                              <>
-                                <td className="text-left py-1 text-xs">After Discount: {finalTotal.toFixed(2)} EGP</td>
-                                <td colSpan={2} className="text-center py-1 text-xs italic">
-                                  {item.discountType === 'PERCENTAGE' ? `${item.discountValue}% off` : 'Fixed Discount'}
-                                </td>
-                                <td className="text-right py-1">-{itemDiscount.toFixed(2)} EGP</td>
-                              </>
-                            )}
+                            <td className="text-left py-1 text-xs">After Discount: {finalTotal.toFixed(2)} EGP</td>
+                            <td colSpan={2} className="text-center py-1 text-xs italic">
+                              {item.discountType === 'PERCENTAGE' ? `${item.discountValue}% off` : 'Fixed Discount'}
+                            </td>
+                            <td className="text-right py-1">-{itemDiscount.toFixed(2)} EGP</td>
                           </tr>
                         )}
                       </React.Fragment>
@@ -288,45 +245,32 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
             {/* Totals */}
             <div className="text-xs space-y-1 mb-3">
               <div className="flex justify-between">
-                <span className="font-bold">{settings.receiptLanguage === 'arabic' ? 'الإجمالي الفرعي:' : 'Subtotal:'}</span>
-                <span>{transaction.subtotal.toFixed(2)} {settings.receiptLanguage === 'arabic' ? 'ج.م' : 'EGP'}</span>
+                <span className="font-bold">Subtotal:</span>
+                <span>{transaction.subtotal.toFixed(2)} EGP</span>
               </div>
               <div className="flex justify-between">
-                <span>{settings.receiptLanguage === 'arabic' ? 'ضريبة القيمة المضافة' : 'VAT'} ({settings.taxRate }%):</span>
-                <span>{transaction.tax.toFixed(2)} {settings.receiptLanguage === 'arabic' ? 'ج.م' : 'EGP'}</span>
+                <span>VAT ({settings.taxRate }%):</span>
+                <span>{transaction.tax.toFixed(2)} EGP</span>
               </div>
               <div className="flex justify-between border-t border-gray-300 pt-1 text-base font-bold">
-                <span>{settings.receiptLanguage === 'arabic' ? 'الإجمالي:' : 'TOTAL:'}</span>
-                <span>{transaction.total.toFixed(2)} {settings.receiptLanguage === 'arabic' ? 'ج.م' : 'EGP'}</span>
+                <span>TOTAL:</span>
+                <span>{transaction.total.toFixed(2)} EGP</span>
               </div>
             </div>
 
             {/* Payment Method */}
             <div className="text-center text-xs mb-3">
-              <p>{settings.receiptLanguage === 'arabic' ? 'طريقة الدفع:' : 'Payment:'} {
-                settings.receiptLanguage === 'arabic'
-                  ? (transaction.paymentMethod === 'cash' ? 'نقدي' :
-                     transaction.paymentMethod === 'card' ? 'بطاقة' :
-                     transaction.paymentMethod === 'installment' ? 'تقسيط' : 'آخر')
-                  : (transaction.paymentMethod === 'cash' ? 'Cash' :
-                     transaction.paymentMethod === 'card' ? 'Card' :
-                     transaction.paymentMethod === 'installment' ? 'Installment' : 'Other')
+              <p>Payment: {
+                transaction.paymentMethod === 'cash' ? 'Cash' :
+                transaction.paymentMethod === 'card' ? 'Card' :
+                transaction.paymentMethod === 'installment' ? 'Installment' : 'Other'
               }</p>
             </div>
 
             {/* Footer */}
             <div className="text-center text-xs border-t border-gray-300 pt-3">
-              {settings.receiptLanguage === 'arabic' ? (
-                <>
-                  <p>شكراً لزيارتكم</p>
-                  <p>نسعد بخدمتكم دائماً</p>
-                </>
-              ) : (
-                <>
-                  <p>Thank you for your visit!</p>
-                  <p>We appreciate your business</p>
-                </>
-              )}
+              <p>Thank you for your visit!</p>
+              <p>We appreciate your business</p>
             </div>
           </div>
         </div>

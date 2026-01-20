@@ -39,7 +39,6 @@ export interface TaxReceiptSettings {
   printerIP: string // For network printers
   paperWidth: '58mm' | '80mm'
   receiptBottomSpacing: number // Number of blank lines at bottom of receipt (for tearing)
-  receiptLanguage: 'english' | 'arabic' // Language for printed receipts (English recommended for most thermal printers)
   printLogo: boolean
   printQRCode: boolean
   printBarcode: boolean

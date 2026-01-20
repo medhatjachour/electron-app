@@ -57,7 +57,6 @@ export function useSettings() {
       printerIP: localStorage.getItem('printerIP') || '',
       paperWidth: (localStorage.getItem('paperWidth') as '58mm' | '80mm') || '80mm',
       receiptBottomSpacing: parseInt(localStorage.getItem('receiptBottomSpacing') || '4'),
-      receiptLanguage: (localStorage.getItem('receiptLanguage') as 'english' | 'arabic') || 'english',
       printLogo: localStorage.getItem('printLogo') === 'true',
       printQRCode: localStorage.getItem('printQRCode') === 'true',
       printBarcode: localStorage.getItem('printBarcode') === 'true',
