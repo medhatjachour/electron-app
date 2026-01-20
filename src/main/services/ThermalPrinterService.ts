@@ -12,6 +12,7 @@ export interface PrinterSettings {
   printerIP?: string
   paperWidth: '58mm' | '80mm'
   receiptBottomSpacing?: number
+  receiptLanguage?: 'english' | 'arabic'
   printLogo?: boolean
   printQRCode?: boolean
   printBarcode?: boolean
@@ -66,14 +67,12 @@ export class ThermalPrinterService {
     const path = require('path')
     const os = require('os')
 
-    // Create temp file with UTF-8 encoding
+    // Create temp file with text data
     const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.txt`)
-    // Write with UTF-8 BOM to ensure proper encoding
-    const utf8BOM = '\uFEFF'
-    await fs.writeFile(tempFile, utf8BOM + data, 'utf8')
+    await fs.writeFile(tempFile, data, 'utf8')
 
     try {
-      // Print using lp command without raw option to allow CUPS to handle encoding
+      // Print using lp command
       await execAsync(`lp -d ${printerName} "${tempFile}"`)
     } finally {
       // Clean up temp file
@@ -86,9 +85,9 @@ export class ThermalPrinterService {
   }
 
   /**
-   * Format receipt as plain text for CUPS
+   * Format receipt as plain text in English (for thermal printers without Arabic support)
    */
-  private static formatReceiptText(data: ReceiptData, settings: PrinterSettings): string {
+  private static formatReceiptTextEnglish(data: ReceiptData, settings: PrinterSettings): string {
     const width = settings.paperWidth === '80mm' ? 48 : 32
     const line = '='.repeat(width)
     const dashes = '-'.repeat(width)
@@ -105,12 +104,12 @@ export class ThermalPrinterService {
     // Tax info
     text += dashes + '\n'
     text += `Tax No: ${data.taxNumber}\n`
-    if (data.commercialRegister) text += `CR: ${data.commercialRegister}\n`
+    if (data.commercialRegister) text += `Comm Reg: ${data.commercialRegister}\n`
     text += dashes + '\n'
     text += '\n'
     
     // Receipt info
-    text += `Receipt: ${data.receiptNumber}\n`
+    text += `Receipt #: ${data.receiptNumber}\n`
     text += `Date: ${data.date.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
@@ -120,17 +119,12 @@ export class ThermalPrinterService {
       hour12: true
     })}\n`
     if (data.customerName) text += `Customer: ${data.customerName}\n`
-    
-    // Items Table
-    text += dashes + '\n'
-    text += 'Total     Price   Qty   Item\n'
     text += dashes + '\n'
     
-    // Items with discount calculation matching preview
+    // Items with discount calculation
     data.items.forEach(item => {
       const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
       
-      // Calculate original price (item.price is final price after discount)
       let originalPrice = item.price
       let itemDiscount = 0
       
@@ -147,17 +141,16 @@ export class ThermalPrinterService {
       const originalTotal = originalPrice * item.quantity
       const finalTotal = item.price * item.quantity
       
-      // Item row with original price
-      const name = item.name.substring(0, 20)
-      text += `${originalTotal.toFixed(2).padStart(8)}  ${originalPrice.toFixed(2).padStart(7)}  ${item.quantity.toString().padStart(3)}  ${name}\n`
+      // Item details
+      text += item.name + '\n'
+      text += `${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} EGP\n`
       
-      // Discount row if applicable
       if (hasDiscount) {
         const discountLabel = item.discountType === 'PERCENTAGE' 
-          ? `Disc ${item.discountValue}%` 
-          : 'Fixed Disc'
-        text += `-${itemDiscount.toFixed(2).padStart(7)} EGP     ${discountLabel}\n`
-        text += `After Disc: ${finalTotal.toFixed(2)} EGP\n`
+          ? `Discount ${item.discountValue}%` 
+          : 'Fixed Discount'
+        text += `${discountLabel}: -${itemDiscount.toFixed(2)} EGP\n`
+        text += `After Discount: ${finalTotal.toFixed(2)} EGP\n`
       }
       
       text += dashes + '\n'
@@ -165,26 +158,121 @@ export class ThermalPrinterService {
     
     // Totals
     text += '\n'
-    text += `Subtotal:           ${data.subtotal.toFixed(2)} EGP\n`
-    text += `VAT (${data.taxRate}%):        ${data.tax.toFixed(2)} EGP\n`
+    text += `Subtotal: ${data.subtotal.toFixed(2)} EGP\n`
+    text += `VAT (${data.taxRate}%): ${data.tax.toFixed(2)} EGP\n`
     text += line + '\n'
-    text += `TOTAL:              ${data.total.toFixed(2)} EGP\n`
+    text += `TOTAL: ${data.total.toFixed(2)} EGP\n`
     text += line + '\n'
     text += '\n'
     
     // Payment
-    text += `Payment Method: ${data.paymentMethod}\n`
+    text += `Payment: ${data.paymentMethod}\n`
     text += '\n'
-    text += dashes + '\n'
     text += 'Thank you for your visit!\n'
-    text += 'We are happy to serve you\n'
+    text += 'We appreciate your business\n'
     
-    // Add blank lines for easy tearing (configurable spacing)
+    // Add blank lines for easy tearing
     const blankLines = settings.receiptBottomSpacing ?? 4
     text += '\n'.repeat(blankLines)
     
     return text
   }
+
+  /**
+   * Format receipt as plain text with Arabic
+   * Note: Most thermal printers don't support Arabic characters properly
+   */
+  private static formatReceiptTextArabic(data: ReceiptData, settings: PrinterSettings): string {
+    const width = settings.paperWidth === '80mm' ? 48 : 32
+    const line = '='.repeat(width)
+    const dashes = '-'.repeat(width)
+    
+    let text = '\n'
+    
+    // Store name (centered)
+    text += data.storeName.toUpperCase() + '\n'
+    text += data.storeAddress + '\n'
+    text += `ت: ${data.storePhone}\n`
+    if (data.storeEmail) text += data.storeEmail + '\n'
+    text += '\n'
+    
+    // Tax info
+    text += dashes + '\n'
+    text += `الرقم الضريبي: ${data.taxNumber}\n`
+    if (data.commercialRegister) text += `س.ت: ${data.commercialRegister}\n`
+    text += dashes + '\n'
+    text += '\n'
+    
+    // Receipt info
+    text += `رقم الفاتورة: ${data.receiptNumber}\n`
+    text += `التاريخ: ${data.date.toLocaleString('ar-EG', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })}\n`
+    if (data.customerName) text += `العميل: ${data.customerName}\n`
+    text += dashes + '\n'
+    
+    // Items with discount calculation
+    data.items.forEach(item => {
+      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
+      
+      let originalPrice = item.price
+      let itemDiscount = 0
+      
+      if (hasDiscount) {
+        if (item.discountType === 'PERCENTAGE') {
+          originalPrice = item.price / (1 - item.discountValue / 100)
+          itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
+        } else {
+          originalPrice = item.price + (item.discountValue / item.quantity)
+          itemDiscount = item.discountValue
+        }
+      }
+      
+      const originalTotal = originalPrice * item.quantity
+      const finalTotal = item.price * item.quantity
+      
+      // Item details
+      text += item.name + '\n'
+      text += `${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} ج.م\n`
+      
+      if (hasDiscount) {
+        const discountLabel = item.discountType === 'PERCENTAGE' 
+          ? `خصم ${item.discountValue}%` 
+          : 'خصم ثابت'
+        text += `${discountLabel}: -${itemDiscount.toFixed(2)} ج.م\n`
+        text += `بعد الخصم: ${finalTotal.toFixed(2)} ج.م\n`
+      }
+      
+      text += dashes + '\n'
+    })
+    
+    // Totals
+    text += '\n'
+    text += `الإجمالي الفرعي: ${data.subtotal.toFixed(2)} ج.م\n`
+    text += `ض.ق.م (${data.taxRate}%): ${data.tax.toFixed(2)} ج.م\n`
+    text += line + '\n'
+    text += `الإجمالي: ${data.total.toFixed(2)} ج.م\n`
+    text += line + '\n'
+    text += '\n'
+    
+    // Payment
+    text += `طريقة الدفع: ${data.paymentMethod}\n`
+    text += '\n'
+    text += 'شكراً لزيارتكم\n'
+    text += 'نسعد بخدمتكم دائماً\n'
+    
+    // Add blank lines for easy tearing
+    const blankLines = settings.receiptBottomSpacing ?? 4
+    text += '\n'.repeat(blankLines)
+    
+    return text
+  }
+
   private static createPrinter(settings: PrinterSettings): ThermalPrinter {
     let printerInterface: string
     
@@ -210,6 +298,7 @@ export class ThermalPrinterService {
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON, // ESC/POS compatible
       interface: printerInterface,
+      characterSet: 'ARABIC1', // Enable Arabic character set
       removeSpecialCharacters: false,
       lineCharacter: '-',
       width: settings.paperWidth === '80mm' ? 48 : 32
@@ -218,15 +307,135 @@ export class ThermalPrinterService {
   }
 
   /**
+   * Format and print receipt with proper Arabic support
+   */
+  private static async formatAndPrintReceipt(printer: ThermalPrinter, data: ReceiptData, settings: PrinterSettings): Promise<void> {
+    // Set character encoding for Arabic
+    printer.setCharacterSet('ARABIC1')
+    
+    // Store info
+    printer.alignCenter()
+    printer.bold(true)
+    printer.setTextSize(1, 1)
+    printer.println(data.storeName)
+    printer.bold(false)
+    printer.setTextNormal()
+    printer.println(data.storeAddress)
+    printer.println(`ت: ${data.storePhone}`)
+    if (data.storeEmail) {
+      printer.println(data.storeEmail)
+    }
+    printer.newLine()
+
+    // Tax info
+    printer.drawLine()
+    printer.println(`الرقم الضريبي: ${data.taxNumber}`)
+    if (data.commercialRegister) {
+      printer.println(`س.ت: ${data.commercialRegister}`)
+    }
+    printer.drawLine()
+    printer.newLine()
+
+    // Receipt info
+    printer.alignLeft()
+    printer.println(`رقم الفاتورة: ${data.receiptNumber}`)
+    printer.println(`التاريخ: ${data.date.toLocaleString('ar-EG', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })}`)
+    if (data.customerName) {
+      printer.println(`العميل: ${data.customerName}`)
+    }
+    printer.drawLine()
+
+    // Items with discount calculation
+    data.items.forEach(item => {
+      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
+      
+      let originalPrice = item.price
+      let itemDiscount = 0
+      
+      if (hasDiscount) {
+        if (item.discountType === 'PERCENTAGE') {
+          originalPrice = item.price / (1 - item.discountValue / 100)
+          itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
+        } else {
+          originalPrice = item.price + (item.discountValue / item.quantity)
+          itemDiscount = item.discountValue
+        }
+      }
+      
+      const originalTotal = originalPrice * item.quantity
+      const finalTotal = item.price * item.quantity
+      
+      // Item name and details
+      printer.println(item.name)
+      printer.println(`${item.quantity} x ${originalPrice.toFixed(2)} = ${originalTotal.toFixed(2)} ج.م`)
+      
+      if (hasDiscount) {
+        const discountLabel = item.discountType === 'PERCENTAGE' 
+          ? `خصم ${item.discountValue}%` 
+          : 'خصم ثابت'
+        printer.println(`${discountLabel}: -${itemDiscount.toFixed(2)} ج.م`)
+        printer.println(`بعد الخصم: ${finalTotal.toFixed(2)} ج.م`)
+      }
+      
+      printer.drawLine()
+    })
+
+    // Totals
+    printer.newLine()
+    printer.println(`الإجمالي الفرعي: ${data.subtotal.toFixed(2)} ج.م`)
+    printer.println(`ض.ق.م (${data.taxRate}%): ${data.tax.toFixed(2)} ج.م`)
+    printer.drawLine()
+    printer.bold(true)
+    printer.setTextSize(1, 1)
+    printer.println(`الإجمالي: ${data.total.toFixed(2)} ج.م`)
+    printer.bold(false)
+    printer.setTextNormal()
+    printer.drawLine()
+
+    // Payment
+    printer.alignCenter()
+    printer.newLine()
+    printer.println(`طريقة الدفع: ${data.paymentMethod}`)
+    printer.newLine()
+    printer.println('شكراً لزيارتكم')
+    printer.println('نسعد بخدمتكم دائماً')
+
+    // Add spacing
+    const blankLines = settings.receiptBottomSpacing ?? 4
+    for (let i = 0; i < blankLines; i++) {
+      printer.newLine()
+    }
+    
+    if (settings.openCashDrawer) {
+      printer.openCashDrawer()
+    }
+    
+    printer.cut()
+    await printer.execute()
+  }
+
+  /**
    * Print receipt
    */
   static async printReceipt(data: ReceiptData, settings: PrinterSettings): Promise<void> {
     try {
-      // Check if using CUPS printer (non-device path)
+      // For CUPS printers, use direct CUPS printing
       if (settings.printerType === 'usb' && settings.printerName && 
           !settings.printerName.startsWith('/') && !settings.printerName.startsWith('tcp://')) {
-        // Use CUPS lp command
-        const text = this.formatReceiptText(data, settings)
+        
+        // Choose language based on setting (default to English for thermal printers)
+        const useArabic = settings.receiptLanguage === 'arabic'
+        const text = useArabic 
+          ? this.formatReceiptTextArabic(data, settings)
+          : this.formatReceiptTextEnglish(data, settings)
+        
         await this.printToCUPS(settings.printerName, text)
         return
       }
@@ -248,97 +457,7 @@ export class ThermalPrinterService {
 
       // Otherwise use node-thermal-printer for direct device access
       const printer = this.createPrinter(settings)
-
-      // Initialize
-      printer.alignCenter()
-      printer.bold(true)
-      printer.setTextSize(1, 1)
-      printer.println(data.storeName)
-      printer.bold(false)
-      printer.setTextNormal()
-      printer.newLine()
-
-      // Store info
-      printer.println(data.storeAddress)
-      printer.println(`Tel: ${data.storePhone}`)
-      if (data.storeEmail) {
-        printer.println(data.storeEmail)
-      }
-      printer.newLine()
-
-      // Tax number
-      printer.println(`Tax No: ${data.taxNumber}`)
-      if (data.commercialRegister) {
-        printer.println(`Reg: ${data.commercialRegister}`)
-      }
-      printer.drawLine()
-      printer.newLine()
-
-      // Receipt info
-      printer.alignLeft()
-      printer.println(`Receipt: ${data.receiptNumber}`)
-      printer.println(`Date: ${data.date.toLocaleString()}`)
-      if (data.customerName) {
-        printer.println(`Customer: ${data.customerName}`)
-      }
-      printer.drawLine()
-
-      // Items header
-      printer.println('Item                Qty   Price   Total')
-      printer.drawLine()
-
-      // Items
-      data.items.forEach(item => {
-        const name = item.name.substring(0, 20).padEnd(20)
-        const qty = item.quantity.toString().padStart(3)
-        const price = item.price.toFixed(2).padStart(7)
-        const total = item.total.toFixed(2).padStart(7)
-        printer.println(`${name}${qty}${price}${total}`)
-
-        // Discount
-        if (item.discountType && item.discountType !== 'NONE' && item.discountValue) {
-          const discountText = item.discountType === 'PERCENTAGE'
-            ? `  Discount: -${item.discountValue}%`
-            : `  Discount: -$${item.discountValue.toFixed(2)}`
-          printer.println(discountText)
-        }
-      })
-
-      printer.drawLine()
-
-      // Totals
-      printer.println(`Subtotal:${' '.repeat(27)}$${data.subtotal.toFixed(2)}`)
-      printer.println(`Tax (${data.taxRate}%):${' '.repeat(24)}$${data.tax.toFixed(2)}`)
-      
-      printer.bold(true)
-      printer.setTextSize(1, 1)
-      printer.println(`TOTAL:${' '.repeat(30)}$${data.total.toFixed(2)}`)
-      printer.bold(false)
-      printer.setTextNormal()
-      printer.drawLine()
-
-      // Payment method
-      printer.alignCenter()
-      printer.newLine()
-      printer.println(`Payment: ${data.paymentMethod}`)
-      printer.newLine()
-      printer.println('Thank you!')
-      printer.println('Please come again')
-
-      // Feed and cut (configurable spacing)
-      const blankLines = settings.receiptBottomSpacing ?? 4
-      for (let i = 0; i < blankLines; i++) {
-        printer.newLine()
-      }
-      
-      if (settings.openCashDrawer) {
-        printer.openCashDrawer()
-      }
-      
-      printer.cut()
-
-      // Execute print
-      await printer.execute()
+      await this.formatAndPrintReceipt(printer, data, settings)
     } catch (error: any) {
       console.error('❌ Print error:', error)
       throw new Error(`Failed to print: ${error.message}`)

@@ -48,7 +48,6 @@
     "clsx": "^2.0.0",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.1.4",
-    "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.287.0",
