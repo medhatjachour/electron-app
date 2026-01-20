@@ -21,8 +21,10 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
     const taxNumber = localStorage.getItem('taxNumber') || ''
     const commercialRegister = localStorage.getItem('commercialRegister') || ''
     const printerType = localStorage.getItem('printerType') || 'html'
+    const printerName = localStorage.getItem('printerName') || ''
     const printerIP = localStorage.getItem('printerIP') || ''
     const paperWidth = localStorage.getItem('paperWidth') || '80mm'
+    const receiptBottomSpacing = parseInt(localStorage.getItem('receiptBottomSpacing') || '4')
     const printLogo = localStorage.getItem('printLogo') === 'true'
     const printQRCode = localStorage.getItem('printQRCode') === 'true'
     const printBarcode = localStorage.getItem('printBarcode') === 'true'
@@ -36,8 +38,10 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
       taxNumber,
       commercialRegister,
       printerType,
+      printerName,
       printerIP,
       paperWidth,
+      receiptBottomSpacing,
       printLogo,
       printQRCode,
       printBarcode,
@@ -83,24 +87,45 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
         // Totals
         subtotal: transaction.subtotal,
         tax: transaction.tax,
-        taxRate: settings.taxRate ,
+        taxRate: settings.taxRate,
         total: transaction.total
       }
 
-      // Print via IPC
+      const shouldForceThermal = settings.printerType === 'none' || settings.printerType === 'html'
+      const effectiveSettings = shouldForceThermal
+        ? { ...settings, printerType: 'usb' }
+        : settings
+
+      // Print via IPC (auto-detect thermal on first print or fallback)
       const result = await window.api.thermalReceipts.print({
         receiptData,
-        settings
+        settings: effectiveSettings
       })
 
       if (result.success) {
-        success('Receipt printed successfully')
+        // If printer was auto-detected, save it to localStorage
+        if (result.detectedPrinter) {
+          localStorage.setItem('printerName', result.detectedPrinter)
+          localStorage.setItem('printerType', 'usb')
+          success(result.message || 'Receipt printed successfully (printer auto-detected)')
+        } else {
+          if (shouldForceThermal) {
+            localStorage.setItem('printerType', 'usb')
+          }
+          success('Receipt printed successfully')
+        }
       } else {
         error(result.error || 'Failed to print receipt')
+        if (shouldForceThermal) {
+          handleBrowserPrint()
+        }
       }
     } catch (err: any) {
       console.error('Print error:', err)
       error(err.message || 'Failed to print receipt')
+      if (settings.printerType === 'none' || settings.printerType === 'html') {
+        handleBrowserPrint()
+      }
     } finally {
       setIsPrinting(false)
     }
@@ -265,16 +290,14 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
             Print (Browser)
           </button>
           
-          {settings.printerType !== 'none' && settings.printerType !== 'html' && (
-            <button
-              onClick={handlePrint}
-              disabled={isPrinting}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 disabled:bg-slate-400 dark:disabled:bg-slate-600 text-white rounded transition-colors font-medium"
-            >
-              <Printer className="w-4 h-4" />
-              {isPrinting ? 'Printing...' : 'Print (Thermal)'}
-            </button>
-          )}
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 disabled:bg-slate-400 dark:disabled:bg-slate-600 text-white rounded transition-colors font-medium"
+          >
+            <Printer className="w-4 h-4" />
+            {isPrinting ? 'Printing...' : 'Print (Thermal)'}
+          </button>
         </div>
       </div>
 

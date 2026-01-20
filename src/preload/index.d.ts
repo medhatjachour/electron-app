@@ -299,7 +299,7 @@ interface API {
     print: (data: {
       receiptData: any
       settings: any
-    }) => Promise<{ success: boolean; error?: string; buffer?: string }>
+    }) => Promise<{ success: boolean; error?: string; buffer?: string; detectedPrinter?: string; message?: string }>
     detectPrinters: () => Promise<{ success: boolean; printers: any[]; error?: string }>
     testPrint: (settings: any) => Promise<{ success: boolean; message: string }>
   }

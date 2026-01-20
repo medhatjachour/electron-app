@@ -91,6 +91,7 @@ export default function Expenses() {
   const [totalSalaries, setTotalSalaries] = useState<number>(0)
   const [employeeCount, setEmployeeCount] = useState<number>(0)
   const [totalCOGS, setTotalCOGS] = useState<number>(0)
+  const [includeCOGS, setIncludeCOGS] = useState<boolean>(true)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -103,6 +104,9 @@ export default function Expenses() {
     loadExpenses()
     loadSalaryData()
     loadCOGSData()
+    // Load COGS setting from localStorage
+    const cogsEnabled = localStorage.getItem('includeCOGSInCalculations') !== 'false'
+    setIncludeCOGS(cogsEnabled)
   }, [dateRange])
 
   const loadSalaryData = async () => {
@@ -335,7 +339,7 @@ export default function Expenses() {
 
   // Calculate statistics
   const operationalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
-  const totalExpenses = operationalExpenses + totalCOGS
+  const totalExpenses = operationalExpenses + (includeCOGS ? totalCOGS : 0)
   const totalWithSalaries = totalExpenses + totalSalaries
   const expensesByCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
@@ -355,8 +359,8 @@ export default function Expenses() {
       }]
     : expensesByCategory
 
-  // Add COGS as a virtual category if there is any
-  const categoriesWithCOGS = totalCOGS > 0
+  // Add COGS as a virtual category if there is any AND setting is enabled
+  const categoriesWithCOGS = (totalCOGS > 0 && includeCOGS)
     ? [...categoriesWithSalaries, {
         id: 'cogs' as const,
         nameKey: 'costOfGoodsSold',
@@ -442,7 +446,9 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalCOGS.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">{t('fromSales')}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {includeCOGS ? t('fromSales') : `${t('fromSales')} (${t('excluded')})`}
+          </p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
@@ -455,7 +461,9 @@ export default function Expenses() {
           <p className="text-3xl font-bold text-slate-900 dark:text-white">
             ${totalExpenses.toFixed(2)}
           </p>
-          <p className="text-sm text-slate-500 mt-1">{t('includingCOGS')}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {includeCOGS ? t('includingCOGS') : t('excludingCOGS')}
+          </p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">

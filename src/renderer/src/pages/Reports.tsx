@@ -135,11 +135,14 @@ const EnhancedReports: React.FC = () => {
         .filter((t: any) => t.type === 'expense')
         .reduce((sum: number, t: any) => sum + t.amount, 0);
 
-      const netProfit = grossProfit - expenses;
+      // Check if COGS should be included in calculations
+      const includeCOGS = localStorage.getItem('includeCOGSInCalculations') !== 'false';
+      const totalExpenses = includeCOGS ? (totalCOGS + expenses) : expenses;
+      const netProfit = includeCOGS ? (grossProfit - expenses) : (totalRevenue - expenses);
 
       setTodayStats({
         revenue: totalRevenue,
-        expenses: totalCOGS + expenses,
+        expenses: totalExpenses,
         profit: netProfit,
         salesCount: salesData.length,
         expensesCount: financeData.filter((t: any) => t.type === 'expense').length,

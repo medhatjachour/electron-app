@@ -1,19 +1,17 @@
 /**
  * Thermal Printer Service
- * Handles ESC/POS thermal printer communication for Egyptian receipts
- * Supports USB and Network printers with Arabic encoding
+ * Handles thermal printer communication for Egyptian receipts
+ * Uses node-thermal-printer for raw ESC/POS commands
  */
 
-import escpos from 'escpos'
-import USB from 'escpos-usb'
-import Network from 'escpos-network'
-import iconv from 'iconv-lite'
+import { ThermalPrinter, PrinterTypes } from 'node-thermal-printer'
 
 export interface PrinterSettings {
   printerType: 'none' | 'usb' | 'network' | 'html'
   printerName?: string
   printerIP?: string
   paperWidth: '58mm' | '80mm'
+  receiptBottomSpacing?: number
   printLogo?: boolean
   printQRCode?: boolean
   printBarcode?: boolean
@@ -58,272 +56,444 @@ export interface ReceiptData {
 
 export class ThermalPrinterService {
   /**
-   * Format Egyptian receipt with ESC/POS commands and Arabic encoding
+   * Print to CUPS printer using lp command
    */
-  static formatEgyptianReceipt(data: ReceiptData, settings: PrinterSettings): Buffer {
-    const ESC = '\x1B'
-    const GS = '\x1D'
-    const width = settings.paperWidth === '80mm' ? 48 : 32 // Characters per line
-    
-    let receipt = ''
-    
-    // Initialize printer
-    receipt += ESC + '@' // Initialize
-    receipt += ESC + 't' + '\x06' // Set character code table to Windows-1256 (Arabic)
-    
-    // Store name (center, bold, double size)
-    receipt += ESC + 'a' + '\x01' // Center align
-    receipt += ESC + 'E' + '\x01' // Bold on
-    receipt += GS + '!' + '\x11'  // Double width and height
-    receipt += data.storeName + '\n'
-    receipt += GS + '!' + '\x00'  // Normal size
-    receipt += ESC + 'E' + '\x00' // Bold off
-    receipt += '\n'
-    
-    // Store address
-    receipt += data.storeAddress + '\n'
-    receipt += 'ت: ' + data.storePhone + '\n'
-    if (data.storeEmail) {
-      receipt += data.storeEmail + '\n'
+  private static async printToCUPS(printerName: string, data: string): Promise<void> {
+    const { exec } = require('child_process')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+    const fs = require('fs').promises
+    const path = require('path')
+    const os = require('os')
+
+    // Create temp file with UTF-8 encoding
+    const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.txt`)
+    // Write with UTF-8 BOM to ensure proper encoding
+    const utf8BOM = '\uFEFF'
+    await fs.writeFile(tempFile, utf8BOM + data, 'utf8')
+
+    try {
+      // Print using lp command without raw option to allow CUPS to handle encoding
+      await execAsync(`lp -d ${printerName} "${tempFile}"`)
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.unlink(tempFile)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
-    receipt += '\n'
+  }
+
+  /**
+   * Format receipt as plain text for CUPS
+   */
+  private static formatReceiptText(data: ReceiptData, settings: PrinterSettings): string {
+    const width = settings.paperWidth === '80mm' ? 48 : 32
+    const line = '='.repeat(width)
+    const dashes = '-'.repeat(width)
     
-    // Tax number (required by Egyptian law)
-    receipt += 'الرقم الضريبي: ' + data.taxNumber + '\n'
-    if (data.commercialRegister) {
-      receipt += 'س.ت: ' + data.commercialRegister + '\n'
-    }
-    receipt += '='.repeat(width) + '\n'
+    let text = '\n'
     
-    // Receipt number and date
-    receipt += ESC + 'a' + '\x00' // Left align
-    receipt += 'رقم الفاتورة: ' + data.receiptNumber + '\n'
-    receipt += 'التاريخ: ' + data.date.toLocaleString('ar-EG', {
+    // Store name (centered)
+    text += data.storeName.toUpperCase() + '\n'
+    text += data.storeAddress + '\n'
+    text += `Tel: ${data.storePhone}\n`
+    if (data.storeEmail) text += data.storeEmail + '\n'
+    text += '\n'
+    
+    // Tax info
+    text += dashes + '\n'
+    text += `Tax No: ${data.taxNumber}\n`
+    if (data.commercialRegister) text += `CR: ${data.commercialRegister}\n`
+    text += dashes + '\n'
+    text += '\n'
+    
+    // Receipt info
+    text += `Receipt: ${data.receiptNumber}\n`
+    text += `Date: ${data.date.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
-    }) + '\n'
+    })}\n`
+    if (data.customerName) text += `Customer: ${data.customerName}\n`
     
-    if (data.customerName) {
-      receipt += 'العميل: ' + data.customerName + '\n'
-    }
+    // Items Table
+    text += dashes + '\n'
+    text += 'Total     Price   Qty   Item\n'
+    text += dashes + '\n'
     
-    receipt += '='.repeat(width) + '\n'
-    
-    // Column headers
-    const colWidth = settings.paperWidth === '80mm' ? 
-      { name: 20, qty: 4, price: 10, total: 12 } :
-      { name: 12, qty: 3, price: 7, total: 8 }
-    
-    receipt += 'الصنف'.padEnd(colWidth.name) + 
-               'الكمية'.padEnd(colWidth.qty) + 
-               'السعر'.padEnd(colWidth.price) + 
-               'المجموع'.padEnd(colWidth.total) + '\n'
-    receipt += '-'.repeat(width) + '\n'
-    
-    // Items
-    for (const item of data.items) {
-      // item.price is the FINAL price after discount
-      // Calculate original price based on discount type
-      let originalPrice = item.price
-      let discount = 0
-      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue && item.discountValue > 0
+    // Items with discount calculation matching preview
+    data.items.forEach(item => {
+      const hasDiscount = item.discountType && item.discountType !== 'NONE' && item.discountValue > 0
       
-      if (hasDiscount && item.discountValue) {
+      // Calculate original price (item.price is final price after discount)
+      let originalPrice = item.price
+      let itemDiscount = 0
+      
+      if (hasDiscount) {
         if (item.discountType === 'PERCENTAGE') {
-          // If final = original * (1 - discount%), then original = final / (1 - discount%)
           originalPrice = item.price / (1 - item.discountValue / 100)
-          discount = (originalPrice * item.quantity) - (item.price * item.quantity)
+          itemDiscount = (originalPrice * item.quantity) - (item.price * item.quantity)
         } else {
-          // Fixed discount: original = final + discount
           originalPrice = item.price + (item.discountValue / item.quantity)
-          discount = item.discountValue
+          itemDiscount = item.discountValue
         }
       }
       
-      const name = item.name.substring(0, colWidth.name - 1).padEnd(colWidth.name)
-      const qty = item.quantity.toString().padEnd(colWidth.qty)
-      const price = originalPrice.toFixed(2).padEnd(colWidth.price)
-      const total = (originalPrice * item.quantity).toFixed(2).padEnd(colWidth.total)
+      const originalTotal = originalPrice * item.quantity
+      const finalTotal = item.price * item.quantity
       
-      receipt += name + qty + price + total + ' ج.م\n'
+      // Item row with original price
+      const name = item.name.substring(0, 20)
+      text += `${originalTotal.toFixed(2).padStart(8)}  ${originalPrice.toFixed(2).padStart(7)}  ${item.quantity.toString().padStart(3)}  ${name}\n`
       
-      // Add discount line if applicable
+      // Discount row if applicable
       if (hasDiscount) {
-        const finalTotal = item.price * item.quantity
-        
-        receipt += '  خصم '.padEnd(colWidth.name) + 
-                   ' '.padEnd(colWidth.qty) + 
-                   (item.discountType === 'PERCENTAGE' ? `${item.discountValue}%` : 'ثابت').padEnd(colWidth.price) + 
-                   `-${discount.toFixed(2)}`.padEnd(colWidth.total) + ' ج.م\n'
-        receipt += '  بعد الخصم: '.padEnd(colWidth.name + colWidth.qty + colWidth.price) + 
-                   finalTotal.toFixed(2).padEnd(colWidth.total) + ' ج.م\n'
+        const discountLabel = item.discountType === 'PERCENTAGE' 
+          ? `Disc ${item.discountValue}%` 
+          : 'Fixed Disc'
+        text += `-${itemDiscount.toFixed(2).padStart(7)} EGP     ${discountLabel}\n`
+        text += `After Disc: ${finalTotal.toFixed(2)} EGP\n`
       }
+      
+      text += dashes + '\n'
+    })
+    
+    // Totals
+    text += '\n'
+    text += `Subtotal:           ${data.subtotal.toFixed(2)} EGP\n`
+    text += `VAT (${data.taxRate}%):        ${data.tax.toFixed(2)} EGP\n`
+    text += line + '\n'
+    text += `TOTAL:              ${data.total.toFixed(2)} EGP\n`
+    text += line + '\n'
+    text += '\n'
+    
+    // Payment
+    text += `Payment Method: ${data.paymentMethod}\n`
+    text += '\n'
+    text += dashes + '\n'
+    text += 'Thank you for your visit!\n'
+    text += 'We are happy to serve you\n'
+    
+    // Add blank lines for easy tearing (configurable spacing)
+    const blankLines = settings.receiptBottomSpacing ?? 4
+    text += '\n'.repeat(blankLines)
+    
+    return text
+  }
+  private static createPrinter(settings: PrinterSettings): ThermalPrinter {
+    let printerInterface: string
+    
+    if (settings.printerType === 'network' && settings.printerIP) {
+      printerInterface = `tcp://${settings.printerIP}:9100`
+    } else if (settings.printerName) {
+      // Check if it's a USB URI (usb://...)
+      if (settings.printerName.startsWith('usb://')) {
+        printerInterface = settings.printerName
+      }
+      // If it starts with /, it's a device path
+      else if (settings.printerName.startsWith('/')) {
+        printerInterface = settings.printerName
+      }
+      // Otherwise it's a CUPS printer name
+      else {
+        printerInterface = `printer:${settings.printerName}`
+      }
+    } else {
+      printerInterface = '/dev/usb/lp0'
     }
-    
-    receipt += '='.repeat(width) + '\n'
-    
-    // Subtotal
-    receipt += ESC + 'a' + '\x02' // Right align
-    receipt += 'الإجمالي الفرعي:    ' + data.subtotal.toFixed(2) + ' ج.م\n'
-    
-    // Tax (14% in Egypt)
-    receipt += 'ضريبة القيمة المضافة (' + data.taxRate + '%): ' + data.tax.toFixed(2) + ' ج.م\n'
-    receipt += '-'.repeat(width) + '\n'
-    
-    // Total (bold, large)
-    receipt += ESC + 'E' + '\x01' // Bold on
-    receipt += GS + '!' + '\x11'  // Double size
-    receipt += 'الإجمالي:           ' + data.total.toFixed(2) + ' ج.م\n'
-    receipt += GS + '!' + '\x00'  // Normal size
-    receipt += ESC + 'E' + '\x00' // Bold off
-    receipt += '='.repeat(width) + '\n'
-    
-    // Payment method
-    receipt += ESC + 'a' + '\x01' // Center align
-    receipt += 'طريقة الدفع: ' + data.paymentMethod + '\n'
-    receipt += '\n'
-    
-    // Footer message
-    receipt += '        شكراً لزيارتكم\n'
-    receipt += '     نسعد بخدمتكم دائماً\n'
-    receipt += '\n\n'
-    
-    // Optional QR code (for digital receipt)
-    if (settings.printQRCode) {
-      // QR code with receipt number
-      receipt += GS + '(k' + '\x04\x00\x31\x41\x32\x00' // QR model
-      receipt += GS + '(k' + '\x03\x00\x31\x43\x08' // Error correction
-      receipt += GS + '(k' + String.fromCharCode(data.receiptNumber.length + 3, 0) + '\x31\x50\x30'
-      receipt += data.receiptNumber
-      receipt += GS + '(k' + '\x03\x00\x31\x51\x30' // Print QR
-      receipt += '\n\n'
-    }
-    
-    // Cut paper
-    receipt += GS + 'V' + '\x41' + '\x03' // Partial cut
-    
-    // Open cash drawer (if enabled)
-    if (settings.openCashDrawer) {
-      receipt += ESC + 'p' + '\x00' + '\x19' + '\xFA' // Open drawer
-    }
-    
-    // Convert to Windows-1256 encoding for Arabic support
-    return iconv.encode(receipt, 'windows-1256')
+
+    const printer = new ThermalPrinter({
+      type: PrinterTypes.EPSON, // ESC/POS compatible
+      interface: printerInterface,
+      removeSpecialCharacters: false,
+      lineCharacter: '-',
+      width: settings.paperWidth === '80mm' ? 48 : 32
+    })
+    return printer
   }
 
   /**
-   * Detect USB printers
+   * Print receipt
    */
-  static async detectUSBPrinters(): Promise<any[]> {
+  static async printReceipt(data: ReceiptData, settings: PrinterSettings): Promise<void> {
     try {
-      // @ts-ignore - USB.findPrinter() exists but types may not be perfect
-      const devices = USB.findPrinter()
-      return devices || []
-    } catch (error) {
-      console.error('Error detecting USB printers:', error)
-      return []
+      // Check if using CUPS printer (non-device path)
+      if (settings.printerType === 'usb' && settings.printerName && 
+          !settings.printerName.startsWith('/') && !settings.printerName.startsWith('tcp://')) {
+        // Use CUPS lp command
+        const text = this.formatReceiptText(data, settings)
+        await this.printToCUPS(settings.printerName, text)
+        return
+      }
+
+      // Auto-detect if printer name is empty or default
+      if (settings.printerType === 'usb' && (!settings.printerName || settings.printerName === '/dev/usb/lp0')) {
+        const detectedPrinters = await this.detectUSBPrinters()
+        
+        if (detectedPrinters.length > 0) {
+          const firstPrinter = detectedPrinters[0]
+          settings.printerName = firstPrinter.path
+          
+          // Save to localStorage (will be picked up by renderer)
+          // Note: This runs in main process, need to send back to renderer
+        } else {
+          throw new Error('No USB thermal printers detected. Please connect your printer and try again.')
+        }
+      }
+
+      // Otherwise use node-thermal-printer for direct device access
+      const printer = this.createPrinter(settings)
+
+      // Initialize
+      printer.alignCenter()
+      printer.bold(true)
+      printer.setTextSize(1, 1)
+      printer.println(data.storeName)
+      printer.bold(false)
+      printer.setTextNormal()
+      printer.newLine()
+
+      // Store info
+      printer.println(data.storeAddress)
+      printer.println(`Tel: ${data.storePhone}`)
+      if (data.storeEmail) {
+        printer.println(data.storeEmail)
+      }
+      printer.newLine()
+
+      // Tax number
+      printer.println(`Tax No: ${data.taxNumber}`)
+      if (data.commercialRegister) {
+        printer.println(`Reg: ${data.commercialRegister}`)
+      }
+      printer.drawLine()
+      printer.newLine()
+
+      // Receipt info
+      printer.alignLeft()
+      printer.println(`Receipt: ${data.receiptNumber}`)
+      printer.println(`Date: ${data.date.toLocaleString()}`)
+      if (data.customerName) {
+        printer.println(`Customer: ${data.customerName}`)
+      }
+      printer.drawLine()
+
+      // Items header
+      printer.println('Item                Qty   Price   Total')
+      printer.drawLine()
+
+      // Items
+      data.items.forEach(item => {
+        const name = item.name.substring(0, 20).padEnd(20)
+        const qty = item.quantity.toString().padStart(3)
+        const price = item.price.toFixed(2).padStart(7)
+        const total = item.total.toFixed(2).padStart(7)
+        printer.println(`${name}${qty}${price}${total}`)
+
+        // Discount
+        if (item.discountType && item.discountType !== 'NONE' && item.discountValue) {
+          const discountText = item.discountType === 'PERCENTAGE'
+            ? `  Discount: -${item.discountValue}%`
+            : `  Discount: -$${item.discountValue.toFixed(2)}`
+          printer.println(discountText)
+        }
+      })
+
+      printer.drawLine()
+
+      // Totals
+      printer.println(`Subtotal:${' '.repeat(27)}$${data.subtotal.toFixed(2)}`)
+      printer.println(`Tax (${data.taxRate}%):${' '.repeat(24)}$${data.tax.toFixed(2)}`)
+      
+      printer.bold(true)
+      printer.setTextSize(1, 1)
+      printer.println(`TOTAL:${' '.repeat(30)}$${data.total.toFixed(2)}`)
+      printer.bold(false)
+      printer.setTextNormal()
+      printer.drawLine()
+
+      // Payment method
+      printer.alignCenter()
+      printer.newLine()
+      printer.println(`Payment: ${data.paymentMethod}`)
+      printer.newLine()
+      printer.println('Thank you!')
+      printer.println('Please come again')
+
+      // Feed and cut (configurable spacing)
+      const blankLines = settings.receiptBottomSpacing ?? 4
+      for (let i = 0; i < blankLines; i++) {
+        printer.newLine()
+      }
+      
+      if (settings.openCashDrawer) {
+        printer.openCashDrawer()
+      }
+      
+      printer.cut()
+
+      // Execute print
+      await printer.execute()
+    } catch (error: any) {
+      console.error('❌ Print error:', error)
+      throw new Error(`Failed to print: ${error.message}`)
     }
   }
 
   /**
-   * Print to USB thermal printer
-   */
-  static async printUSB(receiptBuffer: Buffer): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        const device = new USB()
-        const printer = new escpos.Printer(device)
-
-        device.open((error: any) => {
-          if (error) {
-            reject(new Error(`Failed to open USB printer: ${error.message}`))
-            return
-          }
-
-          try {
-            printer
-              .raw(receiptBuffer)
-              .close()
-            
-            resolve()
-          } catch (printError: any) {
-            reject(new Error(`Print failed: ${printError.message}`))
-          }
-        })
-      } catch (error: any) {
-        reject(new Error(`USB printer error: ${error.message}`))
-      }
-    })
-  }
-
-  /**
-   * Print to network thermal printer (most common in Egyptian shops)
-   */
-  static async printNetwork(receiptBuffer: Buffer, printerIP: string, port: number = 9100): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        const device = new Network(printerIP, port)
-        const printer = new escpos.Printer(device)
-
-        device.open((error: any) => {
-          if (error) {
-            reject(new Error(`Failed to connect to printer at ${printerIP}:${port}`))
-            return
-          }
-
-          try {
-            printer
-              .raw(receiptBuffer)
-              .close()
-            
-            resolve()
-          } catch (printError: any) {
-            reject(new Error(`Print failed: ${printError.message}`))
-          }
-        })
-      } catch (error: any) {
-        reject(new Error(`Network printer error: ${error.message}`))
-      }
-    })
-  }
-
-  /**
-   * Test printer connection
+   * Test printer
    */
   static async testPrinter(settings: PrinterSettings): Promise<{ success: boolean; message: string }> {
     try {
-      const testReceipt = this.formatEgyptianReceipt({
-        storeName: 'اختبار الطابعة',
-        storeAddress: 'Test Address',
-        storePhone: '0123456789',
-        taxNumber: '123-456-789',
-        receiptNumber: 'TEST-001',
-        date: new Date(),
-        paymentMethod: 'نقدي',
-        items: [
-          { name: 'منتج تجريبي', quantity: 1, price: 10, total: 10 }
-        ],
-        subtotal: 10,
-        tax: 1.4,
-        taxRate: 14,
-        total: 11.4
-      }, settings)
+      // Check if using CUPS printer
+      if (settings.printerType === 'usb' && settings.printerName && 
+          !settings.printerName.startsWith('/') && !settings.printerName.startsWith('tcp://')) {
+        // Use CUPS lp command for test
+        const testText = '\n' +
+          'PRINTER TEST\n' +
+          '================================\n' +
+          '\n' +
+          `Date: ${new Date().toLocaleString()}\n` +
+          `Paper Width: ${settings.paperWidth}\n` +
+          `Printer Type: ${settings.printerType}\n` +
+          `Printer: ${settings.printerName}\n` +
+          '\n' +
+          '================================\n' +
+          '\n' +
+          'Test Successful!\n' +
+          'ZKT eco ZKP8012\n' +
+          '\n\n\n\n'
 
-      if (settings.printerType === 'usb') {
-        await this.printUSB(testReceipt)
-      } else if (settings.printerType === 'network' && settings.printerIP) {
-        await this.printNetwork(testReceipt, settings.printerIP)
-      } else {
-        throw new Error('Invalid printer configuration')
+        await this.printToCUPS(settings.printerName, testText)
+        
+        return {
+          success: true,
+          message: 'Test print sent successfully via CUPS. Check printer output.'
+        }
       }
 
-      return { success: true, message: 'Test print successful!' }
+      // Otherwise use node-thermal-printer
+      const printer = this.createPrinter(settings)
+
+      // Check if printer is connected
+      const isConnected = await printer.isPrinterConnected()
+      
+      if (!isConnected) {
+        return {
+          success: false,
+          message: 'Printer not connected. Check USB cable or IP address.'
+        }
+      }
+
+      printer.alignCenter()
+      printer.bold(true)
+      printer.setTextSize(1, 1)
+      printer.println('PRINTER TEST')
+      printer.bold(false)
+      printer.setTextNormal()
+      printer.newLine()
+      printer.drawLine()
+      printer.newLine()
+
+      printer.alignLeft()
+      printer.println(`Date: ${new Date().toLocaleString()}`)
+      printer.println(`Paper Width: ${settings.paperWidth}`)
+      printer.println(`Printer Type: ${settings.printerType}`)
+      if (settings.printerIP) {
+        printer.println(`Printer IP: ${settings.printerIP}`)
+      }
+      if (settings.printerName) {
+        printer.println(`Printer: ${settings.printerName}`)
+      }
+      printer.newLine()
+      printer.drawLine()
+      printer.newLine()
+
+      printer.alignCenter()
+      printer.bold(true)
+      printer.println('Test Successful!')
+      printer.bold(false)
+      printer.println('ZKT eco ZKP8012')
+
+      printer.newLine()
+      printer.newLine()
+      printer.newLine()
+      printer.cut()
+
+      await printer.execute()
+
+      return {
+        success: true,
+        message: 'Test print sent successfully. Check printer output.'
+      }
     } catch (error: any) {
-      return { success: false, message: error.message }
+      console.error('❌ Test print failed:', error)
+      const errorMessage = error.message || error.toString()
+      console.error('Full error:', errorMessage)
+      
+      return {
+        success: false,
+        message: `Test failed: ${errorMessage}. Check printer path, permissions, and connection.`
+      }
     }
+  }
+
+  /**
+   * Auto-detect USB thermal printers
+   */
+  static async detectUSBPrinters(): Promise<Array<{ path: string; name: string }>> {
+    const { exec } = require('child_process')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+
+    const printers: Array<{ path: string; name: string }> = []
+
+    try {
+      // Get CUPS printers with lpstat -a
+      try {
+        const { stdout } = await execAsync('lpstat -a 2>/dev/null || true')
+        const lines = stdout.split('\n')
+        
+        for (const line of lines) {
+          const match = line.match(/^(\S+)\s+/)
+          if (match) {
+            const printerName = match[1]
+            printers.push({
+              path: printerName,
+              name: `${printerName} (CUPS Printer)`
+            })
+          }
+        }
+      } catch (error) {
+        // lpstat command not available, silently fail
+      }
+
+      // If no printers found, return default
+      if (printers.length === 0) {
+        return [
+          { path: 'ZKP8012', name: 'ZKP8012 (Default)' }
+        ]
+      }
+
+      return printers
+    } catch (error) {
+      console.error('Error detecting USB printers:', error)
+      return [
+        { path: 'ZKP8012', name: 'ZKP8012 (Default)' }
+      ]
+    }
+  }
+
+  /**
+   * Get available printers (for compatibility)
+   */
+  static async getAvailablePrinters(): Promise<string[]> {
+    const detectedPrinters = await this.detectUSBPrinters()
+    return detectedPrinters.map(p => p.path)
   }
 }

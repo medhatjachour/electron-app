@@ -485,6 +485,7 @@ export function registerSearchHandlers(prisma: any) {
     endDate?: string
     previousStartDate?: string
     previousEndDate?: string
+    includeCOGS?: boolean
   }) => {
     try {
       if (!prisma) {
@@ -497,7 +498,7 @@ export function registerSearchHandlers(prisma: any) {
         }
       }
 
-      const { startDate, endDate, previousStartDate, previousEndDate } = options
+      const { startDate, endDate, previousStartDate, previousEndDate, includeCOGS = true } = options
 
       // Build date filters
       const currentWhere: any = {}
@@ -715,12 +716,15 @@ export function registerSearchHandlers(prisma: any) {
 
 
       // Calculate profit metrics from ALL sales INCLUDING operational expenses
-      const grossProfit = totalRevenue - totalCost
+      // If includeCOGS is false, don't subtract totalCost from calculations
+      const grossProfit = includeCOGS ? (totalRevenue - totalCost) : totalRevenue
       const totalProfit = grossProfit - totalOperationalExpenses
       const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
 
       // Calculate previous period profit for comparison
-      const previousGrossProfit = previousRevenue - (previousRevenue * (totalCost / totalRevenue || 0))
+      const previousGrossProfit = includeCOGS 
+        ? (previousRevenue - (previousRevenue * (totalCost / totalRevenue || 0)))
+        : previousRevenue
       const previousTotalProfit = previousGrossProfit - previousTotalExpenses
       const profitChange = previousTotalProfit > 0 
         ? ((totalProfit - previousTotalProfit) / previousTotalProfit) * 100 

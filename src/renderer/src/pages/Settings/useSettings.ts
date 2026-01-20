@@ -43,6 +43,7 @@ export function useSettings() {
       maxDiscountPercentage: parseFloat(localStorage.getItem('maxDiscountPercentage') || '50'),
       maxDiscountAmount: parseFloat(localStorage.getItem('maxDiscountAmount') || '100'),
       requireDiscountReason: true, // Always require reason
+      includeCOGSInCalculations: localStorage.getItem('includeCOGSInCalculations') !== 'false', // Default to true
       // Store information for receipt
       storeName: localStorage.getItem('receiptStoreName') || localStorage.getItem('storeName') || 'My Store',
       storeAddress: localStorage.getItem('receiptStoreAddress') || localStorage.getItem('storeAddress') || '',
@@ -55,6 +56,7 @@ export function useSettings() {
       printerName: localStorage.getItem('printerName') || '',
       printerIP: localStorage.getItem('printerIP') || '',
       paperWidth: (localStorage.getItem('paperWidth') as '58mm' | '80mm') || '80mm',
+      receiptBottomSpacing: parseInt(localStorage.getItem('receiptBottomSpacing') || '4'),
       printLogo: localStorage.getItem('printLogo') === 'true',
       printQRCode: localStorage.getItem('printQRCode') === 'true',
       printBarcode: localStorage.getItem('printBarcode') === 'true',

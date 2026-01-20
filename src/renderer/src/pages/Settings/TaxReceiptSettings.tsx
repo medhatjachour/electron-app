@@ -150,15 +150,38 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               USB Printer Name
             </label>
-            <input
-              type="text"
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
-              value={settings.printerName || ''}
-              onChange={(e) => handleChange('printerName', e.target.value)}
-              placeholder="e.g., XPrinter XP-80C"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                value={settings.printerName || ''}
+                onChange={(e) => handleChange('printerName', e.target.value)}
+                placeholder="e.g., /dev/usb/lp0"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const result = await window.api.thermalReceipts.detectPrinters()
+                    if (result.success && result.printers.length > 0) {
+                      // Use first detected printer
+                      handleChange('printerName', result.printers[0].path)
+                      alert(`Found: ${result.printers.map((p: any) => p.name).join(', ')}`)
+                    } else {
+                      alert('No USB printers detected')
+                    }
+                  } catch (error) {
+                    console.error('Detection error:', error)
+                    alert('Failed to detect printers')
+                  }
+                }}
+                className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium whitespace-nowrap"
+              >
+                Auto-Detect
+              </button>
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Leave empty to use default USB printer
+              Click Auto-Detect or enter manually (e.g., /dev/usb/lp0)
             </p>
           </div>
         )}
@@ -228,6 +251,24 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
           </p>
         </div>
 
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Receipt Bottom Spacing (Blank Lines)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="20"
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+            value={settings.receiptBottomSpacing ?? 4}
+            onChange={(e) => handleChange('receiptBottomSpacing', parseInt(e.target.value) || 0)}
+            placeholder="4"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Number of blank lines at the bottom of receipts (for easy tearing). Recommended: 3-6 lines
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -291,6 +332,33 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
             🖨️ Test Printer Connection
           </button>
         )}
+      </div>
+
+      {/* COGS Calculation Setting */}
+      <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              {t('includeCOGSInCalculations') || 'Include Cost of Goods Sold (COGS) in Calculations'}
+            </label>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              {t('includeCOGSDescription') || 'When enabled, COGS will be included in profit calculations, expense reports, and financial charts. Disable if you track COGS separately or use a different accounting method.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleChange('includeCOGSInCalculations', !settings.includeCOGSInCalculations)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+              settings.includeCOGSInCalculations ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                settings.includeCOGSInCalculations ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Tax Rate */}
