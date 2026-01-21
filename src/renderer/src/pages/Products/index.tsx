@@ -11,6 +11,7 @@ import { useToast } from '../../contexts/ToastContext'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import Modal from '../../components/ui/Modal'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
 import BarcodePrintDialog from '../../components/BarcodePrintDialog'
@@ -52,6 +53,43 @@ export default function Products() {
     size: '',
     store: '',
     stockStatus: ''
+  })
+
+  // Barcode scanner integration - search for products by barcode
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    try {
+      const result = await ipc.inventory.searchByBarcode(barcode)
+      
+      if (!result) {
+        toast.error(`No product found with barcode: ${barcode}`)
+        return
+      }
+
+      // Update search query to show the found product
+      setFilters(prev => ({
+        ...prev,
+        searchQuery: result.name // Search by product name to show it
+      }))
+      
+      toast.success(`Found: ${result.name}`)
+      
+      // Auto-open view modal for the found product
+      setTimeout(async () => {
+        await handleView(result)
+      }, 100)
+    } catch (error) {
+      console.error('Error scanning barcode:', error)
+      toast.error('Failed to search product')
+    }
+  }, [toast])
+
+  // Enable barcode scanner
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    minLength: 3,
+    maxLength: 50,
+    preventDuplicates: true,
+    duplicateTimeout: 500
   })
 
   // Pagination
