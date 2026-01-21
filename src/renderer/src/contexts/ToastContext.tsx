@@ -39,17 +39,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
       {children}
       
-      {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md">
+      {/* Toast Container - z-[9999] ensures it's above all modals */}
+      <div className="fixed top-4 right-4 z-[9999] space-y-3 max-w-md pointer-events-none">
         {toasts.map(toast => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
-            type={toast.type}
-            message={toast.message}
-            duration={toast.duration}
-            onClose={removeToast}
-          />
+          <div key={toast.id} className="pointer-events-auto">
+            <Toast
+              id={toast.id}
+              type={toast.type}
+              message={toast.message}
+              duration={toast.duration}
+              onClose={removeToast}
+            />
+          </div>
         ))}
       </div>
     </ToastContext.Provider>

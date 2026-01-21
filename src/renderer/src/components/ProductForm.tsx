@@ -6,6 +6,7 @@ type ProductVariant = {
   color?: string
   size?: string
   sku: string
+  barcode?: string
   price: number
   stock: number
 }
@@ -13,6 +14,7 @@ type ProductVariant = {
 type FormData = {
   name: string
   baseSKU: string
+  baseBarcode: string
   categoryId: string
   description: string
   basePrice: number
@@ -53,7 +55,7 @@ type ProductFormProps = {
   categories: Category[]
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onRemoveImage: (index: number) => void
-  newVariant: { color: string; size: string; sku: string; price: number; stock: number }
+  newVariant: { color: string; size: string; sku: string; barcode: string; price: number; stock: number }
   setNewVariant: (v: any) => void
   onAddVariant: () => void
   onRemoveVariant: (id: string) => void
@@ -64,6 +66,7 @@ type ProductFormProps = {
     colors: string[]
     sizes: string[]
     baseSKU: string
+    baseBarcode: string
     price: number
     stock: number
   }
@@ -181,6 +184,25 @@ export default function ProductForm({
           {errors.baseSKU && <p className="text-error text-sm mt-1">{errors.baseSKU}</p>}
         </div>
       </div>
+
+      {!formData.hasVariants && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Base Barcode (optional)
+          </label>
+          <input
+            type="text"
+            value={formData.baseBarcode}
+            onChange={(e) => setFormData({ ...formData, baseBarcode: e.target.value.toUpperCase() })}
+            onFocus={(e) => e.target.select()}
+            className="input-field w-full"
+            placeholder="Enter barcode or leave empty to auto-generate"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Will auto-generate BAR{formData.baseSKU || 'SKU'} if left empty
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -357,7 +379,7 @@ export default function ProductForm({
 
             {/* Single Variant Mode */}
             {!batchMode && (
-              <div className="grid grid-cols-6 gap-3">
+              <div className="grid grid-cols-7 gap-3">
                 <input
                   type="text"
                   value={newVariant.color}
@@ -378,6 +400,14 @@ export default function ProductForm({
                   onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value.toUpperCase() })}
                   className="input-field"
                   placeholder={t('sku')}
+                />
+                <input
+                  type="text"
+                  value={newVariant.barcode}
+                  onChange={(e) => setNewVariant({ ...newVariant, barcode: e.target.value.toUpperCase() })}
+                  onFocus={(e) => e.target.select()}
+                  className="input-field"
+                  placeholder="Barcode (optional)"
                 />
                 <input
                   type="number"
@@ -494,7 +524,7 @@ export default function ProductForm({
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     {t('commonSettings')}
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
                         {t('baseSKURequired')}
@@ -507,6 +537,19 @@ export default function ProductForm({
                         placeholder="SKU-BASE"
                       />
                       <p className="text-xs text-slate-500 mt-1">{t('willBe')} {batchVariant.baseSKU || 'SKU'}-1, {batchVariant.baseSKU || 'SKU'}-2, etc.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                        Base Barcode (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={batchVariant.baseBarcode}
+                        onChange={(e) => setBatchVariant({ ...batchVariant, baseBarcode: e.target.value.toUpperCase() })}
+                        className="input-field w-full"
+                        placeholder="BARCODE-BASE"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Will be {batchVariant.baseBarcode || 'BAR'}-1, {batchVariant.baseBarcode || 'BAR'}-2, etc.</p>
                     </div>
                     <div>
                       <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
@@ -591,6 +634,11 @@ export default function ProductForm({
                           <span className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs font-mono">
                             {variant.sku}
                           </span>
+                          {variant.barcode && (
+                            <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-mono">
+                              {variant.barcode}
+                            </span>
+                          )}
                           <span className="text-xs text-slate-500 dark:text-slate-400">
                             • ${(variant.price * variant.stock).toFixed(2)}
                           </span>
@@ -605,7 +653,27 @@ export default function ProductForm({
                       </div>
 
                       {/* Compact Editable Fields */}
-                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                      <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                        {/* Barcode Field */}
+                        <div>
+                          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">
+                            Barcode
+                          </label>
+                          <input
+                            type="text"
+                            value={variant.barcode || ''}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants]
+                              newVariants[index] = { ...newVariants[index], barcode: e.target.value.toUpperCase() || undefined }
+                              setFormData({ ...formData, variants: newVariants })
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded
+                                     focus:ring-1 focus:ring-primary focus:border-primary transition-shadow
+                                     bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono"
+                            placeholder="BAR..."
+                          />
+                        </div>
                         {/* Price Field */}
                         <div>
                           <label className="block text-xs text-slate-600 dark:text-slate-400 mb-0.5">

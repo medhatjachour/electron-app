@@ -228,9 +228,8 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       // Backend search via IPC with barcode support
       const response = await (window as any).api['search:products']({
         filters: { 
-          query: trimmedQuery,
-          // Add barcode-specific search if pattern detected
-          barcode: isBarcodeQuery ? trimmedQuery : undefined
+          query: isBarcodeQuery ? undefined : trimmedQuery, // Don't use query for barcodes
+          barcode: isBarcodeQuery ? trimmedQuery : undefined // Use exact barcode match
         },
         pagination: { 
           page: 1, 
@@ -248,9 +247,32 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       
       // Auto-select first result if exact barcode match and only one result
       if (isBarcodeQuery && results.length === 1) {
-        handleProductSelect(results[0])
+        const product = results[0]
+        
+        // Find exact variant by barcode if product has variants
+        if (product.hasVariants && product.variants && product.variants.length > 0) {
+          const barcodeMatch = product.variants.find(
+            v => v.barcode && v.barcode.toLowerCase() === trimmedQuery.toLowerCase()
+          )
+          if (barcodeMatch) {
+            // Add specific variant to cart
+            addToCart(product, barcodeMatch)
+          } else {
+            // Expand to show variants if no exact match
+            handleProductSelect(product)
+          }
+        } else {
+          // Simple product - add directly
+          handleProductSelect(product)
+        }
+        
         setSearchQuery('')
         setShowDropdown(false)
+        
+        // Keep focus on search input to allow continuous scanning
+        setTimeout(() => {
+          searchInputRef.current?.focus()
+        }, 50)
       }
     } catch (error) {
       console.error('Search error:', error)

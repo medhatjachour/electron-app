@@ -61,6 +61,7 @@ export function registerProductsHandlers(prisma: any) {
             select: {
               id: true,
               sku: true,
+              barcode: true,
               color: true,
               size: true,
               price: true,
@@ -123,8 +124,24 @@ export function registerProductsHandlers(prisma: any) {
         where: { id },
         include: {
           images: { orderBy: { order: 'asc' } },
-          variants: { orderBy: { createdAt: 'asc' } },
-          store: true
+          variants: { 
+            orderBy: { createdAt: 'asc' },
+            select: {
+              id: true,
+              productId: true,
+              color: true,
+              size: true,
+              sku: true,
+              barcode: true,
+              price: true,
+              cost: true,
+              stock: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          },
+          store: true,
+          category: true
         }
       })
 
@@ -247,9 +264,11 @@ export function registerProductsHandlers(prisma: any) {
               // Auto-create default variant for simple products
               create: [{
                 sku: product.baseSKU,
+                barcode: product.baseBarcode || undefined,
                 color: 'Default',
                 size: 'Default',
                 price: product.basePrice,
+                cost: product.baseCost || undefined,
                 stock: baseStock
               }]
             } : undefined
@@ -280,7 +299,18 @@ export function registerProductsHandlers(prisma: any) {
       return { success: true, product: newProduct }
     } catch (error: any) {
       console.error('Error creating product:', error)
-      return { success: false, message: error.message }
+      
+      // Check for duplicate barcode error
+      if (error.code === 'P2002' && error.meta?.target?.includes('barcode')) {
+        return { success: false, message: 'This barcode is already used by another product. Please use a unique barcode.' }
+      }
+      
+      // Check for duplicate SKU error
+      if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+        return { success: false, message: 'This SKU is already used by another product. Please use a unique SKU.' }
+      }
+      
+      return { success: false, message: error.message || 'Failed to create product. Please try again.' }
     }
   })
 
@@ -398,7 +428,7 @@ export function registerProductsHandlers(prisma: any) {
         // Get existing variants to track stock changes
         const existingVariants = await tx.productVariant.findMany({
           where: { productId: id },
-          select: { id: true, sku: true, stock: true, color: true, size: true, price: true }
+          select: { id: true, sku: true, stock: true, color: true, size: true, price: true, barcode: true }
         })
         
         // Build map of existing variants by SKU for comparison
@@ -429,6 +459,7 @@ export function registerProductsHandlers(prisma: any) {
               if (v.color !== (existing as any).color) { updates.color = v.color; needsUpdate = true }
               if (v.size !== (existing as any).size) { updates.size = v.size; needsUpdate = true }
               if (v.price !== (existing as any).price) { updates.price = v.price; needsUpdate = true }
+              if (v.barcode !== (existing as any).barcode) { updates.barcode = v.barcode; needsUpdate = true }
               // Stock is NOT updated here - use stock movement dialog to change stock
               
               if (needsUpdate) {
@@ -440,6 +471,7 @@ export function registerProductsHandlers(prisma: any) {
                 color: v.color,
                 size: v.size,
                 sku: v.sku,
+                barcode: v.barcode,
                 price: v.price,
                 stock: v.stock
               })
@@ -475,18 +507,25 @@ export function registerProductsHandlers(prisma: any) {
           
           if (defaultVariant) {
             // Update default variant (excluding stock - use stock movement dialog)
+            // Also update barcode and cost if product has them
             await tx.productVariant.updateMany({
               where: { productId: id, sku: product.baseSKU },
-              data: { price: product.basePrice }
+              data: { 
+                price: product.basePrice,
+                barcode: product.baseBarcode || undefined,
+                cost: product.baseCost || undefined
+              }
             })
           } else if (!defaultVariant) {
             // Create default variant
             variantData = {
               create: [{
                 sku: product.baseSKU,
+                barcode: product.baseBarcode || undefined,
                 color: 'Default',
                 size: 'Default',
                 price: product.basePrice,
+                cost: product.baseCost || undefined,
                 stock: baseStock
               }]
             }
@@ -558,7 +597,18 @@ export function registerProductsHandlers(prisma: any) {
       return { success: true, product: updated }
     } catch (error: any) {
       console.error('Error updating product:', error)
-      return { success: false, message: error.message }
+      
+      // Check for duplicate barcode error
+      if (error.code === 'P2002' && error.meta?.target?.includes('barcode')) {
+        return { success: false, message: 'This barcode is already used by another product variant. Please use a unique barcode.' }
+      }
+      
+      // Check for duplicate SKU error
+      if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+        return { success: false, message: 'This SKU is already used by another product. Please use a unique SKU.' }
+      }
+      
+      return { success: false, message: error.message || 'Failed to update product. Please try again.' }
     }
   })
 

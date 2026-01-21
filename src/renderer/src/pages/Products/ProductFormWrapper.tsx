@@ -28,6 +28,7 @@ type Category = {
 type FormData = {
   name: string
   baseSKU: string
+  baseBarcode: string
   categoryId: string
   description: string
   basePrice: number
@@ -41,6 +42,7 @@ type FormData = {
     color?: string
     size?: string
     sku: string
+    barcode?: string
     price: number
     stock: number
   }>
@@ -73,6 +75,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
   const [formData, setFormData] = useState<FormData>({
     name: '',
     baseSKU: '',
+    baseBarcode: '',
     categoryId: '',
     description: '',
     basePrice: 0,
@@ -91,6 +94,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     color: '',
     size: '',
     sku: '',
+    barcode: '',
     price: 0,
     stock: 0
   })
@@ -101,6 +105,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     colors: [] as string[],
     sizes: [] as string[],
     baseSKU: '',
+    baseBarcode: '',
     price: 0,
     stock: 0
   })
@@ -136,6 +141,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       setFormData({
         name: product.name,
         baseSKU: product.baseSKU,
+        baseBarcode: product.baseBarcode || '',
         categoryId: product.categoryId || '',
         description: product.description || '',
         basePrice: product.basePrice,
@@ -149,6 +155,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           color: v.color || undefined,
           size: v.size || undefined,
           sku: v.sku,
+          barcode: v.barcode || undefined,
           price: v.price,
           stock: v.stock
         })) || []
@@ -364,6 +371,9 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       return
     }
 
+    // Auto-generate barcode if not provided
+    const barcode = newVariant.barcode || `BAR${newVariant.sku}`
+
     setFormData(prev => ({
       ...prev,
       variants: [
@@ -373,6 +383,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           color: newVariant.color,
           size: newVariant.size,
           sku: newVariant.sku,
+          barcode: barcode,
           price: newVariant.price,
           stock: newVariant.stock
         }
@@ -383,6 +394,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       color: '',
       size: '',
       sku: '',
+      barcode: '',
       price: 0,
       stock: 0
     })
@@ -475,6 +487,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       color?: string
       size?: string
       sku: string
+      barcode?: string
       price: number
       stock: number
     }> = []
@@ -487,11 +500,15 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       batchVariant.colors.forEach(color => {
         batchVariant.sizes.forEach(size => {
           const sku = `${baseSKU}-${counter}`
+          const barcode = batchVariant.baseBarcode 
+            ? `${batchVariant.baseBarcode}-${counter}` 
+            : `BAR${sku}`
           newVariants.push({
             id: `temp-${Date.now()}-${counter}`,
             color,
             size,
             sku,
+            barcode,
             price: batchVariant.price,
             stock: batchVariant.stock
           })
@@ -503,10 +520,14 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     else if (batchVariant.colors.length > 0) {
       batchVariant.colors.forEach(color => {
         const sku = `${baseSKU}-${counter}`
+        const barcode = batchVariant.baseBarcode 
+          ? `${batchVariant.baseBarcode}-${counter}` 
+          : `BAR${sku}`
         newVariants.push({
           id: `temp-${Date.now()}-${counter}`,
           color,
           sku,
+          barcode,
           price: batchVariant.price,
           stock: batchVariant.stock
         })
@@ -517,10 +538,14 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     else if (batchVariant.sizes.length > 0) {
       batchVariant.sizes.forEach(size => {
         const sku = `${baseSKU}-${counter}`
+        const barcode = batchVariant.baseBarcode 
+          ? `${batchVariant.baseBarcode}-${counter}` 
+          : `BAR${sku}`
         newVariants.push({
           id: `temp-${Date.now()}-${counter}`,
           size,
           sku,
+          barcode,
           price: batchVariant.price,
           stock: batchVariant.stock
         })
@@ -552,6 +577,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
       colors: [],
       sizes: [],
       baseSKU: '',
+      baseBarcode: '',
       price: 0,
       stock: 0
     })
@@ -575,10 +601,16 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     setLoading(true)
 
     try {
+      // Auto-generate baseBarcode if not provided for products without variants
+      const finalBaseBarcode = !formData.hasVariants && !formData.baseBarcode.trim()
+        ? `BAR${formData.baseSKU.trim()}`
+        : formData.baseBarcode.trim() || undefined
+
       // Prepare data for API
       const productData = {
         name: formData.name.trim(),
         baseSKU: formData.baseSKU.trim(),
+        baseBarcode: finalBaseBarcode,
         categoryId: formData.categoryId,
         description: formData.description.trim(),
         basePrice: formData.basePrice,
@@ -590,6 +622,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
           color: v.color,
           size: v.size,
           sku: v.sku,
+          barcode: v.barcode,
           price: v.price,
           cost: PRODUCT_DEFAULTS.calculateDefaultCost(v.price), // Default cost from constant
           stock: v.stock
@@ -610,11 +643,15 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
         toast.success(product ? 'Product updated successfully' : 'Product created successfully')
         onSuccess()
       } else {
-        toast.error(result.message || 'Failed to save product')
+        // Show detailed error message from backend
+        const errorMsg = result.message || 'Failed to save product'
+        toast.error(errorMsg, 8000) // 8 seconds for longer error messages
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save product:', error)
-      toast.error('Failed to save product')
+      // Show detailed error with stack trace if available
+      const errorMsg = error?.message || error?.toString() || 'Failed to save product'
+      toast.error(`Error: ${errorMsg}`, 8000)
     } finally {
       setLoading(false)
     }

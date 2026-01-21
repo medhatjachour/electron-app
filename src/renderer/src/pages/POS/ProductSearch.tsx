@@ -3,12 +3,13 @@
  * Now uses backend filtering for better performance and accuracy
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, Filter, X, ChevronDown, RefreshCcw } from 'lucide-react'
 import { useBackendSearch, useFilterMetadata } from '../../hooks/useBackendSearch'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useDebounce } from '../../hooks/useDebounce'
+import { BARCODE_PATTERNS, SEARCH_CONFIG } from '../../../../shared/constants'
 import type { Product, ProductVariant } from './types'
 
 type Props = {
@@ -20,6 +21,7 @@ type SortOption = 'name' | 'price-low' | 'price-high' | 'stock-low' | 'stock-hig
 
 export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonly<Props>) {
   const { t } = useLanguage()
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -43,21 +45,35 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   // Load filter metadata (categories, colors, sizes, price range)
   const { metadata: filterMetadata } = useFilterMetadata()
 
-  // Debounce search query for better performance (300ms delay like Products/Inventory)
-  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+  // Check if query is a barcode
+  const isBarcodeQuery = useMemo(() => {
+    const trimmedQuery = searchQuery.trim()
+    return trimmedQuery.length > 0 && BARCODE_PATTERNS.isBarcode(trimmedQuery)
+  }, [searchQuery])
+
+  // Debounce search query - instant for barcodes, 300ms for text
+  const debouncedSearchQuery = useDebounce(
+    searchQuery, 
+    isBarcodeQuery ? SEARCH_CONFIG.BARCODE_DEBOUNCE : 300
+  )
 
   // Memoize filters object to prevent unnecessary re-renders
-  const searchFilters = useMemo(() => ({
-    query: debouncedSearchQuery,
-    categoryIds: selectedCategoryIds,
-    storeId: selectedStoreId || undefined,
-    stockStatus: stockFilter === 'all' ? undefined : 
-                 stockFilter === 'in-stock' ? ['low', 'normal', 'high'] as any : 
-                 ['low'] as any,
-    priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
-    colors: selectedColors.length > 0 ? selectedColors : undefined,
-    sizes: selectedSizes.length > 0 ? selectedSizes : undefined
-  }), [debouncedSearchQuery, selectedCategoryIds, selectedStoreId, stockFilter, priceRange, selectedColors, selectedSizes])
+  const searchFilters = useMemo(() => {
+    const trimmedQuery = debouncedSearchQuery.trim()
+    
+    return {
+      query: isBarcodeQuery ? undefined : trimmedQuery, // Don't use query for barcodes
+      barcode: isBarcodeQuery ? trimmedQuery : undefined, // Use exact barcode match
+      categoryIds: selectedCategoryIds,
+      storeId: selectedStoreId || undefined,
+      stockStatus: stockFilter === 'all' ? undefined : 
+                   stockFilter === 'in-stock' ? ['low', 'normal', 'high'] as any : 
+                   ['low'] as any,
+      priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
+      colors: selectedColors.length > 0 ? selectedColors : undefined,
+      sizes: selectedSizes.length > 0 ? selectedSizes : undefined
+    }
+  }, [debouncedSearchQuery, isBarcodeQuery, selectedCategoryIds, selectedStoreId, stockFilter, priceRange, selectedColors, selectedSizes])
 
   // Memoize sort options - if no sort selected, default to newest first
   const sortOptions = useMemo(() => {
@@ -91,6 +107,33 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
     }
   })
 
+  // Auto-add to cart when barcode scan returns single result
+  useEffect(() => {
+    if (isBarcodeQuery && products && products.length === 1 && !loading && debouncedSearchQuery) {
+      const product = products[0]
+      
+      // Find exact variant match by barcode if product has variants
+      let variantToAdd: ProductVariant | undefined
+      if (product.hasVariants && product.variants && product.variants.length > 0) {
+        const barcodeMatch = product.variants.find(
+          v => v.barcode && v.barcode.toLowerCase() === debouncedSearchQuery.trim().toLowerCase()
+        )
+        variantToAdd = barcodeMatch || product.variants[0]
+      } else {
+        variantToAdd = product.variants?.[0]
+      }
+      
+      // Add to cart
+      onAddToCart(product, variantToAdd)
+      setSearchQuery('') // Clear search after adding
+      
+      // Keep focus on search input to allow continuous scanning
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 50)
+    }
+  }, [isBarcodeQuery, products, loading, debouncedSearchQuery, onAddToCart])
+
   // Extract filter options from metadata
   const filterOptions = useMemo(() => {
     if (!filterMetadata) {
@@ -117,9 +160,11 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
   const paginatedProducts = filteredProducts
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && filteredProducts.length > 0) {
-      onAddToCart(filteredProducts[0])
-      setSearchQuery('')
+    if (e.key === 'Enter') {
+      e.preventDefault() // Prevent form submission/page reload
+      
+      // Don't auto-add on Enter - let barcode detection handle it
+      // Users can still click to add products manually
     }
   }
 
@@ -158,6 +203,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
           <div className="flex-1 min-w-[300px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder={t('searchProductsEnter')}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
@@ -166,6 +212,11 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
               onKeyDown={handleKeyPress}
               autoFocus
             />
+            {isBarcodeQuery && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
+                Barcode
+              </span>
+            )}
           </div>
 
           {/* Quick Filters - Inline */}

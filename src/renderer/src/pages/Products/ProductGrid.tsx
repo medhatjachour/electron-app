@@ -75,6 +75,12 @@ function ProductGrid({ products, onView, onEdit, onDelete }: Readonly<ProductGri
                 {t('sku')}: {product.baseSKU}
               </p>
 
+              {!product.hasVariants && product.baseBarcode && (
+                <p className="text-xs font-mono text-green-600 dark:text-green-400 mb-2">
+                  🔖 {product.baseBarcode}
+                </p>
+              )}
+
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-lg font-bold text-primary">

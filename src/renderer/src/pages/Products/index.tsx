@@ -451,9 +451,27 @@ export default function Products() {
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('sku')}</div>
                 <p className="text-lg font-semibold">{selectedProduct.baseSKU}</p>
               </div>
+              {!selectedProduct.hasVariants && selectedProduct.baseBarcode && (
+                <div>
+                  <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Barcode</div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-semibold font-mono text-green-600 dark:text-green-400">{selectedProduct.baseBarcode}</p>
+                    <button
+                      onClick={() => window.alert('Barcode printing will be implemented')}
+                      className="px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors"
+                    >
+                      Print Barcode
+                    </button>
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('category')}</div>
-                <p className="text-lg font-semibold">{selectedProduct.category || t('uncategorized')}</p>
+                <p className="text-lg font-semibold">
+                  {typeof selectedProduct.category === 'string' 
+                    ? selectedProduct.category 
+                    : (selectedProduct.category as any)?.name || t('uncategorized')}
+                </p>
               </div>
               <div>
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('price')}</div>
@@ -494,14 +512,36 @@ export default function Products() {
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{t('variants')}</div>
                 <div className="space-y-2">
                   {selectedProduct.variants.map((variant, idx) => (
-                    <div key={variant.id || idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                      <div>
-                        <span className="font-medium">{variant.color} {variant.size}</span>
-                        <span className="text-sm text-slate-500 ml-2">{t('sku')}: {variant.sku}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">${variant.price.toFixed(2)}</div>
-                        <div className="text-sm text-slate-500">{t('stock')}: {variant.stock}</div>
+                    <div key={variant.id || idx} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium">{variant.color} {variant.size}</span>
+                            <span className="text-sm text-slate-500">{t('sku')}: {variant.sku}</span>
+                          </div>
+                          {variant.barcode && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-slate-500">Barcode:</span>
+                              <span className="text-sm font-mono font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                                {variant.barcode}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 ml-3">
+                          <div className="text-right">
+                            <div className="font-semibold">${variant.price.toFixed(2)}</div>
+                            <div className="text-sm text-slate-500">{t('stock')}: {variant.stock}</div>
+                          </div>
+                          {variant.barcode && (
+                            <button
+                              onClick={() => window.alert(`Print barcode: ${variant.barcode}`)}
+                              className="px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors whitespace-nowrap"
+                            >
+                              Print
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
