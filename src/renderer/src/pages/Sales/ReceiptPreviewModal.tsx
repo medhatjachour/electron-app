@@ -9,9 +9,11 @@ interface ReceiptPreviewModalProps {
 
 export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModalProps) {
   const { success, error } = useToast()
-  const [settings, setSettings] = useState<any>({})
+  const [settings, setSettings] = useState<any>(null)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [autoPrintTriggered, setAutoPrintTriggered] = useState(false)
 
+  // Load settings on mount
   useEffect(() => {
     // Load settings from localStorage
     const storeName = localStorage.getItem('storeName') || 'My Store'
@@ -28,9 +30,10 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
     const printLogo = localStorage.getItem('printLogo') === 'true'
     const printQRCode = localStorage.getItem('printQRCode') === 'true'
     const printBarcode = localStorage.getItem('printBarcode') === 'true'
+    const autoPrint = localStorage.getItem('autoPrint') === 'true'
     const taxRate = parseFloat(localStorage.getItem('taxRate') || '10')
 
-    setSettings({
+    const loadedSettings = {
       storeName,
       storeAddress,
       storePhone,
@@ -45,11 +48,27 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
       printLogo,
       printQRCode,
       printBarcode,
+      autoPrint,
       taxRate
-    })
+    }
+    
+    setSettings(loadedSettings)
   }, [])
 
+  // Auto-print when settings are loaded and autoPrint is enabled
+  useEffect(() => {
+    if (settings && settings.autoPrint && !autoPrintTriggered && settings.printerType) {
+      setAutoPrintTriggered(true)
+      // Small delay to ensure modal is fully rendered
+      setTimeout(() => {
+        handlePrint()
+      }, 300)
+    }
+  }, [settings, autoPrintTriggered])
+
   const handlePrint = async () => {
+    if (!settings) return
+    
     setIsPrinting(true)
     try {
       // Prepare receipt data
@@ -132,6 +151,18 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
 
   const handleBrowserPrint = () => {
     window.print()
+  }
+
+  // Don't render until settings are loaded
+  if (!settings) {
+    return (
+      <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-center mt-4 text-slate-600 dark:text-slate-400">Loading receipt...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

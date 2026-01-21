@@ -5,6 +5,13 @@
  */
 
 import { ThermalPrinter, PrinterTypes } from 'node-thermal-printer'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import { promises as fs } from 'fs'
+import * as path from 'path'
+import * as os from 'os'
+
+const execAsync = promisify(exec)
 
 export interface PrinterSettings {
   printerType: 'none' | 'usb' | 'network' | 'html'
@@ -56,15 +63,34 @@ export interface ReceiptData {
 
 export class ThermalPrinterService {
   /**
+   * Sanitize printer name to prevent command injection
+   */
+  private static sanitizePrinterName(name: string): string {
+    // Allow only alphanumeric, dash, underscore, dot, and forward slash
+    return name.replace(/[^a-zA-Z0-9\-_./]/g, '')
+  }
+
+  /**
+   * Sanitize IP address
+   */
+  private static sanitizeIP(ip: string): string {
+    // Validate IP format (IPv4)
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/
+    if (!ipRegex.test(ip)) {
+      throw new Error('Invalid IP address format')
+    }
+    return ip
+  }
+
+  /**
    * Print to CUPS printer using lp command with raw ESC/POS data
    */
   private static async printToCUPS(printerName: string, data: string, settings: PrinterSettings): Promise<void> {
-    const { exec } = require('child_process')
-    const { promisify } = require('util')
-    const execAsync = promisify(exec)
-    const fs = require('fs').promises
-    const path = require('path')
-    const os = require('os')
+    // Sanitize printer name to prevent command injection
+    const safePrinterName = this.sanitizePrinterName(printerName)
+    if (!safePrinterName || safePrinterName.length === 0) {
+      throw new Error('Invalid printer name')
+    }
 
     // Create temp file with ESC/POS commands + text data + cut command
     const tempFile = path.join(os.tmpdir(), `receipt-${Date.now()}.bin`)
@@ -98,13 +124,13 @@ export class ThermalPrinterService {
 
     try {
       // Print using lp command with raw option for ESC/POS commands
-      await execAsync(`lp -d ${printerName} -o raw "${tempFile}"`)
+      await execAsync(`lp -d "${safePrinterName}" -o raw "${tempFile}"`)
     } finally {
       // Clean up temp file
       try {
         await fs.unlink(tempFile)
       } catch (e) {
-        // Ignore cleanup errors
+        console.error(`Failed to delete temporary print file "${tempFile}":`, e)
       }
     }
   }
@@ -207,7 +233,9 @@ export class ThermalPrinterService {
     let printerInterface: string
     
     if (settings.printerType === 'network' && settings.printerIP) {
-      printerInterface = `tcp://${settings.printerIP}:9100`
+      // Sanitize IP address to prevent injection
+      const safeIP = this.sanitizeIP(settings.printerIP)
+      printerInterface = `tcp://${safeIP}:9100`
     } else if (settings.printerName) {
       // Check if it's a USB URI (usb://...)
       if (settings.printerName.startsWith('usb://')) {
@@ -459,7 +487,8 @@ export class ThermalPrinterService {
       printer.bold(true)
       printer.println('Test Successful!')
       printer.bold(false)
-      printer.println('ZKT eco ZKP8012')
+      printer.println('Thermal Printer Ready')
+      printer.println('Receipt System Active')
 
       printer.newLine()
       printer.newLine()

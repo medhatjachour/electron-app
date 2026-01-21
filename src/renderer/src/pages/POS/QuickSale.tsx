@@ -1083,12 +1083,9 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                         <div className="flex flex-col items-end gap-0.5">
                           {(() => {
                             // Calculate original price before discount
-                            let originalPrice = item.price
-                            if (item.discountType === 'PERCENTAGE') {
-                              originalPrice = item.price / (1 - item.discountValue / 100)
-                            } else {
-                              originalPrice = item.price + (item.discountValue / item.quantity)
-                            }
+                            const originalPrice = item.discountType === 'PERCENTAGE'
+                              ? item.price / (1 - item.discountValue / 100)
+                              : item.price + (item.discountValue / item.quantity)
                             const originalSubtotal = originalPrice * item.quantity
                             
                             return (

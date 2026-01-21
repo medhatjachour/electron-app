@@ -14,6 +14,14 @@ export function registerReceiptHandlers(): void {
     try {
       const { receiptData, settings } = data
       
+      // Validate settings to prevent injection
+      if (settings.printerName && typeof settings.printerName !== 'string') {
+        throw new Error('Invalid printer name type')
+      }
+      if (settings.printerIP && typeof settings.printerIP !== 'string') {
+        throw new Error('Invalid printer IP type')
+      }
+      
       console.log('📄 Receipt print requested:', {
         type: settings.printerType,
         name: settings.printerName,
