@@ -632,12 +632,12 @@ export class ThermalPrinterService {
         // Add 0.5cm bottom margin (approximately 6 lines for thermal printers)
         commands.push(Buffer.from('\n\n\n\n\n\n'))
 
-        // Cut paper after all content
+        // Cut paper after each copy
         commands.push(Buffer.from([0x1D, 0x56, 0x00])) // GS V 0 - Full cut
 
-        // Add feed between copies
+        // Add small feed between copies (but not after the last one)
         if (copy < copies - 1) {
-          commands.push(Buffer.from([0x1B, 0x64, 0x05])) // ESC d 5 - Feed 5 lines
+          commands.push(Buffer.from([0x1B, 0x64, 0x02])) // ESC d 2 - Feed 2 lines
         }
       }
 

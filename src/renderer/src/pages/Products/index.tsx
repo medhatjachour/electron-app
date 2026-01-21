@@ -73,9 +73,22 @@ export default function Products() {
       
       toast.success(`Found: ${result.name}`)
       
-      // Auto-open view modal for the found product
+      // Auto-open view modal for the found product - fetch full details
       setTimeout(async () => {
-        await handleView(result)
+        try {
+          const fullProduct = await ipc.products.getById(result.id)
+          
+          // Calculate total stock from variants
+          const totalStock = fullProduct.variants && fullProduct.variants.length > 0
+            ? fullProduct.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+            : 0
+          
+          setSelectedProduct({ ...fullProduct, totalStock })
+          setShowViewModal(true)
+        } catch (error) {
+          console.error('Failed to load product details:', error)
+          toast.error('Failed to load product details')
+        }
       }, 100)
     } catch (error) {
       console.error('Error scanning barcode:', error)
@@ -501,7 +514,7 @@ export default function Products() {
                     <p className="text-lg font-semibold font-mono text-green-600 dark:text-green-400">{selectedProduct.baseBarcode}</p>
                     <button
                       onClick={() => {
-                        setPrintBarcode({ code: selectedProduct.baseBarcode, name: selectedProduct.name })
+                        setPrintBarcode({ code: selectedProduct.baseBarcode!, name: selectedProduct.name })
                         setShowPrintDialog(true)
                       }}
                       className="px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors"
@@ -583,7 +596,7 @@ export default function Products() {
                             <button
                               onClick={() => {
                                 setPrintBarcode({
-                                  code: variant.barcode,
+                                  code: variant.barcode!,
                                   name: `${selectedProduct.name} - ${variant.color} ${variant.size}`
                                 })
                                 setShowPrintDialog(true)

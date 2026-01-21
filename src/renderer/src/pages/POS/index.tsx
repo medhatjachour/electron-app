@@ -101,7 +101,7 @@ export default function POS(): JSX.Element {
       console.error('Error scanning barcode:', error)
       toast.error('Failed to add product')
     }
-  }, [addToCart, toast, viewMode, cartOpen])
+  }, [addToCart, toast, viewMode, cartOpen, setCartOpen])
 
   // Enable barcode scanner
   useBarcodeScanner({

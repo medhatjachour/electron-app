@@ -374,6 +374,16 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     // Auto-generate barcode if not provided
     const barcode = newVariant.barcode || `BAR${newVariant.sku}`
 
+    // Check for duplicate barcode within this product
+    const barcodeExists = formData.variants.some(
+      v => v.barcode && v.barcode === barcode
+    )
+
+    if (barcodeExists) {
+      toast.error(`A variant with barcode "${barcode}" already exists in this product`)
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       variants: [

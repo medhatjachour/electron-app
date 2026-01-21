@@ -89,6 +89,11 @@ export default function BarcodePrintDialog({ isOpen, onClose, barcode, productNa
       return
     }
 
+    if (!barcode || barcode.trim().length === 0) {
+      toast.error('Barcode cannot be empty')
+      return
+    }
+
     if (copies < 1 || copies > 10) {
       toast.error('Copies must be between 1 and 10')
       return

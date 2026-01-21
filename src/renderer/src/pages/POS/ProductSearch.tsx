@@ -132,7 +132,7 @@ export default function ProductSearch({ onAddToCart, cartOpen = false }: Readonl
         searchInputRef.current?.focus()
       }, 50)
     }
-  }, [isBarcodeQuery, products, loading, debouncedSearchQuery, onAddToCart])
+  }, [isBarcodeQuery, products, loading, debouncedSearchQuery, onAddToCart, setSearchQuery, searchInputRef])
 
   // Extract filter options from metadata
   const filterOptions = useMemo(() => {

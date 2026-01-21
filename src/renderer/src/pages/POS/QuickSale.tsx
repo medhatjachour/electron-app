@@ -407,7 +407,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       console.error('Error scanning barcode:', error)
       showToast('error', 'Failed to add product')
     }
-  }, [addToCart, showToast])
+  }, [addToCart, showToast, searchInputRef])
 
   // Enable barcode scanner
   useBarcodeScanner({

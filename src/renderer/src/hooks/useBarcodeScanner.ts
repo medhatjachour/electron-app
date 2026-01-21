@@ -136,8 +136,9 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
           if (timeSinceLastKey > 50 && buffer.current.length === 0) {
             // Normal human typing, ignore
             return
-          }
-        }
+          }          
+          // Update last key time for next keystroke
+          lastScanTimeRef.current = now        }
 
         buffer.current += event.key
 
