@@ -9,6 +9,8 @@ import { Search, ShoppingCart, Trash2, X, DollarSign, Percent } from 'lucide-rea
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
+import { ipc } from '../../utils/ipc'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
 import { PaymentFlowSelector } from './PaymentFlowSelector'
@@ -228,9 +230,8 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       // Backend search via IPC with barcode support
       const response = await (window as any).api['search:products']({
         filters: { 
-          query: trimmedQuery,
-          // Add barcode-specific search if pattern detected
-          barcode: isBarcodeQuery ? trimmedQuery : undefined
+          query: isBarcodeQuery ? undefined : trimmedQuery, // Don't use query for barcodes
+          barcode: isBarcodeQuery ? trimmedQuery : undefined // Use exact barcode match
         },
         pagination: { 
           page: 1, 
@@ -248,9 +249,32 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       
       // Auto-select first result if exact barcode match and only one result
       if (isBarcodeQuery && results.length === 1) {
-        handleProductSelect(results[0])
+        const product = results[0]
+        
+        // Find exact variant by barcode if product has variants
+        if (product.hasVariants && product.variants && product.variants.length > 0) {
+          const barcodeMatch = product.variants.find(
+            v => v.barcode && v.barcode.toLowerCase() === trimmedQuery.toLowerCase()
+          )
+          if (barcodeMatch) {
+            // Add specific variant to cart
+            addToCart(product, barcodeMatch)
+          } else {
+            // Expand to show variants if no exact match
+            handleProductSelect(product)
+          }
+        } else {
+          // Simple product - add directly
+          handleProductSelect(product)
+        }
+        
         setSearchQuery('')
         setShowDropdown(false)
+        
+        // Keep focus on search input to allow continuous scanning
+        setTimeout(() => {
+          searchInputRef.current?.focus()
+        }, 50)
       }
     } catch (error) {
       console.error('Search error:', error)
@@ -355,6 +379,44 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
     
     showToast('success', 'Item added')
   }, [showToast])
+
+  // Barcode scanner integration - add products directly to cart
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    try {
+      const result = await ipc.inventory.searchByBarcode(barcode)
+      
+      if (!result) {
+        showToast('error', `No product found: ${barcode}`)
+        return
+      }
+
+      // Add the scanned product to cart
+      if (result.selectedVariant) {
+        // Product with variant
+        addToCart(result, result.selectedVariant)
+      } else {
+        // Product without variant
+        addToCart(result)
+      }
+
+      // Keep focus on search input for continuous scanning
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 50)
+    } catch (error) {
+      console.error('Error scanning barcode:', error)
+      showToast('error', 'Failed to add product')
+    }
+  }, [addToCart, showToast, searchInputRef])
+
+  // Enable barcode scanner
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    minLength: 3,
+    maxLength: 50,
+    preventDuplicates: true,
+    duplicateTimeout: 500 // Allow same product scan after 500ms
+  })
 
   // Handle keyboard navigation in search
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -670,7 +732,18 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       
       // Show receipt option
       if (result.success && result.transaction) {
-        setCompletedTransaction(result.transaction)
+        // Attach product info from cart to the items
+        const itemsWithProducts = (result.items || []).map((item: any, index: number) => ({
+          ...item,
+          product: {
+            name: cartItems[index]?.name || 'Unknown Product'
+          }
+        }))
+        
+        setCompletedTransaction({
+          ...result.transaction,
+          items: itemsWithProducts
+        })
         setShowReceiptModal(true)
       }
       

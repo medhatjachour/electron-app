@@ -11,8 +11,10 @@ import { useToast } from '../../contexts/ToastContext'
 import { useDisplaySettings } from '../../contexts/DisplaySettingsContext'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import Modal from '../../components/ui/Modal'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
+import BarcodePrintDialog from '../../components/BarcodePrintDialog'
 import ProductFormWrapper from './ProductFormWrapper'
 import ProductActions from './ProductActions'
 import ProductFilters from './ProductFilters'
@@ -37,6 +39,10 @@ export default function Products() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  
+  // Barcode print dialog states
+  const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [printBarcode, setPrintBarcode] = useState<{ code: string; name: string }>({ code: '', name: '' })
 
   // Filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -47,6 +53,56 @@ export default function Products() {
     size: '',
     store: '',
     stockStatus: ''
+  })
+
+  // Barcode scanner integration - search for products by barcode
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    try {
+      const result = await ipc.inventory.searchByBarcode(barcode)
+      
+      if (!result) {
+        toast.error(`No product found with barcode: ${barcode}`)
+        return
+      }
+
+      // Update search query to show the found product
+      setFilters(prev => ({
+        ...prev,
+        searchQuery: result.name // Search by product name to show it
+      }))
+      
+      toast.success(`Found: ${result.name}`)
+      
+      // Auto-open view modal for the found product - fetch full details
+      setTimeout(async () => {
+        try {
+          const fullProduct = await ipc.products.getById(result.id)
+          
+          // Calculate total stock from variants
+          const totalStock = fullProduct.variants && fullProduct.variants.length > 0
+            ? fullProduct.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+            : 0
+          
+          setSelectedProduct({ ...fullProduct, totalStock })
+          setShowViewModal(true)
+        } catch (error) {
+          console.error('Failed to load product details:', error)
+          toast.error('Failed to load product details')
+        }
+      }, 100)
+    } catch (error) {
+      console.error('Error scanning barcode:', error)
+      toast.error('Failed to search product')
+    }
+  }, [toast])
+
+  // Enable barcode scanner
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    minLength: 3,
+    maxLength: 50,
+    preventDuplicates: true,
+    duplicateTimeout: 500
   })
 
   // Pagination
@@ -451,9 +507,30 @@ export default function Products() {
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('sku')}</div>
                 <p className="text-lg font-semibold">{selectedProduct.baseSKU}</p>
               </div>
+              {!selectedProduct.hasVariants && selectedProduct.baseBarcode && (
+                <div>
+                  <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Barcode</div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-semibold font-mono text-green-600 dark:text-green-400">{selectedProduct.baseBarcode}</p>
+                    <button
+                      onClick={() => {
+                        setPrintBarcode({ code: selectedProduct.baseBarcode!, name: selectedProduct.name })
+                        setShowPrintDialog(true)
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors"
+                    >
+                      Print Barcode
+                    </button>
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('category')}</div>
-                <p className="text-lg font-semibold">{selectedProduct.category || t('uncategorized')}</p>
+                <p className="text-lg font-semibold">
+                  {typeof selectedProduct.category === 'string' 
+                    ? selectedProduct.category 
+                    : (selectedProduct.category as any)?.name || t('uncategorized')}
+                </p>
               </div>
               <div>
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('price')}</div>
@@ -494,14 +571,42 @@ export default function Products() {
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{t('variants')}</div>
                 <div className="space-y-2">
                   {selectedProduct.variants.map((variant, idx) => (
-                    <div key={variant.id || idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                      <div>
-                        <span className="font-medium">{variant.color} {variant.size}</span>
-                        <span className="text-sm text-slate-500 ml-2">{t('sku')}: {variant.sku}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">${variant.price.toFixed(2)}</div>
-                        <div className="text-sm text-slate-500">{t('stock')}: {variant.stock}</div>
+                    <div key={variant.id || idx} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium">{variant.color} {variant.size}</span>
+                            <span className="text-sm text-slate-500">{t('sku')}: {variant.sku}</span>
+                          </div>
+                          {variant.barcode && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-slate-500">Barcode:</span>
+                              <span className="text-sm font-mono font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                                {variant.barcode}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 ml-3">
+                          <div className="text-right">
+                            <div className="font-semibold">${variant.price.toFixed(2)}</div>
+                            <div className="text-sm text-slate-500">{t('stock')}: {variant.stock}</div>
+                          </div>
+                          {variant.barcode && (
+                            <button
+                              onClick={() => {
+                                setPrintBarcode({
+                                  code: variant.barcode!,
+                                  name: `${selectedProduct.name} - ${variant.color} ${variant.size}`
+                                })
+                                setShowPrintDialog(true)
+                              }}
+                              className="px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors whitespace-nowrap"
+                            >
+                              Print
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -525,6 +630,14 @@ export default function Products() {
         checkResult={deleteCheckResult}
         onDelete={handleConfirmDelete}
         onArchive={handleArchiveProduct}
+      />
+      
+      {/* Barcode Print Dialog */}
+      <BarcodePrintDialog
+        isOpen={showPrintDialog}
+        onClose={() => setShowPrintDialog(false)}
+        barcode={printBarcode.code}
+        productName={printBarcode.name}
       />
     </div>
   )

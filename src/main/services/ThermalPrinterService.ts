@@ -558,4 +558,171 @@ export class ThermalPrinterService {
     const detectedPrinters = await this.detectUSBPrinters()
     return detectedPrinters.map(p => p.path)
   }
+
+  /**
+   * Print barcode label
+   */
+  static async printBarcode(
+    printerName: string,
+    barcodeText: string,
+    options: {
+      productName?: string
+      format?: 'code128' | 'ean13' | 'ean8'
+      copies?: number
+      width?: number
+      height?: number
+    } = {}
+  ): Promise<void> {
+    const {
+      productName = '',
+      format = 'code128',
+      copies = 1,
+      width = 2,
+      height = 100
+    } = options
+
+    // Create temp file for the print job
+    const tempFile = path.join(os.tmpdir(), `barcode-${Date.now()}.bin`)
+
+    try {
+      // Build ESC/POS commands
+      const commands: Buffer[] = []
+
+      // Initialize printer
+      commands.push(Buffer.from([0x1B, 0x40])) // ESC @ - Initialize
+
+      for (let copy = 0; copy < copies; copy++) {
+        // Center alignment
+        commands.push(Buffer.from([0x1B, 0x61, 0x01])) // ESC a 1 - Center
+
+        // Print product name if provided
+        if (productName) {
+          // Bold on
+          commands.push(Buffer.from([0x1B, 0x45, 0x01])) // ESC E 1 - Bold
+          // Print name
+          commands.push(Buffer.from(productName + '\n', 'utf-8'))
+          // Bold off
+          commands.push(Buffer.from([0x1B, 0x45, 0x00])) // ESC E 0 - Bold off
+          commands.push(Buffer.from('\n'))
+        }
+
+        // Use ESC/POS native barcode command for CODE128
+        // This will print the actual barcode graphic (vertical lines)
+        
+        // Set barcode height: GS h n (n = height in dots, default 162)
+        commands.push(Buffer.from([0x1D, 0x68, height])) // GS h - Set barcode height
+        
+        // Set barcode width: GS w n (n = 2-6, module width)
+        commands.push(Buffer.from([0x1D, 0x77, width])) // GS w - Set barcode width
+        
+        // Set HRI position: GS H n (0=none, 1=above, 2=below, 3=both)
+        commands.push(Buffer.from([0x1D, 0x48, 0x02])) // GS H 2 - Print barcode text below
+        
+        // Set HRI font: GS f n (0=Font A, 1=Font B)
+        commands.push(Buffer.from([0x1D, 0x66, 0x00])) // GS f 0 - Font A
+        
+        // Print CODE128 barcode: GS k m n d1...dn
+        // m = 73 for CODE128
+        const barcodeData = Buffer.from(barcodeText, 'utf-8')
+        const barcodeLength = barcodeData.length
+        
+        commands.push(Buffer.from([0x1D, 0x6B, 0x49, barcodeLength])) // GS k 73 n - CODE128 barcode
+        commands.push(barcodeData) // Barcode data
+        
+        // Add 0.5cm bottom margin (approximately 6 lines for thermal printers)
+        commands.push(Buffer.from('\n\n\n\n\n\n'))
+
+        // Cut paper after each copy
+        commands.push(Buffer.from([0x1D, 0x56, 0x00])) // GS V 0 - Full cut
+
+        // Add small feed between copies (but not after the last one)
+        if (copy < copies - 1) {
+          commands.push(Buffer.from([0x1B, 0x64, 0x02])) // ESC d 2 - Feed 2 lines
+        }
+      }
+
+      // Combine all commands
+      const finalBuffer = Buffer.concat(commands)
+
+      // Write to temp file
+      await fs.writeFile(tempFile, finalBuffer)
+
+      // Sanitize printer name
+      const safePrinterName = this.sanitizePrinterName(printerName)
+      if (!safePrinterName) {
+        throw new Error('Invalid printer name')
+      }
+
+      // Send to printer using lp
+      await execAsync(`lp -d "${safePrinterName}" -o raw "${tempFile}"`)
+
+      // Clean up temp file after a delay
+      setTimeout(() => {
+        fs.unlink(tempFile).catch(err => console.error('Failed to delete temp file:', err))
+      }, 5000)
+
+    } catch (error) {
+      // Clean up on error
+      try {
+        await fs.unlink(tempFile)
+      } catch {}
+      throw error
+    }
+  }
+
+  /**
+   * Test print - prints a test page
+   */
+  static async printTest(printerName: string): Promise<void> {
+    const tempFile = path.join(os.tmpdir(), `test-${Date.now()}.bin`)
+
+    try {
+      // Build test print commands
+      const commands: Buffer[] = []
+
+      // Initialize
+      commands.push(Buffer.from([0x1B, 0x40])) // ESC @
+
+      // Center
+      commands.push(Buffer.from([0x1B, 0x61, 0x01])) // ESC a 1
+
+      // Bold
+      commands.push(Buffer.from([0x1B, 0x45, 0x01])) // ESC E 1
+      commands.push(Buffer.from('TEST PRINT\n', 'utf-8'))
+      commands.push(Buffer.from([0x1B, 0x45, 0x00])) // ESC E 0
+
+      commands.push(Buffer.from('\n'))
+      commands.push(Buffer.from('If you can read this,\n', 'utf-8'))
+      commands.push(Buffer.from('your printer is working!\n', 'utf-8'))
+      commands.push(Buffer.from('\n'))
+      commands.push(Buffer.from(new Date().toLocaleString() + '\n', 'utf-8'))
+      commands.push(Buffer.from('\n\n'))
+
+      // Cut
+      commands.push(Buffer.from([0x1D, 0x56, 0x00])) // GS V 0
+
+      const finalBuffer = Buffer.concat(commands)
+      await fs.writeFile(tempFile, finalBuffer)
+
+      // Sanitize printer name
+      const safePrinterName = this.sanitizePrinterName(printerName)
+      if (!safePrinterName) {
+        throw new Error('Invalid printer name')
+      }
+
+      // Send to printer
+      await execAsync(`lp -d "${safePrinterName}" -o raw "${tempFile}"`)
+
+      // Clean up
+      setTimeout(() => {
+        fs.unlink(tempFile).catch(err => console.error('Failed to delete temp file:', err))
+      }, 5000)
+
+    } catch (error) {
+      try {
+        await fs.unlink(tempFile)
+      } catch {}
+      throw error
+    }
+  }
 }

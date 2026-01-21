@@ -32,6 +32,7 @@ export interface Product {
   id: string
   name: string
   baseSKU: string
+  baseBarcode?: string | null
   category: string
   categoryId: string | null
   description: string | null
@@ -55,6 +56,7 @@ export interface ProductVariant {
   color: string | null
   size: string | null
   sku: string
+  barcode?: string | null
   price: number
   stock: number
   createdAt: Date | string

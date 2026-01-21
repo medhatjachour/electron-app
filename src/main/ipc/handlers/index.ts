@@ -32,6 +32,7 @@ import { setupReorderHandlers } from './reorder.handlers'
 import { registerSupplierHandlers } from './suppliers.handlers'
 import { setupPurchaseOrderHandlers } from './purchase-orders.handlers'
 import { registerReceiptHandlers as registerThermalReceiptHandlers } from './receipt.handlers'
+import { registerBarcodePrintHandlers } from './barcode.handlers'
 
 // Initialize Prisma client
 let isSeeded = false
@@ -151,6 +152,9 @@ export function registerAllHandlers() {
   
   // Register thermal receipt/printer handlers
   registerThermalReceiptHandlers()
+  
+  // Register barcode printing handlers
+  registerBarcodePrintHandlers()
   
   // Register purchase order handlers
   setupPurchaseOrderHandlers(prisma)

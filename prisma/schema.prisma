@@ -49,6 +49,7 @@ model Product {
   id            String           @id @default(uuid())
   name          String
   baseSKU       String           @unique
+  baseBarcode   String?          @unique // Barcode for products without variants
   categoryId    String
   category      Category         @relation(fields: [categoryId], references: [id])
   description   String?
@@ -75,6 +76,7 @@ model Product {
   @@index([storeId])
   @@index([name])
   @@index([baseSKU])
+  @@index([baseBarcode])
   @@index([isArchived])
   
   // Composite indexes for common query patterns

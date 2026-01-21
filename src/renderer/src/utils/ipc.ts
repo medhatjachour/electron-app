@@ -420,6 +420,32 @@ const mockIPC = {
     getBySale: async (_saleId: string) => [],
     markAsPaid: async (_data: any) => ({ success: false, error: 'Mock implementation' }),
     create: async (_data: any) => ({ success: false, error: 'Mock implementation' })
+  },
+  inventory: {
+    searchByBarcode: async (barcode: string) => {
+      const products = JSON.parse(localStorage.getItem('products') || '[]')
+      // Search through products and their variants
+      for (const product of products) {
+        // Check product baseBarcode
+        if (product.baseBarcode === barcode) {
+          return {
+            ...product,
+            selectedVariant: null
+          }
+        }
+        // Check variant barcodes
+        if (product.variants && product.variants.length > 0) {
+          const variant = product.variants.find((v: any) => v.barcode === barcode)
+          if (variant) {
+            return {
+              ...product,
+              selectedVariant: variant
+            }
+          }
+        }
+      }
+      return null
+    }
   }
 }
 
@@ -516,5 +542,10 @@ export const ipc = isElectron ? {
     getBySale: (saleId: string) => window.electron.ipcRenderer.invoke('installments:getBySale', saleId),
     markAsPaid: (data: { installmentId: string, paidDate?: string }) => window.electron.ipcRenderer.invoke('installments:markAsPaid', data),
     create: (data: any) => window.electron.ipcRenderer.invoke('installments:create', data)
+  },
+
+  // Inventory/Barcode operations
+  inventory: {
+    searchByBarcode: (barcode: string) => window.electron.ipcRenderer.invoke('inventory:searchByBarcode', barcode)
   }
 } : mockIPC

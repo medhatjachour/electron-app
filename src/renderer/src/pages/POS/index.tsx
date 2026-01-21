@@ -10,7 +10,7 @@
  * - usePOS: Business logic and state management
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Grid, Zap } from 'lucide-react'
 import ProductSearch from './ProductSearch'
 import QuickSale from './QuickSale'
@@ -22,6 +22,9 @@ import { PaymentFlowSelector } from './PaymentFlowSelector'
 import { ReceiptPreviewModal } from '../Sales/ReceiptPreviewModal'
 import { usePOS } from './usePOS'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
+import { useToast } from '../../contexts/ToastContext'
+import { ipc } from '../../utils/ipc'
 import type { Customer } from './types'
 
 type ViewMode = 'grid' | 'quick'
@@ -52,6 +55,9 @@ export default function POS(): JSX.Element {
     setShowDiscountModal,
   } = usePOS()
 
+  const { t, language } = useLanguage()
+  const toast = useToast()
+
   const [cartOpen, setCartOpen] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -65,6 +71,46 @@ export default function POS(): JSX.Element {
   // Grid view has its own local customer state (like QuickSale does)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerQuery, setCustomerQuery] = useState('')
+
+  // Barcode scanner integration - add products directly to cart
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    try {
+      const result = await ipc.inventory.searchByBarcode(barcode)
+      
+      if (!result) {
+        toast.error(`No product found with barcode: ${barcode}`)
+        return
+      }
+
+      // Add the scanned product to cart
+      if (result.selectedVariant) {
+        // Product with variant
+        addToCart(result, result.selectedVariant)
+        toast.success(`Added ${result.name} (${result.selectedVariant.color || ''} ${result.selectedVariant.size || ''})`)
+      } else {
+        // Product without variant
+        addToCart(result)
+        toast.success(`Added ${result.name}`)
+      }
+
+      // Auto-open cart in grid view if closed
+      if (viewMode === 'grid' && !cartOpen) {
+        setCartOpen(true)
+      }
+    } catch (error) {
+      console.error('Error scanning barcode:', error)
+      toast.error('Failed to add product')
+    }
+  }, [addToCart, toast, viewMode, cartOpen, setCartOpen])
+
+  // Enable barcode scanner
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    minLength: 3,
+    maxLength: 50,
+    preventDuplicates: true,
+    duplicateTimeout: 500 // Allow same product scan after 500ms
+  })
 
   // Clear local customer state when sale is completed successfully
   useEffect(() => {
@@ -96,8 +142,6 @@ export default function POS(): JSX.Element {
       setShowPaymentModal(false) // Ensure modal closes
     }
   }
-
-  const { t, language } = useLanguage()
 
   // Quick checkout with cash, no customer
   const handleQuickCheckout = async () => {
