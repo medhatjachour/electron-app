@@ -13,6 +13,7 @@ import { useDebounce } from '../../hooks/useDebounce'
 import { useLanguage } from '../../contexts/LanguageContext'
 import Modal from '../../components/ui/Modal'
 import SmartDeleteDialog from '../../components/SmartDeleteDialog'
+import BarcodePrintDialog from '../../components/BarcodePrintDialog'
 import ProductFormWrapper from './ProductFormWrapper'
 import ProductActions from './ProductActions'
 import ProductFilters from './ProductFilters'
@@ -37,6 +38,10 @@ export default function Products() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteCheckResult, setDeleteCheckResult] = useState<any>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  
+  // Barcode print dialog states
+  const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [printBarcode, setPrintBarcode] = useState<{ code: string; name: string }>({ code: '', name: '' })
 
   // Filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -457,7 +462,10 @@ export default function Products() {
                   <div className="flex items-center gap-2">
                     <p className="text-lg font-semibold font-mono text-green-600 dark:text-green-400">{selectedProduct.baseBarcode}</p>
                     <button
-                      onClick={() => window.alert('Barcode printing will be implemented')}
+                      onClick={() => {
+                        setPrintBarcode({ code: selectedProduct.baseBarcode, name: selectedProduct.name })
+                        setShowPrintDialog(true)
+                      }}
                       className="px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors"
                     >
                       Print Barcode
@@ -535,7 +543,13 @@ export default function Products() {
                           </div>
                           {variant.barcode && (
                             <button
-                              onClick={() => window.alert(`Print barcode: ${variant.barcode}`)}
+                              onClick={() => {
+                                setPrintBarcode({
+                                  code: variant.barcode,
+                                  name: `${selectedProduct.name} - ${variant.color} ${variant.size}`
+                                })
+                                setShowPrintDialog(true)
+                              }}
                               className="px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors whitespace-nowrap"
                             >
                               Print
@@ -565,6 +579,14 @@ export default function Products() {
         checkResult={deleteCheckResult}
         onDelete={handleConfirmDelete}
         onArchive={handleArchiveProduct}
+      />
+      
+      {/* Barcode Print Dialog */}
+      <BarcodePrintDialog
+        isOpen={showPrintDialog}
+        onClose={() => setShowPrintDialog(false)}
+        barcode={printBarcode.code}
+        productName={printBarcode.name}
       />
     </div>
   )
