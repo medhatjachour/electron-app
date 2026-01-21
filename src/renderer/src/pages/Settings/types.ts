@@ -24,6 +24,25 @@ export interface TaxReceiptSettings {
   maxDiscountPercentage: number
   maxDiscountAmount: number
   requireDiscountReason: boolean
+  // COGS calculation setting
+  includeCOGSInCalculations: boolean
+  // Store information for receipt
+  storeName: string
+  storeAddress: string
+  storePhone: string
+  storeEmail: string
+  taxNumber: string // Egyptian tax number (الرقم الضريبي)
+  commercialRegister: string // Commercial register number
+  // Printer settings
+  printerType: 'none' | 'usb' | 'network' | 'html'
+  printerName: string // USB printer name or network printer name
+  printerIP: string // For network printers
+  paperWidth: '58mm' | '80mm'
+  receiptBottomSpacing: number // Number of blank lines at bottom of receipt (for tearing)
+  printLogo: boolean
+  printQRCode: boolean
+  printBarcode: boolean
+  openCashDrawer: boolean
 }
 
 export interface NotificationSettings {

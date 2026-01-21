@@ -315,6 +315,20 @@ export function usePOS() {
         clearCart()
       }, 2000)
       
+      // Return the transaction with items attached for receipt preview
+      // Attach product info from cart to the items
+      const itemsWithProducts = (result.items || []).map((item: any, index: number) => ({
+        ...item,
+        product: {
+          name: cart[index]?.name || 'Unknown Product'
+        }
+      }))
+      
+      return {
+        ...result.transaction,
+        items: itemsWithProducts
+      }
+      
     } catch (error) {
       console.error('❌ Failed to complete sale:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'

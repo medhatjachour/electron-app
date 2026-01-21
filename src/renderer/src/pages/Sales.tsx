@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard, CheckCircle } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Users, Calendar, Filter, Download, RefreshCcw, X, Eye, ChevronDown, ChevronRight, CreditCard, CheckCircle, Receipt } from 'lucide-react'
 import { ipc } from '../utils/ipc'
 import Pagination from '../components/Pagination'
 import { formatCurrency, formatLargeNumber } from '@renderer/utils/formatNumber'
 import RefundItemsModal from './Sales/RefundItemsModal'
+import { ReceiptPreviewModal } from './Sales/ReceiptPreviewModal'
 import { InstallmentManager } from '../components/InstallmentManager'
 import { calculateRefundedAmount } from '@/shared/utils/refundCalculations'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -110,6 +111,7 @@ export default function Sales(): JSX.Element {
   const [selectedTransaction, setSelectedTransaction] = useState<SaleTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [showInstallmentManager, setShowInstallmentManager] = useState(false)
   const [selectedTransactionForInstallments, setSelectedTransactionForInstallments] = useState<SaleTransaction | null>(null)
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set())
@@ -444,6 +446,11 @@ export default function Sales(): JSX.Element {
   const handleInstallmentManager = (transaction: SaleTransaction) => {
     setSelectedTransactionForInstallments(transaction)
     setShowInstallmentManager(true)
+  }
+
+  const handleViewReceipt = (transaction: SaleTransaction) => {
+    setSelectedTransaction(transaction)
+    setShowReceiptModal(true)
   }
 
   const handleMarkAsPaid = async (installmentId: string) => {
@@ -1077,6 +1084,14 @@ export default function Sales(): JSX.Element {
                               <Eye size={14} />
                               View
                             </button>
+                            <button 
+                              onClick={() => handleViewReceipt(transaction)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 border border-green-200 dark:border-green-800 rounded-lg text-xs font-semibold transition-all hover:shadow-sm"
+                              title="View receipt"
+                            >
+                              <Receipt size={14} />
+                              Receipt
+                            </button>
                             {transaction.installments && transaction.installments.length > 0 && (
                               <button 
                                 onClick={() => handleInstallmentManager(transaction)}
@@ -1630,6 +1645,17 @@ export default function Sales(): JSX.Element {
           }}
           transactionId={selectedTransactionForInstallments.id}
           customerName={selectedTransactionForInstallments.customerName || 'Walk-in Customer'}
+        />
+      )}
+
+      {/* Receipt Preview Modal */}
+      {showReceiptModal && selectedTransaction && (
+        <ReceiptPreviewModal
+          transaction={selectedTransaction}
+          onClose={() => {
+            setShowReceiptModal(false)
+            setSelectedTransaction(null)
+          }}
         />
       )}
     </div>

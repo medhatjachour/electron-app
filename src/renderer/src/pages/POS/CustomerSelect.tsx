@@ -81,9 +81,9 @@ export default function CustomerSelect({
           </button>
         )}
         
-        {/* Customer Dropdown */}
+        {/* Customer Dropdown - positioned above the input */}
         {showDropdown && filteredCustomers.length > 0 && !selectedCustomer && (
-          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+          <div className="absolute z-50 w-full bottom-full mb-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
             {filteredCustomers.map((customer) => (
               <button
                 key={customer.id}

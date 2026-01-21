@@ -372,6 +372,14 @@ const api = {
     generateInstallment: (installmentId: string) => ipcRenderer.invoke('receipts:generateInstallment', installmentId),
     generateThermal: (receipt: any) => ipcRenderer.invoke('receipts:generateThermal', receipt)
   },
+  thermalReceipts: {
+    print: (data: {
+      receiptData: any
+      settings: any
+    }) => ipcRenderer.invoke('receipt:print', data),
+    detectPrinters: () => ipcRenderer.invoke('receipt:detectPrinters'),
+    testPrint: (settings: any) => ipcRenderer.invoke('receipt:testPrint', settings)
+  },
   // Delete operations
   delete: {
     checkCustomer: (customerId: string) => ipcRenderer.invoke('delete:check-customer', { customerId }),

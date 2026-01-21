@@ -12,6 +12,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal, { type DiscountData } from '../../components/DiscountModal'
 import { PaymentFlowSelector } from './PaymentFlowSelector'
+import { ReceiptPreviewModal } from '../Sales/ReceiptPreviewModal'
 import type { Customer } from './types'
 import { BARCODE_PATTERNS, SEARCH_CONFIG } from '../../../../shared/constants'
 
@@ -99,6 +100,10 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   
   // Payment flow state
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
+  
+  // Receipt modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [completedTransaction, setCompletedTransaction] = useState<any>(null)
   const [customerQuery, setCustomerQuery] = useState('')
   
   // Discount state
@@ -107,7 +112,26 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
-  const total = subtotal
+  const taxRate = parseFloat(localStorage.getItem('salesTaxRate') || '0')
+  const tax = (subtotal * taxRate) / 100
+  
+  // Calculate total discount across all items
+  const totalDiscount = cartItems.reduce((sum, item) => {
+    if (!item.discountType || item.discountType === 'NONE' || !item.discountValue) return sum
+    
+    // item.price is already the final price after discount
+    // Calculate original price to get discount amount
+    let discount = 0
+    if (item.discountType === 'PERCENTAGE') {
+      const originalPrice = item.price / (1 - item.discountValue / 100)
+      discount = (originalPrice - item.price) * item.quantity
+    } else {
+      discount = item.discountValue
+    }
+    return sum + discount
+  }, 0)
+  
+  const total = subtotal + tax
 
   // Load customers and refresh cart stock info
   useEffect(() => {
@@ -567,7 +591,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
             customerName: selectedCustomer.name,
             customerId: selectedCustomer.id,
             subtotal,
-            tax: 0,
+            tax,
             total
           }
         }
@@ -601,6 +625,10 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
 
         showToast('success', 'Installment sale completed')
         
+        // Show receipt option
+        setCompletedTransaction(result.transaction)
+        setShowReceiptModal(true)
+        
         // Reset
         setCartItems([])
         setSelectedCustomer(null)
@@ -630,15 +658,21 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
           customerName: selectedCustomer?.name,
           customerId: selectedCustomer?.id,
           subtotal,
-          tax: 0, // Can be calculated if needed
+          tax,
           total
         }
       }
 
       // Submit sale via IPC
-      await (window as any).api.saleTransactions.create(saleData)
+      const result = await (window as any).api.saleTransactions.create(saleData)
       
       showToast('success', 'Sale completed')
+      
+      // Show receipt option
+      if (result.success && result.transaction) {
+        setCompletedTransaction(result.transaction)
+        setShowReceiptModal(true)
+      }
       
       // Reset
       setCartItems([])
@@ -1045,9 +1079,32 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        ${item.subtotal.toFixed(2)}
-                      </span>
+                      {item.discountValue && item.discountValue > 0 ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          {(() => {
+                            // Calculate original price before discount
+                            const originalPrice = item.discountType === 'PERCENTAGE'
+                              ? item.price / (1 - item.discountValue / 100)
+                              : item.price + (item.discountValue / item.quantity)
+                            const originalSubtotal = originalPrice * item.quantity
+                            
+                            return (
+                              <>
+                                <span className="text-xs text-slate-400 dark:text-slate-500 line-through">
+                                  ${originalSubtotal.toFixed(2)}
+                                </span>
+                                <span className="font-bold text-green-600 dark:text-green-400">
+                                  ${item.subtotal.toFixed(2)}
+                                </span>
+                              </>
+                            )
+                          })()}
+                        </div>
+                      ) : (
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          ${item.subtotal.toFixed(2)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-center">
                       <button
@@ -1074,6 +1131,18 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
               <span>{t('subtotal')}:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-xs text-green-600 dark:text-green-400">
+                <span>{t('discount')}:</span>
+                <span>-${totalDiscount.toFixed(2)}</span>
+              </div>
+            )}
+            {taxRate > 0 && (
+              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-500">
+                <span>{t('tax')} ({taxRate}%):</span>
+                <span>${tax.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white pt-1">
               <span>{t('total')}:</span>
               <span>${total.toFixed(2)}</span>
@@ -1260,6 +1329,17 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
           maxDiscountPercentage={parseFloat(localStorage.getItem('maxDiscountPercentage') || '50')}
           maxDiscountAmount={parseFloat(localStorage.getItem('maxDiscountAmount') || '100')}
           requireReason={true}
+        />
+      )}
+
+      {/* Receipt Preview Modal */}
+      {showReceiptModal && completedTransaction && (
+        <ReceiptPreviewModal
+          transaction={completedTransaction}
+          onClose={() => {
+            setShowReceiptModal(false)
+            setCompletedTransaction(null)
+          }}
         />
       )}
     </div>

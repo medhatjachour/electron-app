@@ -17,7 +17,7 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('taxReceiptSettings')}
@@ -25,6 +25,340 @@ export default function TaxReceiptSettings({ settings, onChange }: Props) {
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
           {t('configureTaxReceipt')}
         </p>
+      </div>
+
+      {/* Store Information for Receipt */}
+      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <h4 className="text-base font-semibold text-slate-900 dark:text-white">
+          Store Information (Receipt)
+        </h4>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
+          This information will appear on printed receipts
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Store Name *
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+              value={settings.storeName || ''}
+              onChange={(e) => handleChange('storeName', e.target.value)}
+              placeholder="e.g., محل الزهور"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Store Phone *
+            </label>
+            <input
+              type="tel"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+              value={settings.storePhone || ''}
+              onChange={(e) => handleChange('storePhone', e.target.value)}
+              placeholder="e.g., 0123456789"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Store Email
+            </label>
+            <input
+              type="email"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+              value={settings.storeEmail || ''}
+              onChange={(e) => handleChange('storeEmail', e.target.value)}
+              placeholder="e.g., info@store.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Tax Number (الرقم الضريبي) *
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+              value={settings.taxNumber || ''}
+              onChange={(e) => handleChange('taxNumber', e.target.value)}
+              placeholder="e.g., 123-456-789"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Store Address *
+          </label>
+          <textarea
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary resize-none"
+            rows={2}
+            value={settings.storeAddress || ''}
+            onChange={(e) => handleChange('storeAddress', e.target.value)}
+            placeholder="e.g., 15 شارع النيل، القاهرة، مصر"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Commercial Register Number (optional)
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+            value={settings.commercialRegister || ''}
+            onChange={(e) => handleChange('commercialRegister', e.target.value)}
+            placeholder="e.g., 12345"
+          />
+        </div>
+      </div>
+
+      {/* Printer Settings */}
+      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <h4 className="text-base font-semibold text-slate-900 dark:text-white">
+          Thermal Printer Settings
+        </h4>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
+          Configure your thermal printer for receipt printing
+        </p>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Printer Type *
+          </label>
+          <select
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+            value={settings.printerType || 'none'}
+            onChange={(e) => handleChange('printerType', e.target.value)}
+          >
+            <option value="none">No Printer (Manual Print)</option>
+            <option value="usb">USB Thermal Printer</option>
+            <option value="network">Network Thermal Printer (WiFi/Ethernet)</option>
+            <option value="html">System Printer (HTML/PDF)</option>
+          </select>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            USB: Connect via USB cable • Network: Connect via IP address • HTML: Use system print dialog
+          </p>
+        </div>
+
+        {settings.printerType === 'usb' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              USB Printer Name
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                value={settings.printerName || ''}
+                onChange={(e) => handleChange('printerName', e.target.value)}
+                placeholder="e.g., /dev/usb/lp0"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const result = await window.api.thermalReceipts.detectPrinters()
+                    if (result.success && result.printers.length > 0) {
+                      // Use first detected printer
+                      handleChange('printerName', result.printers[0].path)
+                      alert(`Found: ${result.printers.map((p: any) => p.name).join(', ')}`)
+                    } else {
+                      alert('No USB printers detected')
+                    }
+                  } catch (error) {
+                    console.error('Detection error:', error)
+                    alert('Failed to detect printers')
+                  }
+                }}
+                className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium whitespace-nowrap"
+              >
+                Auto-Detect
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Click Auto-Detect or enter manually (e.g., /dev/usb/lp0)
+            </p>
+          </div>
+        )}
+
+        {settings.printerType === 'network' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Printer IP Address *
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                value={settings.printerIP || ''}
+                onChange={(e) => handleChange('printerIP', e.target.value)}
+                placeholder="e.g., 192.168.1.100"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Find printer IP from printer settings menu
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Printer Name (optional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                value={settings.printerName || ''}
+                onChange={(e) => handleChange('printerName', e.target.value)}
+                placeholder="e.g., Kitchen Printer"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Paper Width
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="paperWidth"
+                value="58mm"
+                checked={settings.paperWidth === '58mm'}
+                onChange={(e) => handleChange('paperWidth', e.target.value)}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-300">58mm (Small)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="paperWidth"
+                value="80mm"
+                checked={settings.paperWidth === '80mm'}
+                onChange={(e) => handleChange('paperWidth', e.target.value)}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-300">80mm (Standard)</span>
+            </label>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Most Egyptian thermal printers use 80mm paper
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Receipt Bottom Spacing (Blank Lines)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="20"
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+            value={settings.receiptBottomSpacing ?? 4}
+            onChange={(e) => handleChange('receiptBottomSpacing', parseInt(e.target.value) || 0)}
+            placeholder="4"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Number of blank lines at the bottom of receipts (for easy tearing). Recommended: 3-6 lines
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={settings.printLogo || false}
+              onChange={(e) => handleChange('printLogo', e.target.checked)}
+            />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Print Store Logo</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={settings.printQRCode || false}
+              onChange={(e) => handleChange('printQRCode', e.target.checked)}
+            />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Print QR Code</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={settings.printBarcode || false}
+              onChange={(e) => handleChange('printBarcode', e.target.checked)}
+            />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Print Receipt Barcode</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={settings.openCashDrawer || false}
+              onChange={(e) => handleChange('openCashDrawer', e.target.checked)}
+            />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Open Cash Drawer After Print</span>
+          </label>
+        </div>
+
+        {/* Test Print Button */}
+        {settings.printerType !== 'none' && settings.printerType !== 'html' && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const result = await window.api.thermalReceipts.testPrint(settings)
+                if (result.success) {
+                  alert('Test print successful!')
+                } else {
+                  alert('Test print failed: ' + result.message)
+                }
+              } catch (error: any) {
+                alert('Test print error: ' + error.message)
+              }
+            }}
+            className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+          >
+            🖨️ Test Printer Connection
+          </button>
+        )}
+      </div>
+
+      {/* COGS Calculation Setting */}
+      <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              {t('includeCOGSInCalculations') || 'Include Cost of Goods Sold (COGS) in Calculations'}
+            </label>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              {t('includeCOGSDescription') || 'When enabled, COGS will be included in profit calculations, expense reports, and financial charts. Disable if you track COGS separately or use a different accounting method.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleChange('includeCOGSInCalculations', !settings.includeCOGSInCalculations)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+              settings.includeCOGSInCalculations ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                settings.includeCOGSInCalculations ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Tax Rate */}

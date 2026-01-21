@@ -114,7 +114,7 @@ export class EmailReportService {
    */
   async getEmailReportConfig(userId: string): Promise<EmailReportConfig | null> {
     try {
-      const report = await this.prisma.emailReport.findUnique({
+      const report = await this.prisma.emailReport.findFirst({
         where: { userId }
       })
 

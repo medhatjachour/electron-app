@@ -172,7 +172,8 @@ export default function Finance() {
         startDate: currentDates.start,
         endDate: currentDates.end,
         previousStartDate: previousDates.start,
-        previousEndDate: previousDates.end
+        previousEndDate: previousDates.end,
+        includeCOGS: localStorage.getItem('includeCOGSInCalculations') !== 'false'
       })
 
       if (data) {

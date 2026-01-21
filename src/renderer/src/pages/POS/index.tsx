@@ -19,6 +19,7 @@ import SuccessModal from './SuccessModal'
 import AddCustomerModal from './AddCustomerModal'
 import DiscountModal from '../../components/DiscountModal'
 import { PaymentFlowSelector } from './PaymentFlowSelector'
+import { ReceiptPreviewModal } from '../Sales/ReceiptPreviewModal'
 import { usePOS } from './usePOS'
 import { useLanguage } from '../../contexts/LanguageContext'
 import type { Customer } from './types'
@@ -57,6 +58,10 @@ export default function POS(): JSX.Element {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
   const [isCompletingSale, setIsCompletingSale] = useState(false)
   
+  // Receipt preview modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [completedTransaction, setCompletedTransaction] = useState<any>(null)
+  
   // Grid view has its own local customer state (like QuickSale does)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerQuery, setCustomerQuery] = useState('')
@@ -81,7 +86,11 @@ export default function POS(): JSX.Element {
   const handleCompleteSale = async () => {
     setIsCompletingSale(true)
     try {
-      await completeSale(selectedCustomer)
+      const transaction = await completeSale(selectedCustomer)
+      if (transaction) {
+        setCompletedTransaction(transaction)
+        setShowReceiptModal(true)
+      }
     } finally {
       setIsCompletingSale(false)
       setShowPaymentModal(false) // Ensure modal closes
@@ -105,7 +114,11 @@ export default function POS(): JSX.Element {
 
     try {
       // Call completeSale with null customer (no override needed since we set state above)
-      await completeSale(null)
+      const transaction = await completeSale(null)
+      if (transaction) {
+        setCompletedTransaction(transaction)
+        setShowReceiptModal(true)
+      }
     } catch (error) {
       console.error('Quick checkout failed:', error)
     } finally {
@@ -282,6 +295,23 @@ export default function POS(): JSX.Element {
                   <span>{t('subtotal')}:</span>
                   <span className="font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
+                {/* Discount line - only show if there are discounts */}
+                {(() => {
+                  const totalDiscount = cart.reduce((sum, item) => {
+                    if (item.discountType === 'PERCENTAGE') {
+                      return sum + (item.price * item.quantity * item.discountValue / 100)
+                    } else if (item.discountType === 'FIXED') {
+                      return sum + item.discountValue
+                    }
+                    return sum
+                  }, 0)
+                  return totalDiscount > 0 ? (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>{t('discount')}:</span>
+                      <span className="font-semibold">-${totalDiscount.toFixed(2)}</span>
+                    </div>
+                  ) : null
+                })()}
                 <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                   <span>{t('tax')} ({(parseFloat(localStorage.getItem('taxRate') || '10'))}%):</span>
                   <span className="font-semibold">${tax.toFixed(2)}</span>
@@ -397,6 +427,16 @@ export default function POS(): JSX.Element {
         </div>
       )}
 
+      {/* Receipt Preview Modal */}
+      {showReceiptModal && completedTransaction && (
+        <ReceiptPreviewModal
+          transaction={completedTransaction}
+          onClose={() => {
+            setShowReceiptModal(false)
+            setCompletedTransaction(null)
+          }}
+        />
+      )}
      
     </div>
   )
