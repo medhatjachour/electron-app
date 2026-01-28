@@ -101,8 +101,7 @@ export default function Products() {
     onScan: handleBarcodeScan,
     minLength: 3,
     maxLength: 50,
-    preventDuplicates: true,
-    duplicateTimeout: 500
+    preventDuplicates: false // Allow scanning same product multiple times
   })
 
   // Pagination

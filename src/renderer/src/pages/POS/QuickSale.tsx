@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ShoppingCart, Trash2, X, DollarSign, Percent } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, X, DollarSign, Percent, Info } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -84,9 +84,6 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null)
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(-1) // -1 means on product, 0+ means on variant
   
-  // Debug: Log when expandedProductId changes
-
-  
   // Reset variant selection when product changes or collapses
   useEffect(() => {
     if (!expandedProductId) {
@@ -114,23 +111,18 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
-  const taxRate = parseFloat(localStorage.getItem('salesTaxRate') || '0')
+  const taxRate = parseFloat(localStorage.getItem('taxRate') || '0')
   const tax = (subtotal * taxRate) / 100
   
   // Calculate total discount across all items
+  // Discount is the difference between original price and final price
   const totalDiscount = cartItems.reduce((sum, item) => {
     if (!item.discountType || item.discountType === 'NONE' || !item.discountValue) return sum
     
-    // item.price is already the final price after discount
-    // Calculate original price to get discount amount
-    let discount = 0
-    if (item.discountType === 'PERCENTAGE') {
-      const originalPrice = item.price / (1 - item.discountValue / 100)
-      discount = (originalPrice - item.price) * item.quantity
-    } else {
-      discount = item.discountValue
-    }
-    return sum + discount
+    const originalPrice = item.price // Price before discount
+    const finalPrice = item.finalPrice || item.price // Price after discount
+    const discountPerItem = originalPrice - finalPrice
+    return sum + (discountPerItem * item.quantity)
   }, 0)
   
   const total = subtotal + tax
@@ -271,10 +263,7 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
         setSearchQuery('')
         setShowDropdown(false)
         
-        // Keep focus on search input to allow continuous scanning
-        setTimeout(() => {
-          searchInputRef.current?.focus()
-        }, 50)
+        // DON'T refocus - scanner works when input is NOT focused
       }
     } catch (error) {
       console.error('Search error:', error)
@@ -313,8 +302,14 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       // Add directly if no variants or only one variant
       const variant = product.variants?.[0]
       addToCart(product, variant)
+      // Show toast for manual selection
+      if (variant) {
+        showToast('success', `Added ${product.name} (${variant.color || ''} ${variant.size || ''})`)
+      } else {
+        showToast('success', `Added ${product.name}`)
+      }
     }
-  }, [])
+  }, [ ])
 
   // Add product to cart with stock validation
   const addToCart = useCallback((product: Product, variant?: ProductVariant) => {
@@ -375,10 +370,10 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
     
     // Keep dropdown open but collapse expanded variants
     setExpandedProductId(null)
-    searchInputRef.current?.focus()
+    // DON'T refocus - scanner works when input is NOT focused
     
-    showToast('success', 'Item added')
-  }, [showToast])
+    // No toast here - let the caller show specific toast
+  }, [])
 
   // Barcode scanner integration - add products directly to cart
   const handleBarcodeScan = useCallback(async (barcode: string) => {
@@ -394,28 +389,27 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
       if (result.selectedVariant) {
         // Product with variant
         addToCart(result, result.selectedVariant)
+        showToast('success', `Added ${result.name} (${result.selectedVariant.color || ''} ${result.selectedVariant.size || ''})`)
       } else {
         // Product without variant
         addToCart(result)
+        showToast('success', `Added ${result.name}`)
       }
 
-      // Keep focus on search input for continuous scanning
-      setTimeout(() => {
-        searchInputRef.current?.focus()
-      }, 50)
+      // DON'T refocus search input - scanner works when input is NOT focused
+      // This prevents barcode characters from leaking into search field
     } catch (error) {
       console.error('Error scanning barcode:', error)
       showToast('error', 'Failed to add product')
     }
-  }, [addToCart, showToast, searchInputRef])
+  }, [addToCart, showToast])
 
   // Enable barcode scanner
   useBarcodeScanner({
     onScan: handleBarcodeScan,
     minLength: 3,
     maxLength: 50,
-    preventDuplicates: true,
-    duplicateTimeout: 500 // Allow same product scan after 500ms
+    preventDuplicates: false // Allow scanning same variant multiple times
   })
 
   // Handle keyboard navigation in search
@@ -687,8 +681,22 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
 
         showToast('success', 'Installment sale completed')
         
-        // Show receipt option
-        setCompletedTransaction(result.transaction)
+        // Re-fetch transaction with full details including installments
+        const fullTransaction = await (window as any).api.saleTransactions.getById(result.transaction.id)
+        
+        // Attach product info from cart to the items
+        const itemsWithProducts = (result.items || []).map((item: any, index: number) => ({
+          ...item,
+          product: {
+            name: cartItems[index]?.name || 'Unknown Product'
+          }
+        }))
+        
+        // Show receipt option with full transaction data
+        setCompletedTransaction({
+          ...fullTransaction,
+          items: itemsWithProducts
+        })
         setShowReceiptModal(true)
         
         // Reset
@@ -789,19 +797,32 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
     <div className="h-full flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900 overflow-y-scroll">
       {/* Search Bar with Dropdown - Compact */}
       <div className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={18} />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-            placeholder={t('searchProductsPlaceholder')}
-            className="w-full pl-10 pr-24 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            autoComplete="off"
-          />
+        <div className="relative flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={18} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+              placeholder={t('searchProductsPlaceholder')}
+              className="w-full pl-10 pr-24 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              autoComplete="off"
+            />
+          </div>
+          <div className="relative group">
+            <Info size={20} className="text-slate-400 hover:text-primary cursor-help" />
+            <div className="absolute right-0 top-8 w-72 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="font-semibold mb-2">📱 Barcode Scanner Usage:</div>
+              <ul className="space-y-1 list-disc list-inside">
+                <li><strong>To scan:</strong> Click outside the search box or press ESC, then scan</li>
+                <li><strong>To type:</strong> Click inside the search box and type normally</li>
+                <li><strong>Quick tip:</strong> Scanner only works when search box is NOT focused</li>
+              </ul>
+            </div>
+          </div>
           {isSearching && (
             <div className="absolute right-14 top-1/2 -translate-y-1/2 z-10">
               <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
@@ -935,7 +956,10 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                           return (
                             <button
                               key={variant.id}
-                              onClick={() => addToCart(product, variant)}
+                              onClick={() => {
+                                addToCart(product, variant)
+                                showToast('success', `Added ${product.name} (${variantLabel})`)
+                              }}
                               disabled={variant.stock === 0}
                               className={`w-full px-3 py-2 rounded-lg flex items-center justify-between transition-all text-left ${
                                 variant.stock === 0
@@ -1274,7 +1298,11 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
                   return (
                     <button
                       key={variant.id}
-                      onClick={() => addToCart(selectedProduct, variant)}
+                      onClick={() => {
+                        addToCart(selectedProduct, variant)
+                        showToast('success', `Added ${selectedProduct.name} (${variantLabel})`)
+                        setShowVariantModal(false)
+                      }}
                       disabled={variant.stock === 0}
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         variant.stock === 0

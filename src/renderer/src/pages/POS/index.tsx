@@ -108,8 +108,7 @@ export default function POS(): JSX.Element {
     onScan: handleBarcodeScan,
     minLength: 3,
     maxLength: 50,
-    preventDuplicates: true,
-    duplicateTimeout: 500 // Allow same product scan after 500ms
+    preventDuplicates: false // Allow scanning same variant multiple times
   })
 
   // Clear local customer state when sale is completed successfully

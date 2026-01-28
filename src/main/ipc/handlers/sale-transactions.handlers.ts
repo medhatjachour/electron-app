@@ -154,6 +154,31 @@ export function registerSaleTransactionHandlers(prisma: any) {
         timeout: 30000
       })
 
+      // Fetch the transaction with user info for receipt display
+      const transactionWithUser = await prisma.saleTransaction.findUnique({
+        where: { id: result.transaction.id },
+        include: {
+          user: {
+            select: {
+              username: true,
+              fullName: true
+            }
+          },
+          customer: {
+            select: {
+              name: true,
+              phone: true
+            }
+          },
+          installments: {
+            orderBy: {
+              dueDate: 'asc'
+            }
+          },
+          deposits: true
+        }
+      })
+
       // After successful transaction, recalculate customer totalSpent if customerId provided
       if (transactionData.customerId) {
         try {
@@ -176,7 +201,7 @@ export function registerSaleTransactionHandlers(prisma: any) {
         }
       }
 
-      return { success: true, ...result }
+      return { success: true, transaction: transactionWithUser, items: result.items }
     } catch (error) {
       console.error('Error creating sale transaction:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }

@@ -57,8 +57,18 @@ export interface ReceiptData {
   total: number
   
   // Optional
+  username?: string
   customerName?: string
+  customerPhone?: string
   notes?: string
+  
+  // Installments
+  installments?: Array<{
+    amount: number
+    dueDate: Date
+    status: string
+  }>
+  depositAmount?: number
 }
 
 export class ThermalPrinterService {
@@ -169,7 +179,9 @@ export class ThermalPrinterService {
       minute: '2-digit',
       hour12: true
     })}\n`
+    if (data.username) text += `Cashier: ${data.username}\n`
     if (data.customerName) text += `Customer: ${data.customerName}\n`
+    if (data.customerPhone) text += `Phone: ${data.customerPhone}\n`
     text += dashes + '\n'
     
     // Items with discount calculation
@@ -218,6 +230,34 @@ export class ThermalPrinterService {
     
     // Payment
     text += `Payment: ${data.paymentMethod}\n`
+    
+    // Installments
+    if (data.installments && data.installments.length > 0) {
+      text += '\n'
+      text += dashes + '\n'
+      text += 'INSTALLMENT PLAN\n'
+      text += dashes + '\n'
+      
+      if (data.depositAmount) {
+        text += `Deposit Paid: ${data.depositAmount.toFixed(2)} EGP\n`
+        text += '\n'
+      }
+      
+      data.installments.forEach((inst, idx) => {
+        const status = inst.status === 'paid' ? ' PAID' : inst.status === 'overdue' ? ' OVERDUE' : ''
+        const dateStr = inst.dueDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+        text += `#${idx + 1} ${dateStr}\n`
+        text += `   ${inst.amount.toFixed(2)} EGP${status}\n`
+      })
+      
+      const remaining = data.installments
+        .filter(i => i.status !== 'paid')
+        .reduce((sum, i) => sum + i.amount, 0)
+      
+      text += dashes + '\n'
+      text += `Remaining: ${remaining.toFixed(2)} EGP\n`
+    }
+    
     text += '\n'
     text += 'Thank you for your visit!\n'
     text += 'We appreciate your business\n'
@@ -302,8 +342,14 @@ export class ThermalPrinterService {
       minute: '2-digit',
       hour12: true
     })}`)
+    if (data.username) {
+      printer.println(`Cashier: ${data.username}`)
+    }
     if (data.customerName) {
       printer.println(`Customer: ${data.customerName}`)
+    }
+    if (data.customerPhone) {
+      printer.println(`Phone: ${data.customerPhone}`)
     }
     printer.drawLine()
 
@@ -355,10 +401,45 @@ export class ThermalPrinterService {
     printer.drawLine()
 
     // Payment
+    printer.newLine()
     printer.alignCenter()
-    printer.newLine()
     printer.println(`Payment: ${data.paymentMethod}`)
+    
+    // Installments
+    if (data.installments && data.installments.length > 0) {
+      printer.newLine()
+      printer.drawLine()
+      printer.alignCenter()
+      printer.bold(true)
+      printer.println('INSTALLMENT PLAN')
+      printer.bold(false)
+      printer.drawLine()
+      printer.alignLeft()
+      
+      if (data.depositAmount) {
+        printer.println(`Deposit: ${data.depositAmount.toFixed(2)} EGP`)
+        printer.drawLine()
+      }
+      
+      data.installments.forEach((inst, idx) => {
+        const status = inst.status === 'paid' ? 'PAID' : inst.status === 'overdue' ? 'OVER' : 'DUE'
+        const dateStr = inst.dueDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+        printer.println(`#${idx + 1} ${dateStr}`)
+        printer.println(`   ${inst.amount.toFixed(2)} EGP - ${status}`)
+      })
+      
+      const remaining = data.installments
+        .filter(i => i.status !== 'paid')
+        .reduce((sum, i) => sum + i.amount, 0)
+      
+      printer.drawLine()
+      printer.bold(true)
+      printer.println(`Remaining: ${remaining.toFixed(2)} EGP`)
+      printer.bold(false)
+    }
+    
     printer.newLine()
+    printer.alignCenter()
     printer.println('Thank you for your visit!')
     printer.println('We appreciate your business')
 
@@ -588,8 +669,12 @@ export class ThermalPrinterService {
       // Build ESC/POS commands
       const commands: Buffer[] = []
 
-      // Initialize printer
+      // Initialize printer with extended reset
       commands.push(Buffer.from([0x1B, 0x40])) // ESC @ - Initialize
+      
+      // Enable barcode printing (some printers need this)
+      // Set to standard mode
+      commands.push(Buffer.from([0x1B, 0x53])) // ESC S - Select standard mode
 
       for (let copy = 0; copy < copies; copy++) {
         // Center alignment
@@ -606,8 +691,11 @@ export class ThermalPrinterService {
           commands.push(Buffer.from('\n'))
         }
 
+        // Line feed before barcode (some printers require this)
+        commands.push(Buffer.from('\n'))
+        
         // Use ESC/POS native barcode command for CODE128
-        // This will print the actual barcode graphic (vertical lines)
+        // XPrinter supports multiple formats, trying Type B command (more compatible)
         
         // Set barcode height: GS h n (n = height in dots, default 162)
         commands.push(Buffer.from([0x1D, 0x68, height])) // GS h - Set barcode height
@@ -621,13 +709,22 @@ export class ThermalPrinterService {
         // Set HRI font: GS f n (0=Font A, 1=Font B)
         commands.push(Buffer.from([0x1D, 0x66, 0x00])) // GS f 0 - Font A
         
-        // Print CODE128 barcode: GS k m n d1...dn
-        // m = 73 for CODE128
+        // Print CODE128 barcode using Type B format (GS k m d1...dk NUL)
+        // This is the most compatible format for XPrinter and similar thermal printers
+        // The barcode data must include proper CODE128 structure
         const barcodeData = Buffer.from(barcodeText, 'utf-8')
-        const barcodeLength = barcodeData.length
         
-        commands.push(Buffer.from([0x1D, 0x6B, 0x49, barcodeLength])) // GS k 73 n - CODE128 barcode
+        // GS k 73 - CODE128 with NUL terminator (Type B format)
+        commands.push(Buffer.from([0x1D, 0x6B, 0x49])) // GS k m (m=73 for CODE128)
         commands.push(barcodeData) // Barcode data
+        commands.push(Buffer.from([0x00])) // NUL terminator
+        
+        // Debug: Log barcode command being sent
+        console.log(`📋 Barcode print debug:`)
+        console.log(`   - Text: ${barcodeText}`)
+        console.log(`   - Length: ${barcodeData.length}`)
+        console.log(`   - Height: ${height}, Width: ${width}`)
+        console.log(`   - Command: GS k 73 (CODE128 Type B)`)
         
         // Add 0.5cm bottom margin (approximately 6 lines for thermal printers)
         commands.push(Buffer.from('\n\n\n\n\n\n'))

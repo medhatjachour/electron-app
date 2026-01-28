@@ -18,12 +18,14 @@ import {
   Activity,
   ShoppingCart,
   Receipt,
-  TrendingDown
+  TrendingDown,
+  Eye
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ReceiptPreviewModal } from './Sales/ReceiptPreviewModal';
 
 interface TodayStats {
   revenue: number;
@@ -42,6 +44,23 @@ interface ActivityItem {
   description: string;
   amount?: number;
   icon: any;
+  saleData?: any; // Full sale transaction data
+}
+
+interface ItemSummary {
+  productId: string;
+  productName: string;
+  totalQuantity: number;
+  revenue: number;
+  category?: string;
+  variants?: VariantSale[];
+}
+
+interface VariantSale {
+  variantId: string | null;
+  variantName: string;
+  quantity: number;
+  revenue: number;
 }
 
 interface ReportFormState {
@@ -61,6 +80,12 @@ const EnhancedReports: React.FC = () => {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [reportData, setReportData] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [itemsSummary, setItemsSummary] = useState<ItemSummary[]>([]);
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [totalPiecesSold, setTotalPiecesSold] = useState(0);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [reportForm, setReportForm] = useState<ReportFormState>({
     reportType: null,
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -176,7 +201,7 @@ const EnhancedReports: React.FC = () => {
 
       const activities: ActivityItem[] = [];
 
-      // Add sales
+      // Add sales with full data
       salesData.forEach((sale: any) => {
         activities.push({
           id: sale.id,
@@ -187,9 +212,72 @@ const EnhancedReports: React.FC = () => {
           }),
           description: `Sale: ${sale.customerName || 'Walk-in Customer'}`,
           amount: sale.total,
-          icon: ShoppingCart
+          icon: ShoppingCart,
+          saleData: sale // Store full sale data
         });
       });
+
+      // Calculate items sold summary with variant tracking
+      const itemsMap = new Map<string, ItemSummary>();
+      let totalPieces = 0;
+
+      salesData.forEach((sale: any) => {
+        sale.items?.forEach((item: any) => {
+          const netQuantity = item.quantity - (item.refundedQuantity || 0);
+          if (netQuantity > 0) {
+            totalPieces += netQuantity;
+            const key = item.productId;
+            const itemRevenue = item.totalPrice || (item.price * netQuantity);
+            
+            if (itemsMap.has(key)) {
+              const existing = itemsMap.get(key)!;
+              existing.totalQuantity += netQuantity;
+              existing.revenue += itemRevenue;
+              
+              // Track variant
+              const variantName = item.selectedVariant || 'Base Product';
+              const variantId = item.variantId || null;
+              const existingVariant = existing.variants?.find(v => 
+                v.variantId === variantId && v.variantName === variantName
+              );
+              
+              if (existingVariant) {
+                existingVariant.quantity += netQuantity;
+                existingVariant.revenue += itemRevenue;
+              } else {
+                existing.variants = existing.variants || [];
+                existing.variants.push({
+                  variantId,
+                  variantName,
+                  quantity: netQuantity,
+                  revenue: itemRevenue
+                });
+              }
+            } else {
+              const variantName = item.selectedVariant || 'Base Product';
+              const variantId = item.variantId || null;
+              
+              itemsMap.set(key, {
+                productId: item.productId,
+                productName: item.product?.name || 'Unknown Product',
+                totalQuantity: netQuantity,
+                revenue: itemRevenue,
+                category: item.product?.category?.name,
+                variants: [{
+                  variantId,
+                  variantName,
+                  quantity: netQuantity,
+                  revenue: itemRevenue
+                }]
+              });
+            }
+          }
+        });
+      });
+
+      const itemsSummaryArray = Array.from(itemsMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
+      setItemsSummary(itemsSummaryArray);
+      setTotalPiecesSold(totalPieces);
 
       // Add expenses
       financeData
@@ -616,7 +704,7 @@ const EnhancedReports: React.FC = () => {
         </div>
 
         {/* Today's Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-slate-600 dark:text-slate-400">{t('revenue')}</span>
@@ -671,6 +759,19 @@ const EnhancedReports: React.FC = () => {
                 : t('noTransactions')}
             </p>
           </div>
+
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-2 border-primary">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Items Sold</span>
+              <Package size={18} className="text-primary" />
+            </div>
+            <p className="text-2xl font-bold text-primary">
+              {totalPiecesSold}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {itemsSummary.length} {itemsSummary.length === 1 ? 'product' : 'products'}
+            </p>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -701,51 +802,116 @@ const EnhancedReports: React.FC = () => {
 
       {/* Activity Feed & Quick Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed - Today Only */}
+        {/* Enhanced Sales Activity - Today Only */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Activity Feed</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Sales Activity</h3>
               <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">{activityFeed.length} {t('events')}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500 font-medium">{activityFeed.filter(a => a.type === 'sale').length} Sales</span>
+              <span className="text-xs font-bold text-primary">{totalPiecesSold} Pieces</span>
+            </div>
           </div>
           
-          <div className="space-y-3 max-h-80 overflow-y-auto">
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
             {activityFeed.length > 0 ? (
               activityFeed.map((activity) => {
                 const Icon = activity.icon;
+                const isExpanded = expandedSales.has(activity.id);
+                const isSale = activity.type === 'sale';
+                
                 return (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                  >
-                    <div className={`p-2 rounded-lg ${
-                      activity.type === 'sale' 
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
-                        : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                    }`}>
-                      <Icon size={16} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-900 dark:text-white font-medium">
-                        {activity.description}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Clock size={12} className="text-slate-400" />
-                        <span className="text-xs text-slate-500">{activity.time}</span>
+                  <div key={activity.id} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                    <div
+                      onClick={() => {
+                        if (isSale) {
+                          setExpandedSales(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(activity.id)) {
+                              newSet.delete(activity.id);
+                            } else {
+                              newSet.add(activity.id);
+                            }
+                            return newSet;
+                          });
+                        }
+                      }}
+                      className={`flex items-center gap-3 p-3 ${isSale ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50' : ''} transition-colors`}
+                    >
+                      <div className={`p-2 rounded-lg ${
+                        activity.type === 'sale' 
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
+                        <Icon size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                          {activity.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock size={12} className="text-slate-400" />
+                          <span className="text-xs text-slate-500">{activity.time}</span>
+                          {isSale && activity.saleData?.items && (
+                            <span className="text-xs text-slate-500">• {activity.saleData.items.reduce((sum: number, item: any) => sum + (item.quantity - (item.refundedQuantity || 0)), 0)} items</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {activity.amount && (
+                          <span className={`text-sm font-bold ${
+                            activity.type === 'sale' 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {activity.type === 'sale' ? '+' : '-'}{formatCurrency(activity.amount)}
+                          </span>
+                        )}
+                        {isSale && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReceipt(activity.saleData);
+                            }}
+                            className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                            title="View Receipt"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
-                    {activity.amount && (
-                      <span className={`text-sm font-bold ${
-                        activity.type === 'sale' 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-red-600 dark:text-red-400'
-                      }`}>
-                        {activity.type === 'sale' ? '+' : '-'}{formatCurrency(activity.amount)}
-                      </span>
+                    
+                    {/* Expanded Sale Items */}
+                    {isExpanded && isSale && activity.saleData?.items && (
+                      <div className="bg-slate-50 dark:bg-slate-700/30 px-3 pb-3 border-t border-slate-200 dark:border-slate-700">
+                        <div className="mt-2 space-y-2">
+                          {activity.saleData.items.map((item: any, idx: number) => {
+                            const netQty = item.quantity - (item.refundedQuantity || 0);
+                            if (netQty <= 0) return null;
+                            return (
+                              <div key={idx} className="flex items-center justify-between text-xs bg-white dark:bg-slate-800 p-2 rounded">
+                                <div className="flex-1">
+                                  <span className="font-medium text-slate-900 dark:text-white">{item.product?.name || 'Unknown'}</span>
+                                  {item.product?.category && (
+                                    <span className="ml-2 text-slate-500">({item.product.category.name})</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-slate-600 dark:text-slate-400">×{netQty}</span>
+                                  <span className="font-bold text-slate-900 dark:text-white min-w-[60px] text-right">
+                                    {formatCurrency(item.totalPrice || (item.price * netQty))}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -800,6 +966,133 @@ const EnhancedReports: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Items Sold Summary with Search */}
+      {itemsSummary.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Package size={20} className="text-primary" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Items Sold Today</h3>
+              <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                {itemsSummary.length} Products
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-primary">{totalPiecesSold}</p>
+              <p className="text-xs text-slate-500">Total Pieces</p>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={itemSearchQuery}
+              onChange={(e) => setItemSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+
+          {/* Items List */}
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {itemsSummary
+              .filter(item => 
+                itemSearchQuery === '' || 
+                item.productName.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+                item.category?.toLowerCase().includes(itemSearchQuery.toLowerCase())
+              )
+              .map((item, idx) => {
+                const isExpanded = expandedProducts.has(item.productId);
+                const hasVariants = item.variants && item.variants.length > 1;
+                
+                return (
+                  <div key={item.productId} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                    <div 
+                      onClick={() => {
+                        if (hasVariants) {
+                          setExpandedProducts(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(item.productId)) {
+                              newSet.delete(item.productId);
+                            } else {
+                              newSet.add(item.productId);
+                            }
+                            return newSet;
+                          });
+                        }
+                      }}
+                      className={`flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 ${hasVariants ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700' : ''} transition-colors`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-900 dark:text-white">{item.productName}</p>
+                            {hasVariants && (
+                              <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                                {item.variants.length} variants
+                              </span>
+                            )}
+                          </div>
+                          {item.category && (
+                            <p className="text-xs text-slate-500">{item.category}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">×{item.totalQuantity}</p>
+                          <p className="text-xs text-slate-500">pieces</p>
+                        </div>
+                        <div className="text-right min-w-[80px]">
+                          <p className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(item.revenue)}</p>
+                          <p className="text-xs text-slate-500">revenue</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Expanded Variants */}
+                    {isExpanded && hasVariants && (
+                      <div className="bg-white dark:bg-slate-800 px-3 pb-3 border-t border-slate-200 dark:border-slate-700">
+                        <div className="mt-2 space-y-2">
+                          {item.variants.sort((a, b) => b.quantity - a.quantity).map((variant, vIdx) => (
+                            <div key={vIdx} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 p-2 rounded">
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[10px]">
+                                  {vIdx + 1}
+                                </div>
+                                <span className="font-medium text-slate-900 dark:text-white">{variant.variantName}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-slate-600 dark:text-slate-400">×{variant.quantity}</span>
+                                <span className="font-bold text-green-600 dark:text-green-400 min-w-[60px] text-right">
+                                  {formatCurrency(variant.revenue)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            {itemsSummary.filter(item => 
+              itemSearchQuery === '' || 
+              item.productName.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
+              item.category?.toLowerCase().includes(itemSearchQuery.toLowerCase())
+            ).length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                No products found matching "{itemSearchQuery}"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Report Preview Modal - Comprehensive */}
       {showPreview && reportData && (
@@ -1062,6 +1355,14 @@ const EnhancedReports: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Receipt Preview Modal */}
+      {selectedReceipt && (
+        <ReceiptPreviewModal
+          transaction={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
       )}
     </div>
   );
