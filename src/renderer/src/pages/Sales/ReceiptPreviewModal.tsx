@@ -55,16 +55,16 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
     setSettings(loadedSettings)
   }, [])
 
-  // Auto-print when settings are loaded and autoPrint is enabled
-  useEffect(() => {
-    if (settings && settings.autoPrint && !autoPrintTriggered && settings.printerType) {
-      setAutoPrintTriggered(true)
-      // Small delay to ensure modal is fully rendered
-      setTimeout(() => {
-        handlePrint()
-      }, 300)
-    }
-  }, [settings, autoPrintTriggered])
+  // Auto-print disabled - user should manually click Print button
+  // useEffect(() => {
+  //   if (settings && settings.autoPrint && !autoPrintTriggered && settings.printerType) {
+  //     setAutoPrintTriggered(true)
+  //     // Small delay to ensure modal is fully rendered
+  //     setTimeout(() => {
+  //       handlePrint()
+  //     }, 300)
+  //   }
+  // }, [settings, autoPrintTriggered])
 
   const handlePrint = async () => {
     if (!settings) return

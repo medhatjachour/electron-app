@@ -111,23 +111,18 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
   
   // Calculated totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
-  const taxRate = parseFloat(localStorage.getItem('salesTaxRate') || '0')
+  const taxRate = parseFloat(localStorage.getItem('taxRate') || '0')
   const tax = (subtotal * taxRate) / 100
   
   // Calculate total discount across all items
+  // Discount is the difference between original price and final price
   const totalDiscount = cartItems.reduce((sum, item) => {
     if (!item.discountType || item.discountType === 'NONE' || !item.discountValue) return sum
     
-    // item.price is already the final price after discount
-    // Calculate original price to get discount amount
-    let discount = 0
-    if (item.discountType === 'PERCENTAGE') {
-      const originalPrice = item.price / (1 - item.discountValue / 100)
-      discount = (originalPrice - item.price) * item.quantity
-    } else {
-      discount = item.discountValue
-    }
-    return sum + discount
+    const originalPrice = item.price // Price before discount
+    const finalPrice = item.finalPrice || item.price // Price after discount
+    const discountPerItem = originalPrice - finalPrice
+    return sum + (discountPerItem * item.quantity)
   }, 0)
   
   const total = subtotal + tax
