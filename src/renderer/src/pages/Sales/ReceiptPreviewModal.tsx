@@ -88,9 +88,11 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
                       transaction.paymentMethod === 'card' ? 'Card' : 
                       transaction.paymentMethod === 'installment' ? 'Installment' : 'Other',
 
-        // Customer
-        customerName: transaction.Customer?.name || 'Walk-in Customer',
+        // User who made the sale
+        username: transaction.user?.username || transaction.user?.fullName || 'Unknown',
 
+        // Customer
+        customerName: transaction.Customer?.name || transaction.customerName || 'Walk-in Customer',        customerPhone: transaction.Customer?.phone || transaction.customer?.phone || null,
         // Items
         items: (transaction.items || []).map((item: any) => ({
           name: item.product?.name || item.ProductVariant?.Product?.name || 'Unknown Product',
@@ -106,7 +108,15 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
         subtotal: transaction.subtotal,
         tax: transaction.tax,
         taxRate: settings.taxRate,
-        total: transaction.total
+        total: transaction.total,
+        
+        // Installments
+        installments: transaction.installments?.map((inst: any) => ({
+          amount: inst.amount,
+          dueDate: new Date(inst.dueDate),
+          status: inst.status
+        })),
+        depositAmount: transaction.deposits?.[0]?.amount
       }
 
       const shouldForceThermal = settings.printerType === 'none' || settings.printerType === 'html'
@@ -211,8 +221,10 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
                 minute: '2-digit',
                 hour12: true
               })}</p>
-              {transaction.Customer && <p>Customer: {transaction.Customer.name}</p>}
-            </div>
+              <p>Cashier: {transaction.user?.username || transaction.user?.fullName || 'Unknown'}</p>
+              <p>Customer: {transaction.Customer?.name || transaction.customerName || 'Walk-in Customer'}</p>              {(transaction.Customer?.phone || transaction.customer?.phone) && (
+                <p>Phone: {transaction.Customer?.phone || transaction.customer?.phone}</p>
+              )}            </div>
 
             {/* Items Table */}
             <div className="border-t border-b border-gray-300 py-2 mb-3">
@@ -297,6 +309,35 @@ export function ReceiptPreviewModal({ transaction, onClose }: ReceiptPreviewModa
                 transaction.paymentMethod === 'installment' ? 'Installment' : 'Other'
               }</p>
             </div>
+
+            {/* Installment Details */}
+            {transaction.installments && transaction.installments.length > 0 && (
+              <div className="border-t border-gray-300 pt-3 mb-3">
+                <p className="text-xs font-bold mb-2 text-center">INSTALLMENT PLAN</p>
+                {transaction.deposits && transaction.deposits.length > 0 && (
+                  <div className="text-xs mb-2 bg-gray-100 p-2 rounded">
+                    <div className="flex justify-between">
+                      <span>Deposit Paid:</span>
+                      <span className="font-bold">{transaction.deposits[0].amount.toFixed(2)} EGP</span>
+                    </div>
+                  </div>
+                )}
+                <div className="text-xs space-y-1">
+                  {transaction.installments.map((inst: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center py-1 border-b border-dashed border-gray-200">
+                      <span>Payment {idx + 1}: {new Date(inst.dueDate).toLocaleDateString()}</span>
+                      <span className={`font-bold ${inst.status === 'paid' ? 'text-green-600' : inst.status === 'overdue' ? 'text-red-600' : ''}`}>
+                        {inst.amount.toFixed(2)} EGP {inst.status === 'paid' ? '✓' : ''}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-2 font-bold">
+                    <span>Remaining:</span>
+                    <span>{transaction.installments.filter((i: any) => i.status !== 'paid').reduce((sum: number, i: any) => sum + i.amount, 0).toFixed(2)} EGP</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="text-center text-xs border-t border-gray-300 pt-3">

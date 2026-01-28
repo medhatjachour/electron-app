@@ -57,8 +57,18 @@ export interface ReceiptData {
   total: number
   
   // Optional
+  username?: string
   customerName?: string
+  customerPhone?: string
   notes?: string
+  
+  // Installments
+  installments?: Array<{
+    amount: number
+    dueDate: Date
+    status: string
+  }>
+  depositAmount?: number
 }
 
 export class ThermalPrinterService {
@@ -169,7 +179,9 @@ export class ThermalPrinterService {
       minute: '2-digit',
       hour12: true
     })}\n`
+    if (data.username) text += `Cashier: ${data.username}\n`
     if (data.customerName) text += `Customer: ${data.customerName}\n`
+    if (data.customerPhone) text += `Phone: ${data.customerPhone}\n`
     text += dashes + '\n'
     
     // Items with discount calculation
@@ -218,6 +230,34 @@ export class ThermalPrinterService {
     
     // Payment
     text += `Payment: ${data.paymentMethod}\n`
+    
+    // Installments
+    if (data.installments && data.installments.length > 0) {
+      text += '\n'
+      text += dashes + '\n'
+      text += 'INSTALLMENT PLAN\n'
+      text += dashes + '\n'
+      
+      if (data.depositAmount) {
+        text += `Deposit Paid: ${data.depositAmount.toFixed(2)} EGP\n`
+        text += '\n'
+      }
+      
+      data.installments.forEach((inst, idx) => {
+        const status = inst.status === 'paid' ? ' PAID' : inst.status === 'overdue' ? ' OVERDUE' : ''
+        const dateStr = inst.dueDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+        text += `#${idx + 1} ${dateStr}\n`
+        text += `   ${inst.amount.toFixed(2)} EGP${status}\n`
+      })
+      
+      const remaining = data.installments
+        .filter(i => i.status !== 'paid')
+        .reduce((sum, i) => sum + i.amount, 0)
+      
+      text += dashes + '\n'
+      text += `Remaining: ${remaining.toFixed(2)} EGP\n`
+    }
+    
     text += '\n'
     text += 'Thank you for your visit!\n'
     text += 'We appreciate your business\n'
@@ -302,8 +342,14 @@ export class ThermalPrinterService {
       minute: '2-digit',
       hour12: true
     })}`)
+    if (data.username) {
+      printer.println(`Cashier: ${data.username}`)
+    }
     if (data.customerName) {
       printer.println(`Customer: ${data.customerName}`)
+    }
+    if (data.customerPhone) {
+      printer.println(`Phone: ${data.customerPhone}`)
     }
     printer.drawLine()
 
@@ -355,10 +401,45 @@ export class ThermalPrinterService {
     printer.drawLine()
 
     // Payment
+    printer.newLine()
     printer.alignCenter()
-    printer.newLine()
     printer.println(`Payment: ${data.paymentMethod}`)
+    
+    // Installments
+    if (data.installments && data.installments.length > 0) {
+      printer.newLine()
+      printer.drawLine()
+      printer.alignCenter()
+      printer.bold(true)
+      printer.println('INSTALLMENT PLAN')
+      printer.bold(false)
+      printer.drawLine()
+      printer.alignLeft()
+      
+      if (data.depositAmount) {
+        printer.println(`Deposit: ${data.depositAmount.toFixed(2)} EGP`)
+        printer.drawLine()
+      }
+      
+      data.installments.forEach((inst, idx) => {
+        const status = inst.status === 'paid' ? 'PAID' : inst.status === 'overdue' ? 'OVER' : 'DUE'
+        const dateStr = inst.dueDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+        printer.println(`#${idx + 1} ${dateStr}`)
+        printer.println(`   ${inst.amount.toFixed(2)} EGP - ${status}`)
+      })
+      
+      const remaining = data.installments
+        .filter(i => i.status !== 'paid')
+        .reduce((sum, i) => sum + i.amount, 0)
+      
+      printer.drawLine()
+      printer.bold(true)
+      printer.println(`Remaining: ${remaining.toFixed(2)} EGP`)
+      printer.bold(false)
+    }
+    
     printer.newLine()
+    printer.alignCenter()
     printer.println('Thank you for your visit!')
     printer.println('We appreciate your business')
 

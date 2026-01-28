@@ -681,8 +681,22 @@ export default function QuickSale({ onCompleteSale: _onCompleteSale }: QuickSale
 
         showToast('success', 'Installment sale completed')
         
-        // Show receipt option
-        setCompletedTransaction(result.transaction)
+        // Re-fetch transaction with full details including installments
+        const fullTransaction = await (window as any).api.saleTransactions.getById(result.transaction.id)
+        
+        // Attach product info from cart to the items
+        const itemsWithProducts = (result.items || []).map((item: any, index: number) => ({
+          ...item,
+          product: {
+            name: cartItems[index]?.name || 'Unknown Product'
+          }
+        }))
+        
+        // Show receipt option with full transaction data
+        setCompletedTransaction({
+          ...fullTransaction,
+          items: itemsWithProducts
+        })
         setShowReceiptModal(true)
         
         // Reset
