@@ -337,7 +337,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     }))
   }
 
-  const handleAddVariant = () => {
+  const handleAddVariant = async () => {
     if (!newVariant.color || !newVariant.size || !newVariant.sku) {
       toast.error('Please fill all variant fields')
       return
@@ -381,6 +381,19 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
 
     if (barcodeExists) {
       toast.error(`A variant with barcode "${barcode}" already exists in this product`)
+      return
+    }
+
+    // Check for global barcode uniqueness
+    try {
+      const existingProduct = await window.api.inventory.searchByBarcode(barcode)
+      if (existingProduct && existingProduct.id !== productId) {
+        toast.error(`Barcode "${barcode}" is already used by another product: ${existingProduct.name}`)
+        return
+      }
+    } catch (error) {
+      console.error('Error checking barcode uniqueness:', error)
+      toast.error('Failed to validate barcode uniqueness')
       return
     }
 
@@ -469,7 +482,7 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
     }))
   }
 
-  const handleGenerateBatchVariants = () => {
+  const handleGenerateBatchVariants = async () => {
     // Validation
     if (!batchVariant.baseSKU.trim()) {
       toast.error('Please enter a base SKU')
@@ -573,6 +586,23 @@ export default function ProductFormWrapper({ product, onSuccess, onCancel }: Pro
 
     if (duplicates.length > 0) {
       toast.error('Some variant combinations already exist')
+      return
+    }
+
+    // Check for global barcode uniqueness for all generated barcodes
+    try {
+      for (const variant of newVariants) {
+        if (variant.barcode) {
+          const existingProduct = await window.api.inventory.searchByBarcode(variant.barcode)
+          if (existingProduct && existingProduct.id !== productId) {
+            toast.error(`Barcode "${variant.barcode}" is already used by another product: ${existingProduct.name}`)
+            return
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking barcode uniqueness:', error)
+      toast.error('Failed to validate barcode uniqueness')
       return
     }
 

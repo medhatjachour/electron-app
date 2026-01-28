@@ -588,8 +588,12 @@ export class ThermalPrinterService {
       // Build ESC/POS commands
       const commands: Buffer[] = []
 
-      // Initialize printer
+      // Initialize printer with extended reset
       commands.push(Buffer.from([0x1B, 0x40])) // ESC @ - Initialize
+      
+      // Enable barcode printing (some printers need this)
+      // Set to standard mode
+      commands.push(Buffer.from([0x1B, 0x53])) // ESC S - Select standard mode
 
       for (let copy = 0; copy < copies; copy++) {
         // Center alignment
@@ -606,8 +610,11 @@ export class ThermalPrinterService {
           commands.push(Buffer.from('\n'))
         }
 
+        // Line feed before barcode (some printers require this)
+        commands.push(Buffer.from('\n'))
+        
         // Use ESC/POS native barcode command for CODE128
-        // This will print the actual barcode graphic (vertical lines)
+        // XPrinter supports multiple formats, trying Type B command (more compatible)
         
         // Set barcode height: GS h n (n = height in dots, default 162)
         commands.push(Buffer.from([0x1D, 0x68, height])) // GS h - Set barcode height
@@ -621,13 +628,22 @@ export class ThermalPrinterService {
         // Set HRI font: GS f n (0=Font A, 1=Font B)
         commands.push(Buffer.from([0x1D, 0x66, 0x00])) // GS f 0 - Font A
         
-        // Print CODE128 barcode: GS k m n d1...dn
-        // m = 73 for CODE128
+        // Print CODE128 barcode using Type B format (GS k m d1...dk NUL)
+        // This is the most compatible format for XPrinter and similar thermal printers
+        // The barcode data must include proper CODE128 structure
         const barcodeData = Buffer.from(barcodeText, 'utf-8')
-        const barcodeLength = barcodeData.length
         
-        commands.push(Buffer.from([0x1D, 0x6B, 0x49, barcodeLength])) // GS k 73 n - CODE128 barcode
+        // GS k 73 - CODE128 with NUL terminator (Type B format)
+        commands.push(Buffer.from([0x1D, 0x6B, 0x49])) // GS k m (m=73 for CODE128)
         commands.push(barcodeData) // Barcode data
+        commands.push(Buffer.from([0x00])) // NUL terminator
+        
+        // Debug: Log barcode command being sent
+        console.log(`📋 Barcode print debug:`)
+        console.log(`   - Text: ${barcodeText}`)
+        console.log(`   - Length: ${barcodeData.length}`)
+        console.log(`   - Height: ${height}, Width: ${width}`)
+        console.log(`   - Command: GS k 73 (CODE128 Type B)`)
         
         // Add 0.5cm bottom margin (approximately 6 lines for thermal printers)
         commands.push(Buffer.from('\n\n\n\n\n\n'))

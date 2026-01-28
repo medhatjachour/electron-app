@@ -1,7 +1,7 @@
 /**
  * Barcode Scanner Hook
- * Listens for barcode scanner input and triggers callback
- * Handles rapid scanning without lag
+ * Simple event-based detection: Scanner only works when NO input field is focused
+ * This ensures normal typing and search work perfectly without interference
  */
 
 import { useEffect, useRef, useCallback } from 'react'
@@ -25,7 +25,7 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
     timeout = 100,
     prefix,
     suffix = 'Enter',
-    preventDuplicates = true,
+    preventDuplicates = false,
     duplicateTimeout = 1000
   } = options
 
@@ -80,16 +80,20 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea (except our barcode detection)
+      // SIMPLE RULE: If any input field is focused, scanner does NOTHING
+      // This ensures typing and search work normally
       const target = event.target as HTMLElement
       const isInputField = 
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
 
-      // Allow barcode scanner to work even in input fields
-      // Barcode scanners type very fast, so we can detect them
-      
+      if (isInputField) {
+        // User is typing in a field - do nothing, let it work normally
+        buffer.current = ''
+        return
+      }
+
       // Clear timeout on each keystroke
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -98,6 +102,7 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
       // Handle Enter key (or custom suffix)
       if (event.key === suffix) {
         event.preventDefault()
+        event.stopPropagation()
         
         if (buffer.current.length >= minLength) {
           processBarcode(buffer.current)
@@ -125,21 +130,11 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
         return
       }
 
-      // Add character to buffer
+      // Add character to buffer (only when not in input field)
       if (event.key.length === 1) {
-        // If typing in input field, only accumulate if typing very fast (barcode scanner)
-        if (isInputField) {
-          // Check typing speed - barcode scanners type in < 50ms per character
-          const now = Date.now()
-          const timeSinceLastKey = now - lastScanTimeRef.current
-          
-          if (timeSinceLastKey > 50 && buffer.current.length === 0) {
-            // Normal human typing, ignore
-            return
-          }          
-          // Update last key time for next keystroke
-          lastScanTimeRef.current = now        }
-
+        event.preventDefault()
+        event.stopPropagation()
+        
         buffer.current += event.key
 
         // Prevent buffer overflow

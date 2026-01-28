@@ -109,45 +109,102 @@ export function registerInventoryHandlers(prisma: any) {
         return null
       }
 
-      // Direct barcode lookup on ProductVariant
+      const trimmedBarcode = barcode.trim()
+
+      // STEP 1: Try to find a variant with this barcode
       const variant = await prisma.productVariant.findUnique({
-        where: { barcode: barcode.trim() },
+        where: { barcode: trimmedBarcode },
         include: {
           product: {
             include: {
               category: true,
-              images: true
+              images: true,
+              variants: true // Include all variants for the product
             }
           }
         }
       })
 
-      if (!variant) {
-        return null
+      if (variant) {
+        // Found a variant - return product with this variant selected
+        return {
+          id: variant.product.id,
+          name: variant.product.name,
+          baseSKU: variant.product.baseSKU,
+          category: variant.product.category,
+          price: variant.product.price,
+          cost: variant.product.cost,
+          hasVariants: variant.product.hasVariants,
+          selectedVariant: {
+            id: variant.id,
+            sku: variant.sku,
+            barcode: variant.barcode,
+            color: variant.color,
+            size: variant.size,
+            stock: variant.stock,
+            price: variant.price,
+            cost: variant.cost
+          },
+          variants: variant.product.variants,
+          images: variant.product.images
+        }
       }
 
-      // Return formatted product with variant info
-      return {
-        id: variant.product.id,
-        name: variant.product.name,
-        baseSKU: variant.product.baseSKU,
-        category: variant.product.category,
-        price: variant.product.price,
-        cost: variant.product.cost,
-        hasVariants: variant.product.hasVariants,
-        selectedVariant: {
-          id: variant.id,
-          sku: variant.sku,
-          barcode: variant.barcode,
-          color: variant.color,
-          size: variant.size,
-          stock: variant.stock,
-          price: variant.price,
-          cost: variant.cost
-        },
-        variants: [variant], // Include the matched variant
-        images: variant.product.images
+      // STEP 2: Try to find a product with baseBarcode
+      const product = await prisma.product.findUnique({
+        where: { baseBarcode: trimmedBarcode },
+        include: {
+          category: true,
+          images: true,
+          variants: true
+        }
+      })
+
+      if (product) {
+        // Found a product by baseBarcode
+        // If it has variants, return first available variant
+        if (product.hasVariants && product.variants.length > 0) {
+          const firstVariant = product.variants[0]
+          return {
+            id: product.id,
+            name: product.name,
+            baseSKU: product.baseSKU,
+            category: product.category,
+            price: product.price,
+            cost: product.cost,
+            hasVariants: product.hasVariants,
+            selectedVariant: {
+              id: firstVariant.id,
+              sku: firstVariant.sku,
+              barcode: firstVariant.barcode,
+              color: firstVariant.color,
+              size: firstVariant.size,
+              stock: firstVariant.stock,
+              price: firstVariant.price,
+              cost: firstVariant.cost
+            },
+            variants: product.variants,
+            images: product.images
+          }
+        }
+
+        // Simple product without variants
+        return {
+          id: product.id,
+          name: product.name,
+          baseSKU: product.baseSKU,
+          category: product.category,
+          price: product.price,
+          cost: product.cost,
+          hasVariants: product.hasVariants,
+          selectedVariant: null,
+          variants: product.variants,
+          images: product.images
+        }
       }
+
+      // Not found
+      return null
     } catch (error) {
       console.error('Error searching by barcode:', error)
       return null

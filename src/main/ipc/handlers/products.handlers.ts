@@ -257,7 +257,9 @@ export function registerProductsHandlers(prisma: any) {
                 color: v.color,
                 size: v.size,
                 sku: v.sku,
+                barcode: v.barcode || undefined,
                 price: v.price,
+                cost: v.cost || undefined,
                 stock: v.stock
               }))
             } : product.hasVariants === false && baseStock !== undefined ? {
@@ -924,7 +926,9 @@ export function registerProductsHandlers(prisma: any) {
                   color: v.color,
                   size: v.size,
                   sku: v.sku,
+                  barcode: v.barcode || undefined,
                   price: v.price,
+                  cost: v.cost || undefined,
                   stock: v.stock
                 }))
               } : undefined
